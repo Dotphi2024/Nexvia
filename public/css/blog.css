@@ -1,0 +1,254 @@
+:root {
+    --primary-color: #000000ff;
+    --secondary-color: #ffffffff;
+    --text-color: #333;
+    --light-text-color: #666;
+    --bg-light: #f9f9f9;
+}
+
+/* Base Reset and Typography */
+body {
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-color);
+    line-height: 1.7;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    color: #222 !important;
+    line-height: 1.2;
+    margin-top: 0;
+}
+
+a {
+    text-decoration: none;
+    color: var(--primary-color);
+    transition: color 0.3s;
+}
+
+/* Utility/Layout */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header */
+header {
+    background: #fff;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    color: #222;
+}
+
+nav a {
+    margin-left: 20px;
+    font-weight: 600;
+    color: #000000;
+}
+
+/* Blog Layout */
+.blog-content-wrapper {
+    display: flex;
+    gap: 40px;
+    padding: 60px 0;
+}
+
+.main-article {
+    flex: 3;
+    max-width: 750px;
+}
+
+.sidebar {
+    flex: 1;
+}
+
+/* Article Details */
+.article-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.article-header h1 {
+    font-size: 44px;
+    margin-bottom: 15px;
+}
+
+.meta-info {
+    font-size: 14px;
+    color: var(--light-text-color);
+    margin-bottom: 20px;
+}
+
+.meta-info span:not(:last-child)::after {
+    content: " | ";
+    margin: 0 5px;
+}
+
+.feature-image img {
+    width: 100%;
+    height: auto;
+    max-height: 450px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Article Body */
+.article-body p {
+    margin-bottom: 25px;
+    font-size: 17px;
+}
+
+.article-body h2 {
+    font-size: 28px;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 5px;
+    display: inline-block;
+}
+
+.article-body ul {
+    padding-left: 25px;
+}
+
+.article-body li {
+    margin-bottom: 10px;
+}
+
+blockquote {
+    background-color: var(--bg-light);
+    border-left: 5px solid var(--secondary-color);
+    padding: 20px 30px;
+    margin: 30px 0;
+    font-style: italic;
+    font-size: 18px;
+    color: #444;
+}
+
+/* Sidebar Styles */
+.sidebar-widget {
+    background-color: var(--bg-light);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgb(0 0 0 / 17%);
+}
+
+.sidebar-widget h3 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.sidebar-widget ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-widget li {
+    margin-bottom: 10px;
+    border-bottom: 1px dotted #ccc;
+    padding-bottom: 5px;
+}
+
+/* Footer */
+footer {
+    background-color: #333;
+    color: #eee;
+    text-align: center;
+    padding: 30px 0;
+    font-size: 14px;
+}
+
+.social-share {
+    font-size: 25px !important;
+}
+
+/* Basic styling for the social icons container (optional, adjust as needed) */
+.social-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    /* Size of the circular background */
+    height: 40px;
+    border-radius: 50%;
+    /* Makes it a circle */
+    font-size: 20px;
+    /* Size of the icon itself */
+    color: white;
+    /* Default icon color */
+    transition: background-color 0.3s ease;
+    /* Smooth hover transition */
+}
+
+/* 1. WhatsApp */
+.social-icon.whatsapp {
+    background-color: #25D366;
+    /* WhatsApp Brand Green */
+}
+
+/* 2. LinkedIn */
+.social-icon.linkedin {
+    background-color: #0A66C2;
+    /* LinkedIn Brand Blue */
+}
+
+/* 3. Facebook */
+.social-icon.facebook {
+    background-color: #1877F2;
+    /* Facebook Brand Blue */
+}
+
+/* Optional: Add a hover effect for a better user experience */
+.social-icon.whatsapp:hover {
+    background-color: #128C7E;
+    /* Slightly darker green on hover */
+}
+
+.social-icon.linkedin:hover {
+    background-color: #004182;
+    /* Slightly darker blue on hover */
+}
+
+.social-icon.facebook:hover {
+    background-color: #0C50A4;
+    /* Slightly darker blue on hover */
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .blog-content-wrapper {
+        flex-direction: column;
+        padding: 40px 0;
+    }
+
+    .main-article {
+        max-width: 100%;
+    }
+
+    .article-header h1 {
+        font-size: 36px;
+    }
+
+    .sidebar {
+        padding-top: 0;
+    }
+}
+
+.article-body a {
+    font-weight: bold;
+}

@@ -1,0 +1,10 @@
+Clone Project
+Create database and user
+Add .env and database details in it.
+
+Run the following commands:
+composer install
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+mkdir -p storage/framework/views
