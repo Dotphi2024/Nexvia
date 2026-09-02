@@ -12,12 +12,20 @@ class Customer extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $table    = 'users';
-    protected $guard_name = 'web'; // uses the 'users' provider
+    protected $guard_name = 'web';
 
     protected $fillable = [
         'name',
         'email',
         'phone',
+        'pincode',
+        'city',
+        'state',
+        'dob',
+        'gst_number',
+        'wallet_balance',
+        'referral_code',
+        'referred_by_id',
         'otp',
         'otp_expires_at',
         'phone_verified_at',
@@ -46,13 +54,23 @@ class Customer extends Authenticatable
             'email_verified_at'  => 'datetime',
             'phone_verified_at'  => 'datetime',
             'otp_expires_at'     => 'datetime',
+            'dob'                => 'date',
             'password'           => 'hashed',
+            'wallet_balance'     => 'decimal:2',
         ];
     }
 
-    /**
-     * Generate a fresh 6-digit OTP and set expiry (10 minutes).
-     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($customer) {
+            if (empty($customer->referral_code)) {
+                $customer->referral_code = 'NEX-' . strtoupper(Str::random(6));
+            }
+        });
+    }
+
     public function generateOtp(): string
     {
         $otp = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
@@ -65,9 +83,6 @@ class Customer extends Authenticatable
         return $otp;
     }
 
-    /**
-     * Generate a fresh API token and persist it.
-     */
     public function generateApiToken(): string
     {
         $token = Str::random(60);
@@ -75,9 +90,6 @@ class Customer extends Authenticatable
         return $token;
     }
 
-    /**
-     * Check if the given OTP is valid and not expired.
-     */
     public function isOtpValid(string $otp): bool
     {
         return $this->otp === $otp
@@ -85,9 +97,6 @@ class Customer extends Authenticatable
             && $this->otp_expires_at->isFuture();
     }
 
-    /**
-     * Mark phone as verified and clear OTP.
-     */
     public function markPhoneVerified(): void
     {
         $this->update([
@@ -95,5 +104,25 @@ class Customer extends Authenticatable
             'otp'               => null,
             'otp_expires_at'    => null,
         ]);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'user_id');
+    }
+
+    public function referredBy()
+    {
+        return $this->belongsTo(Customer::class, 'referred_by_id');
+    }
+
+    public function referrals()
+    {
+        return $this->hasMany(Customer::class, 'referred_by_id');
+    }
+
+    public function walletTransactions()
+    {
+        return $this->hasMany(WalletTransaction::class, 'user_id');
     }
 }
