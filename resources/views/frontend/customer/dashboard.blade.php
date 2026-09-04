@@ -20,51 +20,8 @@
             </div>
             <div class="d-flex gap-3">
                 <div class="bg-white p-3 rounded-4 border text-center shadow-xs">
-                    <span class="small text-muted d-block">Referral Code</span>
-                    <span class="fs-5 fw-extrabold text-dark font-monospace">{{ $user->referral_code }}</span>
-                </div>
-                <div class="bg-white p-3 rounded-4 border text-center shadow-xs">
                     <span class="small text-muted d-block">Product Credit Wallet</span>
                     <span class="fs-4 fw-extrabold text-success">₹{{ number_format($user->wallet_balance ?? 0, 2) }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- REFERRAL TRACKING & PRODUCT CREDIT WALLET CARD -->
-    <div class="card card-nexvia p-4 mb-4 border-2 border-primary bg-primary bg-opacity-10">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-7">
-                <span class="badge bg-primary text-white mb-2">🎁 REFERRAL & CREDIT BENEFITS</span>
-                <h4 class="fw-bold text-dark mb-2">Invite Friends & Earn Product Credits</h4>
-                <p class="text-secondary small mb-3">
-                    Share your unique referral link with friends. When they book any product, you earn <strong>category-wise commission slabs (up to 5%)</strong> directly credited to your Product Credit Wallet!
-                </p>
-
-                <div class="input-group mb-2">
-                    <span class="input-group-text bg-white fw-semibold small">Your Referral Link:</span>
-                    <input type="text" class="form-control font-monospace small" id="refLinkInput" value="{{ route('customer.login', ['ref' => $user->referral_code]) }}" readonly>
-                    <button class="btn btn-primary fw-bold" onclick="copyRefLink()">
-                        <iconify-icon icon="solar:copy-bold" class="me-1 align-middle"></iconify-icon> Copy Link
-                    </button>
-                </div>
-                <span id="copyNotice" class="text-success small fw-bold d-none">Link copied to clipboard!</span>
-            </div>
-
-            <div class="col-lg-5">
-                <div class="row g-2 text-center">
-                    <div class="col-6">
-                        <div class="p-3 bg-white rounded-3 border">
-                            <span class="micro text-muted d-block">Total Referred Friends</span>
-                            <h3 class="fw-bold text-primary mb-0">{{ $totalReferralsCount }}</h3>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-3 bg-white rounded-3 border">
-                            <span class="micro text-muted d-block">Total Referral Credits</span>
-                            <h3 class="fw-bold text-success mb-0">₹{{ number_format($totalCreditsEarned, 2) }}</h3>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

@@ -24,18 +24,24 @@ class CustomerAuthController extends Controller
      */
     public function register(Request $request)
     {
+        $name = trim($request->input('fullName') ?? $request->input('name') ?? '');
+        if ($name !== '') {
+            $request->merge(['name' => $name, 'fullName' => $name]);
+        }
+
         $validator = Validator::make($request->all(), [
+            'fullName'    => 'nullable|string|max:255',
             'name'        => 'required|string|max:255',
             'phone'       => 'required|digits:10|unique:users,phone',
             'email'       => 'nullable|email|max:255|unique:users,email',
+            'password'    => 'nullable|string',
             'fcm_token'   => 'nullable|string',
-            'latitude'    => 'nullable|numeric|between:-90,90',
-            'longitude'   => 'nullable|numeric|between:-180,180',
-            'profile_pic' => 'nullable|file|mimes:jpeg,jpg,png,webp|max:2048',
         ], [
-            'phone.digits' => 'Phone number must be exactly 10 digits.',
-            'phone.unique' => 'This phone number is already registered.',
-            'email.unique' => 'This email is already registered.',
+            'name.required'  => 'Full name (fullName) is required.',
+            'phone.required' => 'Phone number is required.',
+            'phone.digits'   => 'Phone number must be exactly 10 digits.',
+            'phone.unique'   => 'This phone number is already registered.',
+            'email.unique'   => 'This email is already registered.',
         ]);
 
         if ($validator->fails()) {
@@ -47,52 +53,34 @@ class CustomerAuthController extends Controller
         }
 
         try {
-            $defaultPassword = $request->password ?? '12345678';
+            $password = $request->input('password') ?: trim($request->phone);
 
             $customerData = [
-                'name'              => trim($request->name),
+                'name'              => $name,
                 'phone'             => trim($request->phone),
                 'email'             => $request->email ? strtolower(trim($request->email)) : null,
-                'password'          => $defaultPassword,  // auto-hashed via cast
+                'password'          => $password, // auto-hashed via model cast
                 'fcm_token'         => $request->fcm_token ?? null,
-                'current_latitude'  => $request->latitude ?? null,
-                'current_longitude' => $request->longitude ?? null,
-                'status'            => 'active',           // account is active immediately
+                'status'            => 'active',
             ];
-
-            // Handle optional profile_pic file upload
-            $allFiles = $request->allFiles();
-            $picFile  = $request->file('profile_pic')
-                ?? collect($allFiles)->first(fn($v, $k) => str_starts_with($k, 'profile_pic'));
-
-            if ($picFile) {
-                if (!file_exists(public_path('customer_pics'))) {
-                    mkdir(public_path('customer_pics'), 0755, true);
-                }
-                $filename = 'customer_pic_' . time() . '_' . uniqid() . '.' . $picFile->getClientOriginalExtension();
-                $picFile->move(public_path('customer_pics'), $filename);
-                $customerData['profile_pic'] = $filename;
-            }
 
             $customer = Customer::create($customerData);
             $token = $customer->generateApiToken();
 
-            // Send Welcome + Password notification on WhatsApp
-            $this->sendWelcomeWhatsApp($customer->phone, $defaultPassword, $customer->name);
+            // Send Welcome notification on WhatsApp if configured
+            $this->sendWelcomeWhatsApp($customer->phone, $password, $customer->name);
 
             return response()->json([
                 'status'  => true,
                 'message' => 'Registration successful.',
                 'token'   => $token,
                 'data'    => [
-                    'id'              => $customer->id,
-                    'name'            => $customer->name,
-                    'phone'           => $customer->phone,
-                    'email'           => $customer->email,
-                    'fcm_token'       => $customer->fcm_token,
-                    'profile_pic_url' => $customer->profile_pic
-                        ? asset('customer_pics/' . $customer->profile_pic)
-                        : null,
+                    'id'        => $customer->id,
+                    'fullName'  => $customer->name,
+                    'name'      => $customer->name,
+                    'phone'     => $customer->phone,
+                    'email'     => $customer->email,
+                    'fcm_token' => $customer->fcm_token,
                 ],
             ], 201);
 
@@ -110,13 +98,13 @@ class CustomerAuthController extends Controller
     // -----------------------------------------------------------------------
 
     /**
-     * POST /api/customer/login
-     *
-     * Accepts: phone (or email), password, optional: fcm_token, latitude, longitude
+     * POST /api/auth/login or /api/customer/login
+     * Accepts: emailOrPhone (or phone or email), password
      */
     public function login(Request $request)
     {
         $loginInput = trim(
+            $request->input('emailOrPhone') ??
             $request->input('phone') ??
             $request->input('email') ??
             $request->input('login') ?? ''
@@ -125,8 +113,6 @@ class CustomerAuthController extends Controller
         $validator = Validator::make($request->all(), [
             'password'  => 'required|string',
             'fcm_token' => 'nullable|string',
-            'latitude'  => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         if (empty($loginInput) || $validator->fails()) {
@@ -157,17 +143,11 @@ class CustomerAuthController extends Controller
                 ], 403);
             }
 
-            // Save FCM token and location if passed during login
+            // Save FCM token if passed during login
             if ($request->has('fcm_token')) {
                 $customer->fcm_token = $request->fcm_token;
+                $customer->save();
             }
-            if ($request->has('latitude')) {
-                $customer->current_latitude = $request->latitude;
-            }
-            if ($request->has('longitude')) {
-                $customer->current_longitude = $request->longitude;
-            }
-            $customer->save();
 
             // Credentials are valid → generate token and return customer data directly
             $token = $customer->generateApiToken();
@@ -178,11 +158,11 @@ class CustomerAuthController extends Controller
                 'token'   => $token,
                 'data'    => [
                     'id'              => $customer->id,
+                    'fullName'        => $customer->name,
                     'name'            => $customer->name,
                     'phone'           => $customer->phone,
                     'email'           => $customer->email,
-                    'fcm_token'       => $customer->fcm_token,
-                    'profile_pic_url' => $customer->profile_pic
+                    'avatarUrl'       => $customer->profile_pic
                         ? asset('customer_pics/' . $customer->profile_pic)
                         : null,
                     'status'          => $customer->status,
@@ -198,18 +178,67 @@ class CustomerAuthController extends Controller
         }
     }
 
-    // -----------------------------------------------------------------------
-    // STEP 3 — Verify OTP: confirm OTP + return api_token
-    // -----------------------------------------------------------------------
+    /**
+     * POST /api/auth/send-otp
+     * Accepts: phone
+     */
+    public function sendOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|digits:10',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Validation error',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $customer = Customer::where('phone', $request->phone)->first();
+
+            if (!$customer) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'No account found with this phone number.',
+                ], 404);
+            }
+
+            $otp  = $customer->generateOtp();
+            $this->sendOtpWhatsApp($customer->phone, $otp, $customer->name);
+
+            return response()->json([
+                'status'    => true,
+                'message'   => 'OTP sent successfully.',
+                'phone'     => $customer->phone,
+                'otp'       => config('app.debug') ? $otp : null,
+                'otp_debug' => config('app.debug') ? $otp : null,
+                'data'      => [
+                    'phone' => $customer->phone,
+                    'otp'   => config('app.debug') ? $otp : null,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to send OTP.',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
 
     /**
-     * POST /api/customer/verify-otp
-     *
-     * Accepts: phone, otp
-     * Verifies OTP → marks phone verified → returns api_token for all future requests.
+     * POST /api/auth/verify-otp
+     * Accepts: phone, otpCode (or otp)
      */
     public function verifyOtp(Request $request)
     {
+        $otp = $request->input('otpCode') ?? $request->input('otp');
+        $request->merge(['otp' => $otp]);
+
         $validator = Validator::make($request->all(), [
             'phone' => 'required|digits:10',
             'otp'   => 'required|digits:6',
@@ -253,10 +282,11 @@ class CustomerAuthController extends Controller
                 'token'   => $token,
                 'data'    => [
                     'id'                => $customer->id,
+                    'fullName'          => $customer->name,
                     'name'              => $customer->name,
                     'phone'             => $customer->phone,
                     'email'             => $customer->email,
-                    'profile_pic_url'   => $customer->profile_pic
+                    'avatarUrl'         => $customer->profile_pic
                         ? asset('customer_pics/' . $customer->profile_pic)
                         : null,
                     'status'            => $customer->status,
@@ -272,15 +302,91 @@ class CustomerAuthController extends Controller
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Resend OTP — if not received or expired
-    // -----------------------------------------------------------------------
+    /**
+     * POST /api/auth/refresh-token
+     * Accepts: refreshToken (or Bearer token)
+     */
+    public function refreshToken(Request $request)
+    {
+        $token = $request->input('refreshToken')
+            ?? $request->input('token')
+            ?? $request->bearerToken();
+
+        if (!$token) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Refresh token or Authorization Bearer token is required.',
+            ], 400);
+        }
+
+        $customer = Customer::where('api_token', $token)->first();
+
+        if (!$customer) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invalid or expired refresh token.',
+            ], 401);
+        }
+
+        $newToken = $customer->generateApiToken();
+
+        return response()->json([
+            'status'       => true,
+            'message'      => 'Token refreshed successfully.',
+            'token'        => $newToken,
+            'refreshToken' => $newToken,
+        ], 200);
+    }
 
     /**
-     * POST /api/customer/resend-otp
-     *
+     * POST /api/auth/forgot-password
+     * Accepts: email (or phone)
+     */
+    public function forgotPassword(Request $request)
+    {
+        $input = trim($request->input('email') ?? $request->input('phone') ?? '');
+
+        if (empty($input)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Email or phone number is required.',
+            ], 422);
+        }
+
+        try {
+            $customer = Customer::where('email', strtolower($input))
+                ->orWhere('phone', $input)
+                ->first();
+
+            if (!$customer) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'No account found with the provided email or phone.',
+                ], 404);
+            }
+
+            $otp = $customer->generateOtp();
+            $this->sendOtpWhatsApp($customer->phone, $otp, $customer->name);
+
+            return response()->json([
+                'status'    => true,
+                'message'   => 'Password reset OTP sent to your registered WhatsApp phone number.',
+                'phone'     => $customer->phone,
+                'otp_debug' => config('app.debug') ? $otp : null,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to process forgot password request.',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/auth/resend-otp
      * Accepts: phone
-     * Rate-limited: 1 OTP per minute to prevent WhatsApp spam.
      */
     public function resendOtp(Request $request)
     {
@@ -308,11 +414,12 @@ class CustomerAuthController extends Controller
 
             // Rate-limit: allow resend only after 1 minute from last OTP
             if ($customer->otp_expires_at && $customer->otp_expires_at->isFuture()) {
-                $secondsLeft = now()->diffInSeconds($customer->otp_expires_at->subMinutes(9), false);
+                $secondsLeft = (int) ceil(now()->diffInSeconds($customer->otp_expires_at->subMinutes(9), false));
                 if ($secondsLeft > 0) {
                     return response()->json([
-                        'status'  => false,
-                        'message' => "Please wait {$secondsLeft} seconds before requesting a new OTP.",
+                        'status'       => false,
+                        'message'      => "Please wait {$secondsLeft} seconds before requesting a new OTP.",
+                        'retry_after'  => $secondsLeft,
                     ], 429);
                 }
             }
@@ -324,7 +431,12 @@ class CustomerAuthController extends Controller
                 'status'    => true,
                 'message'   => 'OTP resent to your WhatsApp number.',
                 'phone'     => $customer->phone,
+                'otp'       => config('app.debug') ? $otp : null,
                 'otp_debug' => config('app.debug') ? $otp : null,
+                'data'      => [
+                    'phone' => $customer->phone,
+                    'otp'   => config('app.debug') ? $otp : null,
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -348,6 +460,11 @@ class CustomerAuthController extends Controller
     private function sendOtpWhatsApp(string $phone, string $otp, string $name): bool
     {
         try {
+            $url = config('services.whatsapp.url');
+            if (empty($url)) {
+                return false;
+            }
+
             $whatsappNumber = '91' . $phone; // India country code
 
             $message = "Hello {$name}! 👋\n\n"
@@ -356,10 +473,10 @@ class CustomerAuthController extends Controller
                 . "This OTP is valid for *10 minutes*. Do not share it with anyone.\n\n"
                 . "_Route-Mate Team_";
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(3)->withHeaders([
                 'Authorization' => 'Bearer ' . config('services.whatsapp.token'),
                 'Content-Type'  => 'application/json',
-            ])->post(config('services.whatsapp.url'), [
+            ])->post($url, [
                 'token'   => config('services.whatsapp.token'),
                 'to'      => $whatsappNumber,
                 'message' => $message,
@@ -379,6 +496,11 @@ class CustomerAuthController extends Controller
     private function sendWelcomeWhatsApp(string $phone, string $password, string $name): bool
     {
         try {
+            $url = config('services.whatsapp.url');
+            if (empty($url)) {
+                return false;
+            }
+
             $whatsappNumber = '91' . $phone; // India country code
 
             $message = "Welcome to *Route-Mate*, {$name}! 🎉\n\n"
@@ -388,10 +510,10 @@ class CustomerAuthController extends Controller
                 . "Please use these credentials to login.\n\n"
                 . "_Route-Mate Team_";
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(3)->withHeaders([
                 'Authorization' => 'Bearer ' . config('services.whatsapp.token'),
                 'Content-Type'  => 'application/json',
-            ])->post(config('services.whatsapp.url'), [
+            ])->post($url, [
                 'token'   => config('services.whatsapp.token'),
                 'to'      => $whatsappNumber,
                 'message' => $message,
@@ -410,9 +532,12 @@ class CustomerAuthController extends Controller
      *
      * GET /api/customer/profile/{id?} or GET /api/customer/profile?customer_id=1
      */
+    /**
+     * GET /api/user/profile or /api/customer/profile
+     */
     public function profile(Request $request, $id = null)
     {
-        $authCustomer = $request->get('authenticated_customer');
+        $authCustomer = $request->get('authenticated_customer') ?? $request->user();
         $customerId   = $id ?? $request->input('customer_id') ?? $request->input('id') ?? $authCustomer?->id;
 
         if (!$customerId) {
@@ -433,9 +558,10 @@ class CustomerAuthController extends Controller
             }
 
             $customerData = $customer->toArray();
-            unset($customerData['otp_expires_at'], $customerData['phone_verified_at'], $customerData['email_verified_at']);
+            unset($customerData['otp_expires_at'], $customerData['phone_verified_at'], $customerData['email_verified_at'], $customerData['profile_pic']);
 
-            $customerData['profile_pic_url'] = $customer->profile_pic
+            $customerData['fullName']  = $customer->name;
+            $customerData['avatarUrl'] = $customer->profile_pic
                 ? asset('customer_pics/' . $customer->profile_pic)
                 : null;
 
@@ -456,14 +582,13 @@ class CustomerAuthController extends Controller
     }
 
     /**
-     * Update Customer Profile API (name, email, phone, profile_pic)
-     *
-     * POST /api/customer/update-profile
+     * PUT /api/user/profile or POST /api/customer/update-profile
+     * Accepts: fullName (or name), email, phone, avatarUrl (or profile_pic file/URL)
      */
     public function updateProfile(Request $request)
     {
-        $authCustomer = $request->get('authenticated_customer');
-        $targetId     = $request->input('customer_id') ?? $authCustomer?->id;
+        $authCustomer = $request->get('authenticated_customer') ?? $request->user();
+        $targetId     = $request->input('id') ?? $request->input('user_id') ?? $request->input('customer_id') ?? $authCustomer?->id;
 
         if (!$targetId) {
             return response()->json([
@@ -472,11 +597,19 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
+        $fullName = $request->input('fullName') ?? $request->input('name');
+        if ($fullName) {
+            $request->merge(['name' => trim($fullName)]);
+        }
+
         $validator = Validator::make($request->all(), [
             'name'        => 'sometimes|string|max:255',
             'email'       => 'sometimes|nullable|email|max:255|unique:users,email,' . $targetId,
             'phone'       => 'sometimes|digits:10|unique:users,phone,' . $targetId,
-            'profile_pic' => 'nullable|file|mimes:jpeg,jpg,png,webp|max:2048',
+            'profile_pic' => 'nullable',
+            'avatarUrl'   => 'nullable',
+            'avatar'      => 'nullable',
+            'image'       => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -492,36 +625,41 @@ class CustomerAuthController extends Controller
 
             // Update text fields if provided
             foreach (['name', 'email', 'phone'] as $field) {
-                if ($request->has($field)) {
+                if ($request->has($field) && !empty($request->$field)) {
                     $customer->$field = $request->$field;
                 }
             }
 
-            // Handle profile pic upload
+            // Handle file upload under any field name (avatarUrl, profile_pic, avatar, image, etc.)
             $allFiles = $request->allFiles();
             $picFile  = $request->file('profile_pic')
-                ?? collect($allFiles)->first(fn($v, $k) => str_starts_with($k, 'profile_pic'));
+                ?? $request->file('avatarUrl')
+                ?? $request->file('avatar')
+                ?? $request->file('image')
+                ?? collect($allFiles)->first();
 
-            if ($picFile) {
+            if ($picFile && $picFile->isValid()) {
                 if (!file_exists(public_path('customer_pics'))) {
                     mkdir(public_path('customer_pics'), 0755, true);
                 }
-                // Delete old profile pic
                 if ($customer->profile_pic && file_exists(public_path('customer_pics/' . $customer->profile_pic))) {
                     @unlink(public_path('customer_pics/' . $customer->profile_pic));
                 }
                 $filename = 'customer_pic_' . time() . '_' . uniqid() . '.' . $picFile->getClientOriginalExtension();
                 $picFile->move(public_path('customer_pics'), $filename);
                 $customer->profile_pic = $filename;
+            } elseif ($request->has('avatarUrl') && is_string($request->avatarUrl) && !empty($request->avatarUrl)) {
+                $customer->profile_pic = $request->avatarUrl;
             }
 
             $customer->save();
 
             $customerData = $customer->fresh()->toArray();
-            unset($customerData['otp_expires_at'], $customerData['phone_verified_at'], $customerData['email_verified_at']);
+            unset($customerData['otp_expires_at'], $customerData['phone_verified_at'], $customerData['email_verified_at'], $customerData['profile_pic']);
 
-            $customerData['profile_pic_url'] = $customer->profile_pic
-                ? asset('customer_pics/' . $customer->profile_pic)
+            $customerData['fullName']  = $customer->name;
+            $customerData['avatarUrl'] = $customer->profile_pic
+                ? (str_starts_with($customer->profile_pic, 'http') ? $customer->profile_pic : asset('customer_pics/' . $customer->profile_pic))
                 : null;
 
             return response()->json([
@@ -602,9 +740,18 @@ class CustomerAuthController extends Controller
     public function logout(Request $request)
     {
         try {
+            $token = $request->input('token') ?? $request->input('refreshToken') ?? $request->bearerToken();
+            $phone = $request->input('phone');
+
+            if ($token) {
+                Customer::where('api_token', $token)->update(['api_token' => null]);
+            } elseif ($phone) {
+                Customer::where('phone', $phone)->update(['api_token' => null]);
+            }
+
             return response()->json([
                 'status'  => true,
-                'message' => 'Customer logged out successfully.',
+                'message' => 'User logged out successfully.',
             ], 200);
 
         } catch (\Exception $e) {

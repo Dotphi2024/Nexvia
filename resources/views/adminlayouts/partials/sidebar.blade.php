@@ -32,6 +32,17 @@
                     </a>
                </li>
 
+               <li class="menu-title">Users & Customers</li>
+
+               <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.customers.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:users-group-two-rounded-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Customer Accounts</span>
+                    </a>
+               </li>
+
                <li class="menu-title">E-Commerce & Products</li>
 
                <li class="nav-item">
@@ -89,17 +100,6 @@
                               <iconify-icon icon="solar:shield-check-outline"></iconify-icon>
                          </span>
                          <span class="nav-text">Service Requests</span>
-                    </a>
-               </li>
-
-               <li class="menu-title">Storefront</li>
-
-               <li class="nav-item">
-                    <a class="nav-link" href="{{ route('home') }}" target="_blank">
-                         <span class="nav-icon">
-                              <iconify-icon icon="solar:shop-outline"></iconify-icon>
-                         </span>
-                         <span class="nav-text">View Customer Store</span>
                     </a>
                </li>
           </ul>

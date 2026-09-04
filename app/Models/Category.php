@@ -14,7 +14,6 @@ class Category extends Model
         'slug',
         'type',
         'commission_percentage',
-        'icon',
         'image',
         'description',
         'is_active',

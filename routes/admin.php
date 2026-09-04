@@ -40,4 +40,10 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     // Service & Warranty Requests
     Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('admin.service.requests.index');
     Route::post('/service-requests/{id}/status', [ServiceRequestController::class, 'updateStatus'])->name('admin.service.requests.status');
+
+    // Customer Account & Address Management
+    Route::get('/customers', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'index'])->name('admin.customers.index');
+    Route::get('/customers/{id}', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'show'])->name('admin.customers.show');
+    Route::post('/customers/{id}/status', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'updateStatus'])->name('admin.customers.status');
+    Route::delete('/customers/{id}', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'destroy'])->name('admin.customers.destroy');
 });
