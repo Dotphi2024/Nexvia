@@ -32,6 +32,8 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::get('/bookings/{id}', [BookingAdminController::class, 'show'])->name('admin.bookings.show');
     Route::post('/bookings/{id}/status', [BookingAdminController::class, 'updateStatus'])->name('admin.bookings.update.status');
     Route::get('/transfers-audit', [BookingAdminController::class, 'transfers'])->name('admin.transfers.audit');
+    Route::post('/transfers/{id}/approve', [BookingAdminController::class, 'approveTransfer'])->name('admin.transfers.approve');
+    Route::post('/transfers/{id}/reject', [BookingAdminController::class, 'rejectTransfer'])->name('admin.transfers.reject');
 
     // Booking Engine Configuration Controls
     Route::get('/booking-engine', [BookingEngineController::class, 'settings'])->name('admin.booking.engine.settings');

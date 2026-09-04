@@ -59,6 +59,11 @@ class CustomerAuthController extends Controller
                 'name'              => $name,
                 'phone'             => trim($request->phone),
                 'email'             => $request->email ? strtolower(trim($request->email)) : null,
+                'pincode'           => $request->pincode ?? null,
+                'city'              => $request->city ?? null,
+                'state'             => $request->state ?? null,
+                'dob'               => $request->dob ?? null,
+                'gst_number'        => $request->gst_number ?? null,
                 'password'          => $password, // auto-hashed via model cast
                 'fcm_token'         => $request->fcm_token ?? null,
                 'status'            => 'active',
@@ -624,7 +629,7 @@ class CustomerAuthController extends Controller
             $customer = $authCustomer && $authCustomer->id == $targetId ? $authCustomer : Customer::findOrFail($targetId);
 
             // Update text fields if provided
-            foreach (['name', 'email', 'phone'] as $field) {
+            foreach (['name', 'email', 'phone', 'pincode', 'city', 'state', 'dob', 'gst_number'] as $field) {
                 if ($request->has($field) && !empty($request->$field)) {
                     $customer->$field = $request->$field;
                 }

@@ -1,13 +1,13 @@
 @extends('adminlayouts.vertical', ['title' => 'Categories'])
 
-@section('title', 'Category & Commission Slab Management')
+@section('title', 'Category & Product Credit Management')
 
 @section('content')
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-dark mb-1">Categories & Commission Slabs</h4>
-            <p class="text-muted small mb-0">Manage product categories, category images, and referral reward percentage slabs</p>
+            <h4 class="fw-bold text-dark mb-1">Categories & Product Credit Slabs</h4>
+            <p class="text-muted small mb-0">Manage product categories, category images, and referral Product Credit percentage slabs (10% to 20%)</p>
         </div>
     </div>
 
@@ -42,11 +42,12 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Commission Slab (%) *</label>
+                            <label class="form-label fw-semibold text-dark">Starting Product Credit (%) *</label>
                             <div class="input-group">
-                                <input type="number" step="0.01" name="commission_percentage" class="form-control" value="5.00" required>
-                                <span class="input-group-text bg-light fw-bold">%</span>
+                                <input type="number" step="0.01" name="commission_percentage" class="form-control" value="10.00" required>
+                                <span class="input-group-text bg-light fw-bold">% Credit</span>
                             </div>
+                            <span class="text-muted micro d-block mt-1">Tier progression: 1st=10%, 2nd=12%, 3rd=15%, 4th=18%, 5th+=20%</span>
                         </div>
 
                         <div class="mb-3">
@@ -80,7 +81,7 @@
                                     <th>Image</th>
                                     <th>Category Name</th>
                                     <th>Type</th>
-                                    <th>Commission Slab</th>
+                                    <th>Product Credit Slabs</th>
                                     <th class="text-end">Action</th>
                                 </tr>
                             </thead>
@@ -108,7 +109,7 @@
                                         </td>
                                         <td>
                                             <span class="badge bg-success-subtle text-success fw-bold">
-                                                {{ $category->commission_percentage ?? 3.00 }}%
+                                                10% → 20% Product Credit
                                             </span>
                                         </td>
                                         <td class="text-end">
