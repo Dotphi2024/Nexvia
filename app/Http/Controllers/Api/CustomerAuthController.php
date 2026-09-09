@@ -67,7 +67,13 @@ class CustomerAuthController extends Controller
             // 1. Check if registered using a referral code
             $referredById = null;
             $referrerInfo = null;
-            $refInput = $request->input('referral_code') ?? $request->input('referred_by') ?? $request->input('ref');
+            $refInput = $request->input('referral_code')
+                ?? $request->input('referralCode')
+                ?? $request->input('refferal_code')
+                ?? $request->input('referred_by')
+                ?? $request->input('ref')
+                ?? $request->input('referral code')
+                ?? $request->input('refferal code');
             if (!empty($refInput)) {
                 $refInput = strtoupper(trim($refInput));
                 $referrer = Customer::where('referral_code', $refInput)->first();
@@ -159,26 +165,36 @@ class CustomerAuthController extends Controller
 
     /**
      * POST /api/auth/login or /api/customer/login
-     * Accepts: emailOrPhone (or phone or email), password
+     * Password-less login.
+     * Accepts: phone (or email, emailOrPhone, mobile)
      */
     public function login(Request $request)
     {
+        $bodyJson = json_decode($request->getContent(), true) ?? [];
+        $trimmedJson = [];
+        if (is_array($bodyJson)) {
+            foreach ($bodyJson as $key => $val) {
+                $trimmedJson[trim($key)] = $val;
+            }
+        }
+
         $loginInput = trim(
-            $request->input('emailOrPhone') ??
             $request->input('phone') ??
+            $request->input('emailOrPhone') ??
             $request->input('email') ??
-            $request->input('login') ?? ''
+            $request->input('mobile') ??
+            $request->input('login') ??
+            ($trimmedJson['phone'] ?? null) ??
+            ($trimmedJson['emailOrPhone'] ?? null) ??
+            ($trimmedJson['email'] ?? null) ??
+            ($trimmedJson['mobile'] ?? null) ??
+            ($trimmedJson['login'] ?? null) ?? ''
         );
 
-        $validator = Validator::make($request->all(), [
-            'password'  => 'required|string',
-            'fcm_token' => 'nullable|string',
-        ]);
-
-        if (empty($loginInput) || $validator->fails()) {
+        if (empty($loginInput)) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Phone/email and password are required.',
+                'message' => 'Phone number or email is required.',
             ], 422);
         }
 
@@ -187,12 +203,12 @@ class CustomerAuthController extends Controller
                 ->orWhere('email', strtolower($loginInput))
                 ->first();
 
-            // Guard: wrong credentials
-            if (!$customer || !Hash::check($request->password, $customer->password)) {
+            // Guard: user not found
+            if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Invalid phone/email or password.',
-                ], 401);
+                    'message' => 'No account found with this phone/email. Please register first.',
+                ], 404);
             }
 
             // Guard: deactivated account
@@ -203,13 +219,19 @@ class CustomerAuthController extends Controller
                 ], 403);
             }
 
+            // Optional: If password is provided and not empty, and developer wishes to verify it
+            // if ($request->filled('password') && !Hash::check($request->password, $customer->password)) {
+            //     return response()->json(['status' => false, 'message' => 'Invalid password.'], 401);
+            // }
+
             // Save FCM token if passed during login
-            if ($request->has('fcm_token')) {
-                $customer->fcm_token = $request->fcm_token;
+            $fcmToken = $request->input('fcm_token') ?? ($trimmedJson['fcm_token'] ?? null);
+            if (!empty($fcmToken)) {
+                $customer->fcm_token = $fcmToken;
                 $customer->save();
             }
 
-            // Credentials are valid → generate token and return customer data directly
+            // Generate authentication token and return customer data directly
             $token = $customer->generateApiToken();
 
             return response()->json([
@@ -228,6 +250,9 @@ class CustomerAuthController extends Controller
                     'self_dealer_code'   => $customer->self_dealer_code,
                     'self_dealer_status' => $customer->self_dealer_status ?? 'inactive',
                     'wallet_balance'     => (float) ($customer->wallet_balance ?? 0),
+                    'city'               => $customer->city,
+                    'state'              => $customer->state,
+                    'pincode'            => $customer->pincode,
                     'avatarUrl'          => $customer->profile_pic
                         ? asset('customer_pics/' . $customer->profile_pic)
                         : null,
@@ -632,8 +657,23 @@ class CustomerAuthController extends Controller
             $customerData = $customer->toArray();
             unset($customerData['otp_expires_at'], $customerData['phone_verified_at'], $customerData['email_verified_at'], $customerData['profile_pic']);
 
-            $customerData['fullName']  = $customer->name;
-            $customerData['avatarUrl'] = $customer->profile_pic
+            // Get saved addresses
+            $savedAddresses = \App\Models\UserAddress::where('user_id', $customer->id)
+                ->orderBy('is_default', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $defaultAddress = $savedAddresses->firstWhere('is_default', true) ?? $savedAddresses->first();
+
+            $customerData['fullName']        = $customer->name;
+            $customerData['address']         = $customer->address ?: ($defaultAddress?->street ?? null);
+            $customerData['street']          = $customerData['address'];
+            $customerData['city']            = $customer->city ?: ($defaultAddress?->city ?? null);
+            $customerData['state']           = $customer->state ?: ($defaultAddress?->state ?? null);
+            $customerData['pincode']         = $customer->pincode ?: ($defaultAddress?->pincode ?? null);
+            $customerData['default_address'] = $defaultAddress;
+            $customerData['saved_addresses'] = $savedAddresses;
+            $customerData['avatarUrl']       = $customer->profile_pic
                 ? asset('customer_pics/' . $customer->profile_pic)
                 : null;
 
@@ -655,7 +695,7 @@ class CustomerAuthController extends Controller
 
     /**
      * PUT /api/user/profile or POST /api/customer/update-profile
-     * Accepts: fullName (or name), email, phone, avatarUrl (or profile_pic file/URL)
+     * Accepts: fullName (or name), email, phone, address, street, city, state, pincode, avatarUrl (or profile_pic file/URL)
      */
     public function updateProfile(Request $request)
     {
@@ -666,6 +706,7 @@ class CustomerAuthController extends Controller
             return response()->json([
                 'status'  => false,
                 'message' => 'Customer ID or Authorization token is required.',
+                'error'   => 'Customer ID is required',
             ], 422);
         }
 
@@ -674,10 +715,19 @@ class CustomerAuthController extends Controller
             $request->merge(['name' => trim($fullName)]);
         }
 
+        $bodyJson = json_decode($request->getContent(), true) ?? [];
+        $addressVal = $request->input('address')
+            ?? $request->input('street')
+            ?? $request->input('address_line')
+            ?? ($bodyJson['address'] ?? null)
+            ?? ($bodyJson['street'] ?? null)
+            ?? ($bodyJson['address_line'] ?? null);
+
         $validator = Validator::make($request->all(), [
             'name'        => 'sometimes|string|max:255',
             'email'       => 'sometimes|nullable|email|max:255|unique:users,email,' . $targetId,
             'phone'       => 'sometimes|digits:10|unique:users,phone,' . $targetId,
+            'address'     => 'nullable|string',
             'profile_pic' => 'nullable',
             'avatarUrl'   => 'nullable',
             'avatar'      => 'nullable',
@@ -695,10 +745,40 @@ class CustomerAuthController extends Controller
         try {
             $customer = $authCustomer && $authCustomer->id == $targetId ? $authCustomer : Customer::findOrFail($targetId);
 
+            if ($addressVal) {
+                $customer->address = $addressVal;
+            }
+
             // Update text fields if provided
-            foreach (['name', 'email', 'phone', 'pincode', 'city', 'state', 'dob', 'gst_number'] as $field) {
+            foreach (['name', 'email', 'phone', 'address', 'pincode', 'city', 'state', 'dob', 'gst_number'] as $field) {
                 if ($request->has($field) && !empty($request->$field)) {
                     $customer->$field = $request->$field;
+                }
+            }
+
+            // Sync with default UserAddress if address provided
+            if (!empty($customer->address)) {
+                $defaultAddr = \App\Models\UserAddress::where('user_id', $customer->id)->where('is_default', true)->first();
+                if ($defaultAddr) {
+                    $defaultAddr->update([
+                        'name'    => $customer->name,
+                        'phone'   => $customer->phone,
+                        'street'  => $customer->address,
+                        'city'    => $customer->city ?: $defaultAddr->city,
+                        'state'   => $customer->state ?: $defaultAddr->state,
+                        'pincode' => $customer->pincode ?: $defaultAddr->pincode,
+                    ]);
+                } else {
+                    \App\Models\UserAddress::create([
+                        'user_id'    => $customer->id,
+                        'name'       => $customer->name,
+                        'phone'      => $customer->phone,
+                        'street'     => $customer->address,
+                        'city'       => $customer->city ?: 'Mumbai',
+                        'state'      => $customer->state ?: 'Maharashtra',
+                        'pincode'    => $customer->pincode ?: '400001',
+                        'is_default' => true,
+                    ]);
                 }
             }
 
@@ -807,23 +887,64 @@ class CustomerAuthController extends Controller
     /**
      * Customer Logout API
      *
-     * POST /api/customer/logout
+     * POST /api/customer/logout or /api/auth/logout or /api/logout
+     * Requires: user_id (or id, customer_id)
      */
     public function logout(Request $request)
     {
         try {
-            $token = $request->input('token') ?? $request->input('refreshToken') ?? $request->bearerToken();
-            $phone = $request->input('phone');
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
 
-            if ($token) {
-                Customer::where('api_token', $token)->update(['api_token' => null]);
-            } elseif ($phone) {
-                Customer::where('phone', $phone)->update(['api_token' => null]);
+            // Extract user ID from query, body, or JSON payload
+            $userId = $request->input('user_id')
+                ?? $request->input('id')
+                ?? $request->input('customer_id')
+                ?? ($bodyJson['user_id'] ?? null)
+                ?? ($bodyJson['id'] ?? null)
+                ?? ($bodyJson['customer_id'] ?? null);
+
+            // MANDATORY CHECK: Do NOT logout without User ID!
+            if (empty($userId)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'User ID is required to logout. Please pass user_id (or id).',
+                    'errors'  => [
+                        'user_id' => ['The user_id field is required.'],
+                    ],
+                ], 422);
             }
+
+            $customer = Customer::find($userId);
+
+            if (!$customer) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => "User not found with ID: {$userId}. Cannot perform logout.",
+                ], 404);
+            }
+
+            // Invalidate/clear active api_token
+            $customer->api_token = null;
+            $customer->save();
+
+            // Clear active guards
+            try {
+                auth()->guard('customer')->logout();
+            } catch (\Throwable $e) {}
+
+            try {
+                auth()->guard('web')->logout();
+            } catch (\Throwable $e) {}
 
             return response()->json([
                 'status'  => true,
                 'message' => 'User logged out successfully.',
+                'user_id' => (int) $userId,
+                'data'    => [
+                    'user_id' => (int) $userId,
+                    'name'    => $customer->name,
+                    'phone'   => $customer->phone,
+                ],
             ], 200);
 
         } catch (\Exception $e) {

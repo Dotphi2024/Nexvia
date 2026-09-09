@@ -10,19 +10,39 @@ use App\Http\Controllers\Api\ReferralWalletApiController;
 use App\Http\Controllers\Api\OrderDeliveryApiController;
 use App\Http\Controllers\Api\WarrantyAndServiceApiController;
 use App\Http\Controllers\Api\SelfDealerApiController;
+use App\Http\Controllers\Api\BannerApiController;
+use App\Http\Controllers\Api\WishlistApiController;
+use App\Http\Controllers\Api\CartApiController;
+use App\Http\Controllers\Api\CheckoutApiController;
+use App\Http\Controllers\Api\PaymentApiController;
 
 Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
 });
 
 // Categories & Products Public APIs
-Route::get('/categories', [CategoryApiController::class, 'index']);
-Route::get('/products',   [ProductApiController::class, 'index']);
-Route::post('/products',  [ProductApiController::class, 'index']);
-Route::get('/products/{idOrSlug}', [ProductApiController::class, 'show']);
+Route::get('/categories',           [CategoryApiController::class, 'index']);
+Route::post('/categories',          [CategoryApiController::class, 'index']);
+Route::get('/categories/{idOrSlug}',[CategoryApiController::class, 'show']);
+Route::get('/products/trending',     [ProductApiController::class, 'trending']);
+Route::post('/products/trending',    [ProductApiController::class, 'trending']);
+Route::get('/products/search',       [ProductApiController::class, 'search']);
+Route::post('/products/search',      [ProductApiController::class, 'search']);
+Route::get('/products',              [ProductApiController::class, 'index']);
+Route::post('/products',             [ProductApiController::class, 'index']);
+Route::get('/products/{idOrSlug}',   [ProductApiController::class, 'show']);
+Route::post('/products/{idOrSlug}',  [ProductApiController::class, 'show']);
+Route::get('/products/detail/{idOrSlug}', [ProductApiController::class, 'show']);
 
 // Order Delivery Tracking Public API
 Route::get('/deliveries/{trackingNumber}', [OrderDeliveryApiController::class, 'trackDelivery']);
+
+// Home Section Banners Public API (Home Index Page Sliders & Promos)
+Route::get('/home/banners',         [BannerApiController::class, 'index']);
+Route::get('/home-banners',         [BannerApiController::class, 'index']);
+Route::get('/banners',              [BannerApiController::class, 'index']);
+Route::get('/customer/banners',     [BannerApiController::class, 'index']);
+Route::post('/banners/{id}/click',  [BannerApiController::class, 'recordClick']);
 
 // Auth Routes (/api/auth/*)
 Route::prefix('auth')->group(function () {
@@ -33,11 +53,13 @@ Route::prefix('auth')->group(function () {
     Route::post('/refresh-token',   [CustomerAuthController::class, 'refreshToken']);
     Route::post('/forgot-password', [CustomerAuthController::class, 'forgotPassword']);
     Route::post('/resend-otp',      [CustomerAuthController::class, 'resendOtp']);
-    Route::post('/logout',          [CustomerAuthController::class, 'logout']);
+    Route::match(['get', 'post'], '/logout', [CustomerAuthController::class, 'logout']);
     Route::get('/categories',       [CategoryApiController::class, 'index']);
     Route::get('/products',         [ProductApiController::class, 'index']);
     Route::post('/products',        [ProductApiController::class, 'index']);
 });
+
+Route::match(['get', 'post'], '/logout', [CustomerAuthController::class, 'logout']);
 
 // User Profile & Address Routes (/api/user/*)
 Route::prefix('user')->middleware('customer.auth')->group(function () {
@@ -57,9 +79,15 @@ Route::prefix('user')->middleware('customer.auth')->group(function () {
 // Customer Protected Routes (/api/customer/*)
 Route::prefix('customer')->group(function () {
     Route::get('/categories',          [CategoryApiController::class, 'index']);
-    Route::get('/products',            [ProductApiController::class, 'index']);
-    Route::post('/products',           [ProductApiController::class, 'index']);
-    Route::get('/products/{idOrSlug}', [ProductApiController::class, 'show']);
+    Route::post('/categories',         [CategoryApiController::class, 'index']);
+    Route::get('/categories/{idOrSlug}',[CategoryApiController::class, 'show']);
+    Route::get('/products/trending',     [ProductApiController::class, 'trending']);
+    Route::post('/products/trending',    [ProductApiController::class, 'trending']);
+    Route::get('/products/search',       [ProductApiController::class, 'search']);
+    Route::post('/products/search',      [ProductApiController::class, 'search']);
+    Route::get('/products',              [ProductApiController::class, 'index']);
+    Route::post('/products',             [ProductApiController::class, 'index']);
+    Route::get('/products/{idOrSlug}',   [ProductApiController::class, 'show']);
     Route::post('/register',           [CustomerAuthController::class, 'register']);
     Route::post('/login',              [CustomerAuthController::class, 'login']);
     Route::post('/send-otp',           [CustomerAuthController::class, 'sendOtp']);
@@ -67,7 +95,7 @@ Route::prefix('customer')->group(function () {
     Route::post('/refresh-token',      [CustomerAuthController::class, 'refreshToken']);
     Route::post('/forgot-password',    [CustomerAuthController::class, 'forgotPassword']);
     Route::post('/resend-otp',         [CustomerAuthController::class, 'resendOtp']);
-    Route::post('/logout',             [CustomerAuthController::class, 'logout']);
+    Route::match(['get', 'post'], '/logout', [CustomerAuthController::class, 'logout']);
 
     Route::middleware('customer.auth')->group(function () {
         Route::get('/profile',          [CustomerAuthController::class, 'profile']);
@@ -83,6 +111,7 @@ Route::prefix('customer')->group(function () {
         Route::post('/addresses/remove', [UserAddressController::class, 'destroy']);
 
         // Bookings & 60-Day Balance Routes
+        Route::match(['get', 'post'], '/bookings/list',   [BookingApiController::class, 'index']);
         Route::get('/bookings',                           [BookingApiController::class, 'index']);
         Route::post('/bookings',                          [BookingApiController::class, 'store']);
         Route::get('/bookings/{id}',                      [BookingApiController::class, 'show']);
@@ -114,8 +143,90 @@ Route::prefix('customer')->group(function () {
             Route::post('/redeem',              [SelfDealerApiController::class, 'redeem']);
         });
         Route::post('/referral/apply',          [SelfDealerApiController::class, 'applyReferralCode']);
+
+        // Wishlist / Favorites Routes (/api/customer/wishlist)
+        Route::match(['get', 'post'], '/wishlist/list', [WishlistApiController::class, 'index']);
+        Route::get('/wishlist',                         [WishlistApiController::class, 'index']);
+        Route::post('/wishlist',                        [WishlistApiController::class, 'store']);
+        Route::post('/wishlist/add',                    [WishlistApiController::class, 'store']);
+        Route::post('/wishlist/toggle',                 [WishlistApiController::class, 'toggle']);
+        Route::delete('/wishlist/clear',                [WishlistApiController::class, 'clear']);
+        Route::post('/wishlist/clear',                  [WishlistApiController::class, 'clear']);
+        Route::get('/wishlist/check/{productId}',       [WishlistApiController::class, 'check']);
+        Route::delete('/wishlist/{productId?}',         [WishlistApiController::class, 'destroy']);
+        Route::post('/wishlist/remove',                 [WishlistApiController::class, 'destroy']);
+        Route::post('/wishlist/delete',                 [WishlistApiController::class, 'destroy']);
+
+        // Customer Cart Routes (/api/customer/cart)
+        Route::match(['get', 'post'], '/cart/list',      [CartApiController::class, 'index']);
+        Route::get('/cart',                              [CartApiController::class, 'index']);
+        Route::post('/cart',                             [CartApiController::class, 'store']);
+        Route::post('/cart/add',                         [CartApiController::class, 'store']);
+        Route::match(['post', 'put'], '/cart/update',    [CartApiController::class, 'update']);
+        Route::match(['delete', 'post'], '/cart/remove', [CartApiController::class, 'destroy']);
+        Route::match(['delete', 'post'], '/cart/delete', [CartApiController::class, 'destroy']);
+        Route::delete('/cart/clear',                     [CartApiController::class, 'clear']);
+        Route::post('/cart/clear',                       [CartApiController::class, 'clear']);
+        Route::delete('/cart/{id}',                      [CartApiController::class, 'destroy']);
+
+        // Checkout Calculate Route (/api/customer/checkout/calculate)
+        Route::post('/checkout/calculate',               [CheckoutApiController::class, 'calculate']);
+
+        // Payment Order & Gateway Routes (/api/customer/payments/*)
+        Route::post('/payments/create-order',            [PaymentApiController::class, 'createOrder']);
+        Route::post('/payments/verify',                  [PaymentApiController::class, 'verifyPayment']);
     });
 });
+
+// Direct Wishlist Routes (/api/wishlist/*)
+Route::match(['get', 'post'], '/wishlist/list',         [WishlistApiController::class, 'index']);
+Route::get('/wishlist',                                 [WishlistApiController::class, 'index']);
+Route::post('/wishlist',                                [WishlistApiController::class, 'store']);
+Route::post('/wishlist/add',                            [WishlistApiController::class, 'store']);
+Route::post('/wishlist/toggle',                         [WishlistApiController::class, 'toggle']);
+Route::delete('/wishlist/clear',                        [WishlistApiController::class, 'clear']);
+Route::post('/wishlist/clear',                          [WishlistApiController::class, 'clear']);
+Route::get('/wishlist/check/{productId}',               [WishlistApiController::class, 'check']);
+Route::delete('/wishlist/{productId?}',                 [WishlistApiController::class, 'destroy']);
+Route::post('/wishlist/remove',                         [WishlistApiController::class, 'destroy']);
+Route::post('/wishlist/delete',                         [WishlistApiController::class, 'destroy']);
+
+// Direct Cart Routes (/api/cart/*)
+Route::match(['get', 'post'], '/cart/list',             [CartApiController::class, 'index']);
+Route::get('/cart',                                     [CartApiController::class, 'index']);
+Route::post('/cart',                                    [CartApiController::class, 'store']);
+Route::post('/cart/add',                                [CartApiController::class, 'store']);
+Route::match(['post', 'put'], '/cart/update',           [CartApiController::class, 'update']);
+Route::match(['delete', 'post'], '/cart/remove',        [CartApiController::class, 'destroy']);
+Route::match(['delete', 'post'], '/cart/delete',        [CartApiController::class, 'destroy']);
+Route::delete('/cart/clear',                            [CartApiController::class, 'clear']);
+Route::post('/cart/clear',                              [CartApiController::class, 'clear']);
+Route::delete('/cart/{id}',                             [CartApiController::class, 'destroy']);
+
+// Direct Checkout Calculate Route (/api/checkout/calculate)
+Route::post('/checkout/calculate',                      [CheckoutApiController::class, 'calculate']);
+
+// Direct Payment Order & Gateway Routes (/api/payments/*)
+Route::post('/payments/create-order',                   [PaymentApiController::class, 'createOrder']);
+Route::post('/payments/verify',                         [PaymentApiController::class, 'verifyPayment']);
+
+// Direct Bookings Routes (/api/bookings/*)
+Route::match(['get', 'post'], '/bookings/list',         [BookingApiController::class, 'index']);
+Route::match(['get', 'post'], '/booking/list',          [BookingApiController::class, 'index']);
+Route::post('/bookings',                                [BookingApiController::class, 'store']);
+Route::post('/booking',                                 [BookingApiController::class, 'store']);
+Route::get('/bookings',                                 [BookingApiController::class, 'index']);
+Route::get('/booking',                                  [BookingApiController::class, 'index']);
+Route::get('/bookings/{id}',                            [BookingApiController::class, 'show']);
+
+// Direct Address Routes (/api/addresses/*)
+Route::match(['get', 'post'], '/addresses/list',         [UserAddressController::class, 'index']);
+Route::get('/addresses',                                 [UserAddressController::class, 'index']);
+Route::post('/addresses',                                [UserAddressController::class, 'store']);
+Route::post('/addresses/add',                            [UserAddressController::class, 'store']);
+Route::match(['delete', 'post'], '/addresses/remove',    [UserAddressController::class, 'destroy']);
+Route::match(['delete', 'post'], '/addresses/delete',    [UserAddressController::class, 'destroy']);
+Route::delete('/addresses/{id?}',                        [UserAddressController::class, 'destroy']);
 
 // =============================================================================
 // V1 SELF DEALER & REFERRAL API SPECIFICATION (DOCUMENTATION SECTION 17)

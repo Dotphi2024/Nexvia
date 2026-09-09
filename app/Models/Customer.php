@@ -18,6 +18,7 @@ class Customer extends Authenticatable
         'name',
         'email',
         'phone',
+        'address',
         'pincode',
         'city',
         'state',
@@ -155,5 +156,20 @@ class Customer extends Authenticatable
     public function referralTransactions()
     {
         return $this->hasMany(Referral::class, 'referrer_id');
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class, 'user_id');
+    }
+
+    public function wishlistProducts()
+    {
+        return $this->belongsToMany(Product::class, 'wishlists', 'user_id', 'product_id')->withTimestamps();
+    }
+
+    public function cartItems()
+    {
+        return $this->hasMany(CartItem::class, 'user_id');
     }
 }

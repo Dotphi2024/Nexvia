@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\BookingAdminController;
 use App\Http\Controllers\Admin\BookingEngineController;
 use App\Http\Controllers\Admin\ServiceRequestController;
+use App\Http\Controllers\Admin\BannerAdminController;
 
 // AdminPanel Routes
 Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->group(function () {
@@ -16,6 +17,8 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     // Category Management
     Route::get('/categories', [CategoryAdminController::class, 'index'])->name('admin.categories.index');
     Route::post('/categories', [CategoryAdminController::class, 'store'])->name('admin.categories.store');
+    Route::put('/categories/{id}', [CategoryAdminController::class, 'update'])->name('admin.categories.update');
+    Route::post('/categories/{id}/update', [CategoryAdminController::class, 'update'])->name('admin.categories.update.post');
     Route::delete('/categories/{id}', [CategoryAdminController::class, 'destroy'])->name('admin.categories.destroy');
 
     // Product Management
@@ -25,7 +28,16 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::get('/products/{id}/edit', [ProductAdminController::class, 'edit'])->name('admin.products.edit');
     Route::put('/products/{id}', [ProductAdminController::class, 'update'])->name('admin.products.update');
     Route::post('/products/{id}/status', [ProductAdminController::class, 'toggleStatus'])->name('admin.products.status');
+    Route::post('/products/{id}/featured', [ProductAdminController::class, 'toggleFeatured'])->name('admin.products.featured');
     Route::delete('/products/{id}', [ProductAdminController::class, 'destroy'])->name('admin.products.destroy');
+
+    // Banner & Slider Management
+    Route::get('/banners', [BannerAdminController::class, 'index'])->name('admin.banners.index');
+    Route::post('/banners', [BannerAdminController::class, 'store'])->name('admin.banners.store');
+    Route::get('/banners/{id}/edit', [BannerAdminController::class, 'edit'])->name('admin.banners.edit');
+    Route::put('/banners/{id}', [BannerAdminController::class, 'update'])->name('admin.banners.update');
+    Route::post('/banners/{id}/status', [BannerAdminController::class, 'toggleStatus'])->name('admin.banners.status');
+    Route::delete('/banners/{id}', [BannerAdminController::class, 'destroy'])->name('admin.banners.destroy');
 
     // Bookings & 60-Day Balance Management
     Route::get('/bookings', [BookingAdminController::class, 'index'])->name('admin.bookings.index');

@@ -70,6 +70,8 @@ class CustomerApiTokenMiddleware
 
         // Attach authenticated customer to request
         $request->attributes->set('authenticated_customer', $customer);
+        $request->setUserResolver(fn() => $customer);
+        auth()->guard('customer')->setUser($customer);
 
         return $next($request);
     }

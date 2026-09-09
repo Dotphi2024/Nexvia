@@ -24,7 +24,8 @@
                 <table class="table table-hover align-middle mb-0 text-nowrap">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">Receipt #</th>
+                            <th class="ps-4" style="width: 60px;">#</th>
+                            <th>Receipt #</th>
                             <th>Customer</th>
                             <th>Product Name</th>
                             <th>20% Paid</th>
@@ -36,9 +37,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($bookings as $booking)
+                        @forelse($bookings as $booking)
                             <tr>
-                                <td class="ps-4">
+                                <td class="ps-4 text-muted small fw-semibold">
+                                    {{ $loop->iteration + ($bookings->currentPage() - 1) * $bookings->perPage() }}
+                                </td>
+                                <td>
                                     <span class="badge bg-primary-subtle text-primary font-monospace fs-13 fw-bold">#{{ $booking->booking_number }}</span>
                                 </td>
                                 <td>
@@ -46,7 +50,7 @@
                                     <span class="text-muted micro">{{ $booking->customer_phone }}</span>
                                 </td>
                                 <td>
-                                    <span class="fs-13 text-dark font-monospace text-wrap d-inline-block" style="max-width: 200px;">{{ $booking->product_name }}</span>
+                                    <span class="fs-13 text-dark text-wrap d-inline-block" style="max-width: 280px;">{{ $booking->product_name }}</span>
                                 </td>
                                 <td class="text-success fw-extrabold fs-14">₹{{ number_format($booking->booking_amount, 2) }}</td>
                                 <td class="text-danger fw-bold fs-14">₹{{ number_format($booking->balance_amount, 2) }}</td>
@@ -74,7 +78,13 @@
                                     <a href="{{ route('admin.bookings.show', $booking->id) }}" class="btn btn-sm btn-soft-primary px-3 rounded-pill">Inspect Receipt</a>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="10" class="text-center py-5 text-muted">
+                                    <p class="mb-0 fw-semibold">No customer bookings found.</p>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

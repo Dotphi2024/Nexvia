@@ -16,6 +16,8 @@ class Booking extends Model
         'product_id',
         'product_name',
         'model_code',
+        'selected_color',
+        'quantity',
         'mrp',
         'booking_amount',
         'balance_amount',
@@ -28,6 +30,7 @@ class Booking extends Model
         'non_refundable_accepted',
         'customer_name',
         'customer_phone',
+        'customer_email',
         'shipping_address',
         'pincode',
         'city',
@@ -41,6 +44,7 @@ class Booking extends Model
         'mrp' => 'decimal:2',
         'booking_amount' => 'decimal:2',
         'balance_amount' => 'decimal:2',
+        'quantity' => 'integer',
         'non_refundable_accepted' => 'boolean',
     ];
 

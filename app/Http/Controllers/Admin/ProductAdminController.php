@@ -10,11 +10,42 @@ use Illuminate\Support\Str;
 
 class ProductAdminController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('category')->latest()->paginate(15);
-        $categories = Category::all();
-        return view('admin.products.index', compact('products', 'categories'));
+        $filter = $request->query('filter', 'all');
+        $categoryId = $request->query('category_id');
+        $search = trim((string)$request->query('q'));
+
+        $query = Product::with('category');
+
+        if (!empty($categoryId)) {
+            $query->where('category_id', $categoryId);
+        }
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('model_code', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        if ($filter === 'trending') {
+            $query->where('is_featured', true);
+        } elseif ($filter === 'inactive') {
+            $query->where('status', 'inactive');
+        } elseif ($filter === 'instock') {
+            $query->where('stock', '>', 0);
+        }
+
+        $products = $query->latest()->paginate(15)->withQueryString();
+        $categories = Category::orderBy('name')->get();
+
+        $totalCount = Product::count();
+        $trendingCount = Product::where('is_featured', true)->count();
+        $inactiveCount = Product::where('status', 'inactive')->count();
+
+        return view('admin.products.index', compact('products', 'categories', 'filter', 'categoryId', 'search', 'totalCount', 'trendingCount', 'inactiveCount'));
     }
 
     public function create()
@@ -155,6 +186,16 @@ class ProductAdminController extends Controller
         $product->save();
 
         return back()->with('success', "Product status changed to {$product->status}!");
+    }
+
+    public function toggleFeatured($id)
+    {
+        $product = Product::findOrFail($id);
+        $product->is_featured = !$product->is_featured;
+        $product->save();
+
+        $statusText = $product->is_featured ? 'marked as 🔥 Trending & Lightning Deal' : 'removed from Trending';
+        return back()->with('success', "Product '{$product->name}' has been {$statusText}!");
     }
 
     public function destroy($id)

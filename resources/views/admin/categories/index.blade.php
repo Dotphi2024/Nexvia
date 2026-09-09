@@ -6,8 +6,8 @@
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-dark mb-1">Categories & Product Credit Slabs</h4>
-            <p class="text-muted small mb-0">Manage product categories, category images, and referral Product Credit percentage slabs (10% to 20%)</p>
+            <h4 class="fw-bold text-dark mb-1">Categories</h4>
+            <p class="text-muted small mb-0">Manage product categories and category images</p>
         </div>
     </div>
 
@@ -38,6 +38,8 @@
                             <select name="type" class="form-select" required>
                                 <option value="electronics">Electronics</option>
                                 <option value="electric_mobility">Electric Mobility</option>
+                                <option value="appliances">Appliances</option>
+                                <option value="vehicles">Vehicles</option>
                             </select>
                         </div>
 
@@ -93,7 +95,6 @@
                                     <th>Image</th>
                                     <th>Category Name</th>
                                     <th>Type</th>
-                                    <th>Product Credit Slabs</th>
                                     <th class="text-end">Action</th>
                                 </tr>
                             </thead>
@@ -102,13 +103,13 @@
                                     <tr>
                                         <td class="text-muted small">{{ $loop->iteration }}</td>
                                         <td>
-                                            @if($category->image)
-                                                <img src="{{ asset($category->image) }}" alt="category" class="rounded border" width="40" height="40" style="object-fit: cover;">
-                                            @else
-                                                <div class="bg-light rounded border d-flex align-items-center justify-content-center text-muted" style="width: 40px; height: 40px;">
-                                                    <iconify-icon icon="solar:box-bold" class="fs-18"></iconify-icon>
-                                                </div>
-                                            @endif
+                                            <img src="{{ \App\Helpers\ImageHelper::resolve($category->image) }}" 
+                                                 alt="category" 
+                                                 class="rounded border" 
+                                                 width="40" 
+                                                 height="40" 
+                                                 style="object-fit: cover;"
+                                                 onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
                                         </td>
                                         <td>
                                             <div class="d-flex align-items-center gap-1">
@@ -124,17 +125,29 @@
                                                 {{ ucfirst(str_replace('_', ' ', $category->type)) }}
                                             </span>
                                         </td>
-                                        <td>
-                                            <span class="badge bg-success-subtle text-success fw-bold">
-                                                10% → 20% Product Credit
-                                            </span>
-                                        </td>
                                         <td class="text-end">
-                                            <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" onsubmit="return confirm('Delete category?');" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                            </form>
+                                            <div class="d-inline-flex gap-1">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-primary"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#editCategoryModal"
+                                                        data-id="{{ $category->id }}"
+                                                        data-name="{{ $category->name }}"
+                                                        data-type="{{ $category->type }}"
+                                                        data-referral-code="{{ $category->referral_category_code }}"
+                                                        data-referral-eligible="{{ $category->referral_eligible ? '1' : '0' }}"
+                                                        data-commission="{{ $category->commission_percentage }}"
+                                                        data-description="{{ $category->description }}"
+                                                        data-image="{{ \App\Helpers\ImageHelper::resolve($category->image) }}"
+                                                        data-action="{{ route('admin.categories.update', $category->id) }}">
+                                                    <i class="bx bx-edit"></i> Edit
+                                                </button>
+                                                <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" onsubmit="return confirm('Delete category?');" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -146,4 +159,112 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Category Modal -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header bg-white border-bottom py-3">
+                <h6 class="modal-title fw-bold text-dark" id="editCategoryModalLabel">
+                    <i class="bx bx-edit text-primary me-1"></i> Edit Category
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editCategoryForm" method="POST" enctype="multipart/form-data">
+                @csrf
+                @method('PUT')
+                <div class="modal-body p-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Category Name *</label>
+                        <input type="text" name="name" id="editCategoryName" class="form-control" required placeholder="Category Name">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Category Type *</label>
+                        <select name="type" id="editCategoryType" class="form-select" required>
+                            <option value="electronics">Electronics</option>
+                            <option value="electric_mobility">Electric Mobility</option>
+                            <option value="appliances">Appliances</option>
+                            <option value="vehicles">Vehicles</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold text-dark">Referral Code (e.g. TV, AC, EV)</label>
+                            <input type="text" name="referral_category_code" id="editCategoryRefCode" class="form-control text-uppercase" maxlength="10">
+                        </div>
+                        <div class="col-md-5 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input type="checkbox" name="referral_eligible" value="1" class="form-check-input" id="editRefEligible">
+                                <label class="form-check-label fw-semibold text-dark small" for="editRefEligible">Referral Eligible</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Category Image</label>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <img id="editCurrentImagePreview" src="" alt="Current Image" class="rounded border" width="48" height="48" style="object-fit: cover; display: none;">
+                            <span id="editNoImageText" class="text-muted small">No image uploaded</span>
+                        </div>
+                        <input type="file" name="image" class="form-control" accept="image/*">
+                        <small class="text-muted">Leave empty to keep the current image.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Description</label>
+                        <textarea name="description" id="editCategoryDescription" class="form-control" rows="2" placeholder="Brief summary of category"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+                        <i class="bx bx-check me-1"></i> Update Category
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const editModal = document.getElementById('editCategoryModal');
+    if (!editModal) return;
+
+    editModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        if (!button) return;
+
+        const action = button.getAttribute('data-action');
+        const name = button.getAttribute('data-name') || '';
+        const type = button.getAttribute('data-type') || 'electronics';
+        const refCode = button.getAttribute('data-referral-code') || '';
+        const refEligible = button.getAttribute('data-referral-eligible') === '1';
+        const description = button.getAttribute('data-description') || '';
+        const image = button.getAttribute('data-image') || '';
+
+        const form = document.getElementById('editCategoryForm');
+        form.action = action;
+
+        document.getElementById('editCategoryName').value = name;
+        document.getElementById('editCategoryType').value = type;
+        document.getElementById('editCategoryRefCode').value = refCode;
+        document.getElementById('editRefEligible').checked = refEligible;
+        document.getElementById('editCategoryDescription').value = description;
+
+        const preview = document.getElementById('editCurrentImagePreview');
+        const noImageText = document.getElementById('editNoImageText');
+        if (image && !image.includes('no-image.png')) {
+            preview.src = image;
+            preview.style.display = 'inline-block';
+            noImageText.style.display = 'none';
+        } else {
+            preview.style.display = 'none';
+            noImageText.style.display = 'inline-block';
+        }
+    });
+});
+</script>
 @endsection

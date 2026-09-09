@@ -118,8 +118,6 @@
                             <th>Customer Name</th>
                             <th>Phone</th>
                             <th>Email</th>
-                            <th>Addresses</th>
-                            <th>Bookings</th>
                             <th>Status</th>
                             <th>Registered On</th>
                             <th class="text-end">Actions</th>
@@ -151,12 +149,6 @@
                                 </td>
                                 <td>
                                     <span class="text-muted small">{{ $customer->email ?? '—' }}</span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info-subtle text-info fw-semibold">{{ $customer->addresses_count }} Address(es)</span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-primary-subtle text-primary fw-semibold">{{ $customer->bookings_count }} Booking(s)</span>
                                 </td>
                                 <td>
                                     <form action="{{ route('admin.customers.status', $customer->id) }}" method="POST" class="d-inline">

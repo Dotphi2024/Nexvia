@@ -63,6 +63,15 @@
                     </a>
                </li>
 
+               <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.banners.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:gallery-wide-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Home Banners</span>
+                    </a>
+               </li>
+
                <li class="menu-title">Booking Engine</li>
 
                <li class="nav-item">

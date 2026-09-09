@@ -12,16 +12,43 @@ class UserAddressController extends Controller
     /**
      * GET /api/user/addresses
      * Fetch user saved delivery addresses
+    /**
+     * Resolve customer from token or user_id parameter.
+     */
+    protected function resolveCustomer(Request $request)
+    {
+        $customer = $request->get('authenticated_customer') ?? $request->user();
+
+        if (!$customer) {
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
+            $userId = $request->input('user_id')
+                ?? $request->input('userId')
+                ?? $request->input('customer_id')
+                ?? $request->input('customerId')
+                ?? ($bodyJson['user_id'] ?? null)
+                ?? ($bodyJson['userId'] ?? null);
+
+            if (!empty($userId)) {
+                $customer = \App\Models\Customer::find($userId);
+            }
+        }
+
+        return $customer;
+    }
+
+    /**
+     * GET /api/user/addresses or /api/addresses or /api/customer/addresses
+     * Fetch user saved delivery addresses
      */
     public function index(Request $request)
     {
         try {
-            $customer = $request->get('authenticated_customer') ?? $request->user();
+            $customer = $this->resolveCustomer($request);
 
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated.',
+                    'message' => 'Unauthenticated. User token or user_id is required.',
                 ], 401);
             }
 
@@ -33,6 +60,7 @@ class UserAddressController extends Controller
             return response()->json([
                 'status'  => true,
                 'message' => 'Addresses retrieved successfully.',
+                'total'   => $addresses->count(),
                 'data'    => $addresses,
             ], 200);
 
@@ -46,18 +74,18 @@ class UserAddressController extends Controller
     }
 
     /**
-     * POST /api/user/addresses
+     * POST /api/user/addresses or /api/addresses
      * Save new shipping address
      * Params: { name, phone, street, city, state, pincode, isDefault }
      */
     public function store(Request $request)
     {
-        $customer = $request->get('authenticated_customer') ?? $request->user();
+        $customer = $this->resolveCustomer($request);
 
         if (!$customer) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Unauthenticated.',
+                'message' => 'Unauthenticated. User token or user_id is required.',
             ], 401);
         }
 
@@ -111,6 +139,15 @@ class UserAddressController extends Controller
                         'is_default' => $isDefault,
                     ]);
 
+                    if ($isDefault) {
+                        $customer->update([
+                            'address' => $address->street,
+                            'city'    => $address->city,
+                            'state'   => $address->state,
+                            'pincode' => $address->pincode,
+                        ]);
+                    }
+
                     return response()->json([
                         'status'  => true,
                         'message' => 'Address updated successfully.',
@@ -129,6 +166,15 @@ class UserAddressController extends Controller
                 'pincode'    => trim($request->pincode),
                 'is_default' => $isDefault,
             ]);
+
+            if ($isDefault) {
+                $customer->update([
+                    'address' => $address->street,
+                    'city'    => $address->city,
+                    'state'   => $address->state,
+                    'pincode' => $address->pincode,
+                ]);
+            }
 
             return response()->json([
                 'status'  => true,
