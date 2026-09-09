@@ -19,13 +19,26 @@ class Referral extends Model
         'product_value',
         'credit_earned',
         'status',
+        'transaction_type',
+        'eligible_product_value',
+        'cycle_number',
+        'referral_stage',
+        'rule_version',
+        'notes',
+        'approved_at',
+        'reversed_at',
     ];
 
     protected $casts = [
-        'benefit_percentage' => 'decimal:2',
-        'product_value' => 'decimal:2',
-        'credit_earned' => 'decimal:2',
+        'benefit_percentage'    => 'decimal:2',
+        'product_value'         => 'decimal:2',
+        'credit_earned'         => 'decimal:2',
+        'eligible_product_value'=> 'decimal:2',
+        'approved_at'           => 'datetime',
+        'reversed_at'           => 'datetime',
     ];
+
+    // --- Relationships ---
 
     public function referrer()
     {
@@ -45,5 +58,54 @@ class Referral extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function walletTransaction()
+    {
+        return $this->hasOne(WalletTransaction::class);
+    }
+
+    // --- Scopes ---
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'available');
+    }
+
+    public function scopeReversed($query)
+    {
+        return $query->where('status', 'reversed');
+    }
+
+    public function scopeReferralType($query)
+    {
+        return $query->where('transaction_type', 'referral');
+    }
+
+    public function scopeActivationType($query)
+    {
+        return $query->where('transaction_type', 'activation');
+    }
+
+    // --- Helpers ---
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->status === 'available';
+    }
+
+    public function isReversed(): bool
+    {
+        return $this->status === 'reversed';
     }
 }

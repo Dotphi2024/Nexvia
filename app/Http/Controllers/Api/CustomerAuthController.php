@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\SelfDealerWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class CustomerAuthController extends Controller
 {
@@ -30,12 +32,19 @@ class CustomerAuthController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'fullName'    => 'nullable|string|max:255',
-            'name'        => 'required|string|max:255',
-            'phone'       => 'required|digits:10|unique:users,phone',
-            'email'       => 'nullable|email|max:255|unique:users,email',
-            'password'    => 'nullable|string',
-            'fcm_token'   => 'nullable|string',
+            'fullName'       => 'nullable|string|max:255',
+            'name'           => 'required|string|max:255',
+            'phone'          => 'required|digits:10|unique:users,phone',
+            'email'          => 'nullable|email|max:255|unique:users,email',
+            'password'       => 'nullable|string',
+            'fcm_token'      => 'nullable|string',
+            'referral_code'  => 'nullable|string',
+            'referred_by'    => 'nullable|string',
+            'pincode'        => 'nullable|string|max:10',
+            'city'           => 'nullable|string|max:100',
+            'state'          => 'nullable|string|max:100',
+            'terms_accepted' => 'nullable|boolean',
+            'terms_version'  => 'nullable|string|max:20',
         ], [
             'name.required'  => 'Full name (fullName) is required.',
             'phone.required' => 'Phone number is required.',
@@ -55,21 +64,58 @@ class CustomerAuthController extends Controller
         try {
             $password = $request->input('password') ?: trim($request->phone);
 
+            // 1. Check if registered using a referral code
+            $referredById = null;
+            $referrerInfo = null;
+            $refInput = $request->input('referral_code') ?? $request->input('referred_by') ?? $request->input('ref');
+            if (!empty($refInput)) {
+                $refInput = strtoupper(trim($refInput));
+                $referrer = Customer::where('referral_code', $refInput)->first();
+                if ($referrer) {
+                    $referredById = $referrer->id;
+                    $referrerInfo = [
+                        'id'            => $referrer->id,
+                        'name'          => $referrer->name,
+                        'referral_code' => $referrer->referral_code,
+                    ];
+                }
+            }
+
+            // 2. Generate unique referral code for this new customer
+            do {
+                $myReferralCode = 'NEX' . strtoupper(Str::random(6));
+            } while (Customer::where('referral_code', $myReferralCode)->exists());
+
+            // 3. T&C Acceptance record
+            $termsAcceptedAt = ($request->boolean('terms_accepted') || $request->has('terms_version')) ? now() : null;
+            $termsVersion    = $request->input('terms_version', 'v1.0');
+
             $customerData = [
-                'name'              => $name,
-                'phone'             => trim($request->phone),
-                'email'             => $request->email ? strtolower(trim($request->email)) : null,
-                'pincode'           => $request->pincode ?? null,
-                'city'              => $request->city ?? null,
-                'state'             => $request->state ?? null,
-                'dob'               => $request->dob ?? null,
-                'gst_number'        => $request->gst_number ?? null,
-                'password'          => $password, // auto-hashed via model cast
-                'fcm_token'         => $request->fcm_token ?? null,
-                'status'            => 'active',
+                'name'                     => $name,
+                'phone'                    => trim($request->phone),
+                'email'                    => $request->email ? strtolower(trim($request->email)) : null,
+                'pincode'                  => $request->pincode ?? null,
+                'city'                     => $request->city ?? null,
+                'state'                    => $request->state ?? null,
+                'dob'                      => $request->dob ?? null,
+                'gst_number'               => $request->gst_number ?? null,
+                'password'                 => $password, // auto-hashed via model cast
+                'fcm_token'                => $request->fcm_token ?? null,
+                'referral_code'            => $myReferralCode,
+                'referred_by_id'           => $referredById,
+                'is_self_dealer'           => false,
+                'self_dealer_status'       => 'inactive',
+                'wallet_balance'           => 0.00,
+                'terms_accepted_at'        => $termsAcceptedAt,
+                'terms_version'            => $termsVersion,
+                'status'                   => 'active',
             ];
 
             $customer = Customer::create($customerData);
+
+            // 4. Initialize Self Dealer Wallet
+            SelfDealerWallet::firstOrCreate(['user_id' => $customer->id]);
+
             $token = $customer->generateApiToken();
 
             // Send Welcome notification on WhatsApp if configured
@@ -80,12 +126,21 @@ class CustomerAuthController extends Controller
                 'message' => 'Registration successful.',
                 'token'   => $token,
                 'data'    => [
-                    'id'        => $customer->id,
-                    'fullName'  => $customer->name,
-                    'name'      => $customer->name,
-                    'phone'     => $customer->phone,
-                    'email'     => $customer->email,
-                    'fcm_token' => $customer->fcm_token,
+                    'id'                 => $customer->id,
+                    'fullName'           => $customer->name,
+                    'name'               => $customer->name,
+                    'phone'              => $customer->phone,
+                    'email'              => $customer->email,
+                    'referral_code'      => $customer->referral_code,
+                    'referral_url'       => url('/ref/' . $customer->referral_code),
+                    'is_self_dealer'     => (bool) $customer->is_self_dealer,
+                    'self_dealer_status' => $customer->self_dealer_status,
+                    'wallet_balance'     => 0.00,
+                    'city'               => $customer->city,
+                    'state'              => $customer->state,
+                    'pincode'            => $customer->pincode,
+                    'fcm_token'          => $customer->fcm_token,
+                    'referred_by'        => $referrerInfo,
                 ],
             ], 201);
 
@@ -162,15 +217,21 @@ class CustomerAuthController extends Controller
                 'message' => 'Login successful',
                 'token'   => $token,
                 'data'    => [
-                    'id'              => $customer->id,
-                    'fullName'        => $customer->name,
-                    'name'            => $customer->name,
-                    'phone'           => $customer->phone,
-                    'email'           => $customer->email,
-                    'avatarUrl'       => $customer->profile_pic
+                    'id'                 => $customer->id,
+                    'fullName'           => $customer->name,
+                    'name'               => $customer->name,
+                    'phone'              => $customer->phone,
+                    'email'              => $customer->email,
+                    'referral_code'      => $customer->referral_code,
+                    'referral_url'       => $customer->referral_code ? url('/ref/' . $customer->referral_code) : null,
+                    'is_self_dealer'     => (bool) $customer->is_self_dealer,
+                    'self_dealer_code'   => $customer->self_dealer_code,
+                    'self_dealer_status' => $customer->self_dealer_status ?? 'inactive',
+                    'wallet_balance'     => (float) ($customer->wallet_balance ?? 0),
+                    'avatarUrl'          => $customer->profile_pic
                         ? asset('customer_pics/' . $customer->profile_pic)
                         : null,
-                    'status'          => $customer->status,
+                    'status'             => $customer->status,
                 ],
             ], 200);
 
@@ -286,15 +347,21 @@ class CustomerAuthController extends Controller
                 'message' => 'OTP verified. Login successful!',
                 'token'   => $token,
                 'data'    => [
-                    'id'                => $customer->id,
-                    'fullName'          => $customer->name,
-                    'name'              => $customer->name,
-                    'phone'             => $customer->phone,
-                    'email'             => $customer->email,
-                    'avatarUrl'         => $customer->profile_pic
+                    'id'                 => $customer->id,
+                    'fullName'           => $customer->name,
+                    'name'               => $customer->name,
+                    'phone'              => $customer->phone,
+                    'email'              => $customer->email,
+                    'referral_code'      => $customer->referral_code,
+                    'referral_url'       => $customer->referral_code ? url('/ref/' . $customer->referral_code) : null,
+                    'is_self_dealer'     => (bool) $customer->is_self_dealer,
+                    'self_dealer_code'   => $customer->self_dealer_code,
+                    'self_dealer_status' => $customer->self_dealer_status ?? 'inactive',
+                    'wallet_balance'     => (float) ($customer->wallet_balance ?? 0),
+                    'avatarUrl'          => $customer->profile_pic
                         ? asset('customer_pics/' . $customer->profile_pic)
                         : null,
-                    'status'            => $customer->status,
+                    'status'             => $customer->status,
                 ],
             ]);
 

@@ -60,6 +60,10 @@ class ProductAdminController extends Controller
             }
         }
 
+        $eligibleReferralValue = $request->eligible_referral_value ?: $mrp;
+        $referralEligible = $request->has('referral_eligible');
+        $selfDealerEligible = $request->has('self_dealer_eligible');
+
         Product::create([
             'category_id' => $request->category_id,
             'name' => $request->name,
@@ -70,6 +74,9 @@ class ProductAdminController extends Controller
             'booking_percentage' => $bookingPercentage,
             'booking_amount' => $bookingAmount,
             'balance_amount' => $balanceAmount,
+            'eligible_referral_value' => $eligibleReferralValue,
+            'referral_eligible' => $referralEligible,
+            'self_dealer_eligible' => $selfDealerEligible,
             'stock' => $request->stock,
             'video_url' => $request->video_url,
             'offer_text' => $request->offer_text,
@@ -107,6 +114,7 @@ class ProductAdminController extends Controller
         $bookingPercentage = $request->booking_percentage ?? 20;
         $bookingAmount = $mrp * ($bookingPercentage / 100);
         $balanceAmount = $mrp - $bookingAmount;
+        $eligibleReferralValue = $request->eligible_referral_value ?: $mrp;
 
         $mainImagePath = $product->main_image;
         if ($request->hasFile('main_image')) {
@@ -125,6 +133,9 @@ class ProductAdminController extends Controller
             'booking_percentage' => $bookingPercentage,
             'booking_amount' => $bookingAmount,
             'balance_amount' => $balanceAmount,
+            'eligible_referral_value' => $eligibleReferralValue,
+            'referral_eligible' => $request->has('referral_eligible'),
+            'self_dealer_eligible' => $request->has('self_dealer_eligible'),
             'stock' => $request->stock,
             'video_url' => $request->video_url,
             'offer_text' => $request->offer_text,

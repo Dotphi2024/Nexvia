@@ -36,6 +36,14 @@ class Customer extends Authenticatable
         'password',
         'profile_pic',
         'status',
+        // Self Dealer fields
+        'is_self_dealer',
+        'self_dealer_code',
+        'self_dealer_status',
+        'self_dealer_activated_at',
+        'activation_booking_id',
+        'terms_version',
+        'terms_accepted_at',
     ];
 
     protected $hidden = [
@@ -51,12 +59,15 @@ class Customer extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at'  => 'datetime',
-            'phone_verified_at'  => 'datetime',
-            'otp_expires_at'     => 'datetime',
-            'dob'                => 'date',
-            'password'           => 'hashed',
-            'wallet_balance'     => 'decimal:2',
+            'email_verified_at'         => 'datetime',
+            'phone_verified_at'         => 'datetime',
+            'otp_expires_at'            => 'datetime',
+            'dob'                       => 'date',
+            'password'                  => 'hashed',
+            'wallet_balance'            => 'decimal:2',
+            'is_self_dealer'            => 'boolean',
+            'self_dealer_activated_at'  => 'datetime',
+            'terms_accepted_at'         => 'datetime',
         ];
     }
 
@@ -129,5 +140,20 @@ class Customer extends Authenticatable
     public function addresses()
     {
         return $this->hasMany(UserAddress::class, 'user_id');
+    }
+
+    public function selfDealerWallet()
+    {
+        return $this->hasOne(SelfDealerWallet::class, 'user_id');
+    }
+
+    public function categoryProgress()
+    {
+        return $this->hasMany(CustomerCategoryProgress::class, 'user_id');
+    }
+
+    public function referralTransactions()
+    {
+        return $this->hasMany(Referral::class, 'referrer_id');
     }
 }

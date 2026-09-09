@@ -13,6 +13,8 @@ class Category extends Model
         'name',
         'slug',
         'type',
+        'referral_category_code',
+        'referral_eligible',
         'commission_percentage',
         'image',
         'description',
@@ -22,7 +24,8 @@ class Category extends Model
 
     protected $casts = [
         'commission_percentage' => 'decimal:2',
-        'is_active' => 'boolean',
+        'is_active'             => 'boolean',
+        'referral_eligible'     => 'boolean',
     ];
 
     public function products()

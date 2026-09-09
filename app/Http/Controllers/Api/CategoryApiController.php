@@ -26,13 +26,15 @@ class CategoryApiController extends Controller
                         : null;
 
                     return [
-                        'id'             => $cat->id,
-                        'name'           => $cat->name,
-                        'slug'           => $cat->slug,
-                        'type'           => $cat->type,
-                        'description'    => $cat->description,
-                        'imageUrl'       => $imageUrl,
-                        'products_count' => $cat->products_count,
+                        'id'                     => $cat->id,
+                        'name'                   => $cat->name,
+                        'slug'                   => $cat->slug,
+                        'type'                   => $cat->type,
+                        'referral_category_code' => $cat->referral_category_code,
+                        'referral_eligible'      => (bool) $cat->referral_eligible,
+                        'description'            => $cat->description,
+                        'imageUrl'               => $imageUrl,
+                        'products_count'         => $cat->products_count,
                     ];
                 });
 

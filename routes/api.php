@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\BookingApiController;
 use App\Http\Controllers\Api\ReferralWalletApiController;
 use App\Http\Controllers\Api\OrderDeliveryApiController;
 use App\Http\Controllers\Api\WarrantyAndServiceApiController;
+use App\Http\Controllers\Api\SelfDealerApiController;
 
 Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
@@ -101,5 +102,41 @@ Route::prefix('customer')->group(function () {
         Route::post('/service-tickets',                   [WarrantyAndServiceApiController::class, 'createServiceTicket']);
         Route::get('/service-tickets',                    [WarrantyAndServiceApiController::class, 'listServiceTickets']);
         Route::post('/installations/schedule',            [WarrantyAndServiceApiController::class, 'scheduleInstallation']);
+
+        // Self Dealer Ecosystem Endpoints (/api/customer/self-dealer/*)
+        Route::prefix('self-dealer')->group(function () {
+            Route::get('/status',               [SelfDealerApiController::class, 'status']);
+            Route::get('/categories',           [SelfDealerApiController::class, 'categories']);
+            Route::get('/category/{id}',        [SelfDealerApiController::class, 'categoryDetail']);
+            Route::get('/wallet',               [SelfDealerApiController::class, 'wallet']);
+            Route::get('/wallet/transactions',  [SelfDealerApiController::class, 'transactions']);
+            Route::get('/referrals',            [SelfDealerApiController::class, 'referrals']);
+            Route::post('/redeem',              [SelfDealerApiController::class, 'redeem']);
+        });
+        Route::post('/referral/apply',          [SelfDealerApiController::class, 'applyReferralCode']);
     });
 });
+
+// =============================================================================
+// V1 SELF DEALER & REFERRAL API SPECIFICATION (DOCUMENTATION SECTION 17)
+// =============================================================================
+Route::prefix('v1')->group(function () {
+    // Public product referral benefit calculator
+    Route::get('/products/{id}/referral-benefit', [SelfDealerApiController::class, 'productReferralBenefit']);
+
+    // Authenticated Self Dealer Endpoints
+    Route::middleware('customer.auth')->group(function () {
+        Route::prefix('self-dealer')->group(function () {
+            Route::get('/status',               [SelfDealerApiController::class, 'status']);
+            Route::get('/categories',           [SelfDealerApiController::class, 'categories']);
+            Route::get('/category/{id}',        [SelfDealerApiController::class, 'categoryDetail']);
+            Route::get('/wallet',               [SelfDealerApiController::class, 'wallet']);
+            Route::get('/wallet/transactions',  [SelfDealerApiController::class, 'transactions']);
+            Route::get('/referrals',            [SelfDealerApiController::class, 'referrals']);
+            Route::post('/redeem',              [SelfDealerApiController::class, 'redeem']);
+        });
+
+        Route::post('/referral/apply',          [SelfDealerApiController::class, 'applyReferralCode']);
+    });
+});
+

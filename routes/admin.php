@@ -48,4 +48,24 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::get('/customers/{id}', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'show'])->name('admin.customers.show');
     Route::post('/customers/{id}/status', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'updateStatus'])->name('admin.customers.status');
     Route::delete('/customers/{id}', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'destroy'])->name('admin.customers.destroy');
+
+    // =========================================================================
+    // SELF DEALER MANAGEMENT
+    // =========================================================================
+    Route::prefix('self-dealers')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'index'])->name('admin.self_dealers.index');
+        Route::get('/fraud-flags/list', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'fraudFlags'])->name('admin.self_dealers.fraud_flags');
+        Route::post('/fraud-flags/{flagId}/review', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'reviewFraudFlag'])->name('admin.self_dealers.fraud_review');
+        Route::get('/transactions/all', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'transactions'])->name('admin.self_dealers.transactions');
+        Route::get('/{id}', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'show'])->name('admin.self_dealers.show');
+        Route::post('/{id}/status', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'updateStatus'])->name('admin.self_dealers.status');
+        Route::post('/referrals/{referralId}/qualify', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'qualifyReferral'])->name('admin.self_dealers.qualify');
+        Route::post('/referrals/{referralId}/reverse', [\App\Http\Controllers\Admin\SelfDealerAdminController::class, 'reverseReferral'])->name('admin.self_dealers.reverse');
+    });
+
+    // =========================================================================
+    // REFERRAL INCENTIVE CONFIGURATION
+    // =========================================================================
+    Route::get('/referral-config', [\App\Http\Controllers\Admin\ReferralStageConfigController::class, 'settings'])->name('admin.referral.config.settings');
+    Route::post('/referral-config', [\App\Http\Controllers\Admin\ReferralStageConfigController::class, 'update'])->name('admin.referral.config.update');
 });

@@ -37,6 +37,8 @@ class CategoryAdminController extends Controller
             'name' => $request->name,
             'slug' => Str::slug($request->name),
             'type' => $request->type,
+            'referral_category_code' => $request->referral_category_code ? strtoupper($request->referral_category_code) : null,
+            'referral_eligible' => $request->has('referral_eligible'),
             'commission_percentage' => $request->commission_percentage,
             'image' => $imagePath,
             'description' => $request->description,

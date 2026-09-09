@@ -116,6 +116,14 @@ class ProductApiController extends Controller
                     'offer_text'         => $product->offer_text,
                     'is_featured'        => (bool) $product->is_featured,
                     'status'             => $product->status,
+                    'eligible_referral_value' => (float) ($product->eligible_referral_value ?: $product->mrp),
+                    'referral_eligible'       => (bool) $product->referral_eligible,
+                    'self_dealer_eligible'    => (bool) $product->self_dealer_eligible,
+                    'self_dealer_benefit'     => [
+                        'activates_self_dealer'  => (bool) $product->self_dealer_eligible,
+                        'activation_points_pct'  => 20.00,
+                        'activation_points_value'=> ((float) ($product->eligible_referral_value ?: $product->mrp)) * 0.20,
+                    ],
                     'created_at'         => $product->created_at ? $product->created_at->toIso8601String() : null,
                 ];
             });
@@ -171,6 +179,9 @@ class ProductApiController extends Controller
                 ? (str_starts_with($product->main_image, 'http') ? $product->main_image : asset($product->main_image))
                 : null;
 
+            $eligibleValue = (float) ($product->eligible_referral_value ?: $product->mrp);
+            $activationPts = $eligibleValue * 0.20;
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Product detail retrieved successfully.',
@@ -189,6 +200,16 @@ class ProductApiController extends Controller
                     'booking_percentage' => (float) ($product->booking_percentage ?? 20.00),
                     'booking_amount'     => (float) $product->booking_amount,
                     'balance_amount'     => (float) $product->balance_amount,
+                    'eligible_referral_value' => $eligibleValue,
+                    'referral_eligible'       => (bool) $product->referral_eligible,
+                    'self_dealer_eligible'    => (bool) $product->self_dealer_eligible,
+                    'self_dealer_benefit'     => [
+                        'activates_self_dealer'   => (bool) $product->self_dealer_eligible,
+                        'activation_points_pct'   => 20.00,
+                        'activation_points_value' => $activationPts,
+                        'banner_title'            => 'SELF DEALER BENEFIT',
+                        'banner_text'             => "Book this product and become an eligible Self Dealer. Earn ₹" . number_format($activationPts, 2) . " (20%) in activation points!",
+                    ],
                     'stock'              => (int) $product->stock,
                     'main_image'         => $imageUrl,
                     'imageUrl'           => $imageUrl,

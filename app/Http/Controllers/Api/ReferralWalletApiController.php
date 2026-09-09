@@ -32,39 +32,42 @@ class ReferralWalletApiController extends Controller
         $referralUrl = url('/ref/' . $user->referral_code);
         $qrCodeData = 'NEXVIA_REF:' . $user->referral_code;
 
-        // Wallet Metrics
-        $walletTransactions = WalletTransaction::where('user_id', $user->id)->get();
-        $availableCredit = (float)($user->wallet_balance ?? 0);
+        // Wallet Metrics from dedicated SelfDealerWallet
+        $wallet = \App\Models\SelfDealerWallet::firstOrCreate(['user_id' => $user->id]);
+        $availableCredit = (float) ($wallet->available_points ?? $user->wallet_balance ?? 0);
+        $pendingCredit   = (float) ($wallet->pending_points ?? 0);
+        $usedCredit      = (float) ($wallet->redeemed_points ?? 0);
+        $lifetimeCredit  = (float) ($wallet->total_earned ?? 0);
 
-        $lifetimeCredit = (float)$walletTransactions->where('type', 'credit')->sum('amount');
-        $usedCredit     = (float)$walletTransactions->where('type', 'debit')->sum('amount');
-        $pendingCredit  = (float)Referral::where('referrer_id', $user->id)->where('status', 'pending')->sum('credit_earned');
-
-        // Category Referral Progression Cards
-        $categories = Category::where('status', 'active')->get();
+        // Category Referral Progression Cards (Variant A 5-stage cycle)
+        $categories = Category::where('is_active', true)->orWhere('referral_eligible', true)->get();
         $progressRecords = CustomerCategoryProgress::where('user_id', $user->id)->get()->keyBy('category_id');
 
         $categoryProgression = $categories->map(function ($cat) use ($progressRecords) {
             $prog = $progressRecords->get($cat->id);
-            $count = $prog ? $prog->referral_count : 0;
-            $tierMap = [
-                0 => 10.00,
-                1 => 12.00,
-                2 => 15.00,
-                3 => 18.00,
-            ];
-            $currentTier = $prog ? $prog->current_tier_percentage : 10.00;
-            $nextTier    = $tierMap[$count] ?? 20.00;
+            $currentStage = $prog ? (int)$prog->current_stage : 1;
+            $cycleNumber  = $prog ? (int)$prog->cycle_number : 1;
+            $count        = $prog ? (int)$prog->referral_count : 0;
+            $totalAllTime = $prog ? (int)$prog->total_referrals_all_time : 0;
+
+            $currentRate = \App\Models\ReferralStageConfig::getRateForStage($currentStage);
+            $nextStage   = ($currentStage >= 5) ? 1 : ($currentStage + 1);
+            $nextRate    = \App\Models\ReferralStageConfig::getRateForStage($nextStage);
 
             return [
-                'category_id'           => $cat->id,
-                'category_name'         => $cat->name,
-                'category_slug'         => $cat->slug,
-                'type'                  => $cat->type,
-                'successful_referrals'  => $count,
-                'current_benefit_pct'   => (float)$currentTier,
-                'next_benefit_pct'      => (float)$nextTier,
-                'progress_status'       => "Referral {$count} / Next Tier {$nextTier}%",
+                'category_id'              => $cat->id,
+                'category_name'            => $cat->name,
+                'category_slug'            => $cat->slug,
+                'category_code'            => $cat->referral_category_code ?? 'CAT',
+                'type'                     => $cat->type,
+                'current_stage'            => $currentStage,
+                'max_stages'               => 5,
+                'cycle_number'             => $cycleNumber,
+                'successful_referrals'     => $count,
+                'total_referrals_all_time' => $totalAllTime,
+                'current_benefit_pct'      => (float)$currentRate,
+                'next_benefit_pct'         => (float)$nextRate,
+                'progress_status'          => "Stage {$currentStage}/5 ({$currentRate}%) • Cycle #{$cycleNumber}",
             ];
         });
 
@@ -77,9 +80,9 @@ class ReferralWalletApiController extends Controller
                 return [
                     'id'               => $referee->id,
                     'name'             => $referee->name,
-                    'phone_masked'     => substr($referee->phone, 0, 2) . '******' . substr($referee->phone, -2),
-                    'joined_at'        => $referee->created_at->format('Y-m-d'),
-                    'booking_status'   => $latestReferral ? 'Booked' : 'Registered',
+                    'phone_masked'     => $referee->phone ? (substr($referee->phone, 0, 2) . '******' . substr($referee->phone, -2)) : 'N/A',
+                    'joined_at'        => $referee->created_at ? $referee->created_at->format('Y-m-d') : null,
+                    'booking_status'   => $latestReferral ? ucfirst($latestReferral->status) : 'Registered',
                     'credit_earned'    => $latestReferral ? (float)$latestReferral->credit_earned : 0.00,
                     'benefit_pct'      => $latestReferral ? (float)$latestReferral->benefit_percentage : 0.00,
                 ];
@@ -96,18 +99,23 @@ class ReferralWalletApiController extends Controller
                     'amount'      => (float)$tx->amount,
                     'type'        => $tx->type,
                     'source'      => $tx->source,
+                    'status'      => $tx->status ?? 'available',
+                    'stage'       => $tx->referral_stage,
+                    'percentage'  => (float)$tx->incentive_percentage,
                     'description' => $tx->description,
-                    'date'        => $tx->created_at->format('Y-m-d H:i:s'),
+                    'date'        => $tx->created_at ? $tx->created_at->format('Y-m-d H:i:s') : null,
                 ];
             });
 
         return response()->json([
             'status' => true,
             'data'   => [
-                'referral_code'       => $user->referral_code,
-                'referral_url'        => $referralUrl,
-                'qr_code_data'        => $qrCodeData,
-                'wallet'              => [
+                'is_self_dealer'       => (bool) $user->is_self_dealer,
+                'self_dealer_code'     => $user->self_dealer_code,
+                'referral_code'        => $user->referral_code,
+                'referral_url'         => $referralUrl,
+                'qr_code_data'         => $qrCodeData,
+                'wallet'               => [
                     'available_credit' => $availableCredit,
                     'pending_credit'   => $pendingCredit,
                     'used_credit'      => $usedCredit,
@@ -115,9 +123,9 @@ class ReferralWalletApiController extends Controller
                     'redeem_label'     => 'REDEEM FOR PRODUCT',
                     'can_withdraw_cash'=> false,
                 ],
-                'category_progress'   => $categoryProgression,
-                'referred_customers'  => $referredCustomers,
-                'wallet_ledger'       => $ledger,
+                'category_progress'    => $categoryProgression,
+                'referred_customers'   => $referredCustomers,
+                'wallet_ledger'        => $ledger,
             ],
         ]);
     }

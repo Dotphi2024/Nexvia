@@ -143,8 +143,25 @@ class BookingApiController extends Controller
                 'qr_code_hash'            => $qrHash,
             ]);
 
-            // Process referral commission reward if customer was referred
-            app(ReferralCommissionService::class)->processBookingReferral($booking);
+            // 1. Link referral code if passed during checkout
+            if ($request->filled('referral_code')) {
+                $refCode = strtoupper(trim($request->referral_code));
+                $referrer = Customer::where('referral_code', $refCode)->first();
+                if ($referrer && $referrer->id !== $user->id && empty($user->referred_by_id)) {
+                    $user->referred_by_id = $referrer->id;
+                    $user->save();
+                }
+            }
+
+            // 2. Process referral points for referrer if customer was referred
+            $referralService = app(ReferralCommissionService::class);
+            $referral = $referralService->processReferralBooking($booking);
+
+            // 3. Activate Self Dealer status for buyer if product is self-dealer eligible
+            $activatedSelfDealer = false;
+            if ($product->self_dealer_eligible && !$user->is_self_dealer) {
+                $activatedSelfDealer = $referralService->activateSelfDealer($user, $booking);
+            }
 
             return response()->json([
                 'status'  => true,
@@ -255,16 +272,24 @@ class BookingApiController extends Controller
 
         // Apply product credit if used
         if ($creditApplied > 0) {
-            $user->wallet_balance = ($user->wallet_balance ?? 0) - $creditApplied;
+            $user->wallet_balance = max(0, ($user->wallet_balance ?? 0) - $creditApplied);
             $user->save();
 
+            // Sync with SelfDealerWallet
+            $dealerWallet = \App\Models\SelfDealerWallet::where('user_id', $user->id)->first();
+            if ($dealerWallet) {
+                $dealerWallet->redeemPoints($creditApplied);
+            }
+
             WalletTransaction::create([
-                'user_id'     => $user->id,
-                'amount'      => $creditApplied,
-                'type'        => 'debit',
-                'source'      => 'booking_redemption',
-                'booking_id'  => $booking->id,
-                'description' => "Redeemed NEXVIA Product Credit (₹" . number_format($creditApplied, 2) . ") toward balance for booking {$booking->booking_number}",
+                'user_id'          => $user->id,
+                'amount'           => $creditApplied,
+                'type'             => 'debit',
+                'source'           => 'booking_redemption',
+                'transaction_type' => 'redemption',
+                'status'           => 'redeemed',
+                'booking_id'       => $booking->id,
+                'description'      => "Redeemed NEXVIA Product Credit (₹" . number_format($creditApplied, 2) . ") toward balance for booking {$booking->booking_number}",
             ]);
         }
 

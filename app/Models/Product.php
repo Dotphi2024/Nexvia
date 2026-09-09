@@ -19,6 +19,9 @@ class Product extends Model
         'booking_percentage',
         'booking_amount',
         'balance_amount',
+        'eligible_referral_value',
+        'referral_eligible',
+        'self_dealer_eligible',
         'stock',
         'main_image',
         'video_url',
@@ -34,13 +37,16 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'mrp' => 'decimal:2',
-        'booking_amount' => 'decimal:2',
-        'balance_amount' => 'decimal:2',
-        'gallery' => 'array',
-        'key_features' => 'array',
-        'specs' => 'array',
-        'is_featured' => 'boolean',
+        'mrp'                    => 'decimal:2',
+        'booking_amount'         => 'decimal:2',
+        'balance_amount'         => 'decimal:2',
+        'eligible_referral_value'=> 'decimal:2',
+        'referral_eligible'      => 'boolean',
+        'self_dealer_eligible'   => 'boolean',
+        'gallery'                => 'array',
+        'key_features'           => 'array',
+        'specs'                  => 'array',
+        'is_featured'            => 'boolean',
     ];
 
     public function category()

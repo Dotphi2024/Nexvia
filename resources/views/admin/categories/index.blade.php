@@ -41,13 +41,25 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Starting Product Credit (%) *</label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" name="commission_percentage" class="form-control" value="10.00" required>
-                                <span class="input-group-text bg-light fw-bold">% Credit</span>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold text-dark">Referral Code (e.g. TV, AC, EV)</label>
+                                <input type="text" name="referral_category_code" class="form-control text-uppercase" placeholder="TV" maxlength="10">
                             </div>
-                            <span class="text-muted micro d-block mt-1">Tier progression: 1st=10%, 2nd=12%, 3rd=15%, 4th=18%, 5th+=20%</span>
+                            <div class="col-md-5 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" name="referral_eligible" value="1" class="form-check-input" id="refEligible" checked>
+                                    <label class="form-check-label fw-semibold text-dark small" for="refEligible">Referral Eligible</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-dark">Starting Product Credit (%)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" name="commission_percentage" class="form-control bg-light" value="10.00" readonly>
+                                <span class="input-group-text bg-light fw-bold text-muted">% Credit</span>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -99,7 +111,12 @@
                                             @endif
                                         </td>
                                         <td>
-                                            <strong class="text-dark d-block fs-14">{{ $category->name }}</strong>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <strong class="text-dark fs-14">{{ $category->name }}</strong>
+                                                @if($category->referral_category_code)
+                                                    <span class="badge bg-dark-subtle text-dark font-monospace">{{ $category->referral_category_code }}</span>
+                                                @endif
+                                            </div>
                                             <span class="text-muted micro">{{ $category->slug }}</span>
                                         </td>
                                         <td>

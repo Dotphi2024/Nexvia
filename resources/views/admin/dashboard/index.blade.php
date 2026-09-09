@@ -124,6 +124,67 @@
         </div>
     </div>
 
+    <!-- SELF DEALER & REFERRAL ECOSYSTEM METRICS -->
+    <div class="card border-0 shadow-sm mb-4 bg-primary-subtle border-start border-primary border-4">
+        <div class="card-body p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-5">🤝</span>
+                    <h6 class="fw-bold text-dark mb-0">Self Dealer Network & Referral Ecosystem</h6>
+                    <span class="badge bg-primary">Variant A Active</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ route('admin.self_dealers.index') }}" class="btn btn-primary btn-sm py-0 px-2 fw-semibold">
+                        View Self Dealers →
+                    </a>
+                    @if($fraudFlagsCount > 0)
+                        <a href="{{ route('admin.self_dealers.fraud_flags') }}" class="btn btn-danger btn-sm py-0 px-2 fw-semibold">
+                            🚩 {{ $fraudFlagsCount }} Fraud {{ Str::plural('Flag', $fraudFlagsCount) }}
+                        </a>
+                    @endif
+                </div>
+            </div>
+            <div class="row g-2 text-center pt-2">
+                <div class="col-6 col-md-2">
+                    <div class="bg-white rounded p-2 shadow-xs">
+                        <span class="text-muted micro d-block">Active Dealers</span>
+                        <strong class="text-dark fs-6">{{ number_format($selfDealers) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="bg-white rounded p-2 shadow-xs">
+                        <span class="text-muted micro d-block">Total Points Issued</span>
+                        <strong class="text-primary fs-6">₹{{ number_format($totalIncentivePoints, 2) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="bg-white rounded p-2 shadow-xs">
+                        <span class="text-muted micro d-block">Pending Points</span>
+                        <strong class="text-warning fs-6">₹{{ number_format($pendingPoints, 2) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="bg-white rounded p-2 shadow-xs">
+                        <span class="text-muted micro d-block">Available Points</span>
+                        <strong class="text-success fs-6">₹{{ number_format($availablePoints, 2) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="bg-white rounded p-2 shadow-xs">
+                        <span class="text-muted micro d-block">Redeemed to Balance</span>
+                        <strong class="text-info fs-6">₹{{ number_format($redeemedPoints, 2) }}</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="bg-white rounded p-2 shadow-xs">
+                        <span class="text-muted micro d-block">Pending Fraud Review</span>
+                        <strong class="{{ $fraudFlagsCount > 0 ? 'text-danger' : 'text-secondary' }} fs-6">{{ number_format($fraudFlagsCount) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Section: Recent Bookings & Recent Transfers -->
     <div class="row g-4">
         <!-- Recent Bookings Table -->

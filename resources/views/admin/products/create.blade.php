@@ -70,6 +70,32 @@
                             <input type="number" name="stock" class="form-control" value="25" required>
                         </div>
 
+                        <!-- SELF DEALER & REFERRAL INCENTIVE SETTINGS -->
+                        <div class="card bg-light border-0 mb-3 p-3">
+                            <h6 class="fw-bold text-dark mb-2">Self Dealer & Referral Settings</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-dark">Eligible Referral Calculation Value (₹)</label>
+                                    <input type="number" step="0.01" name="eligible_referral_value" class="form-control" placeholder="Leave empty to use MRP automatically">
+                                    <span class="micro text-muted">Basis for 10%–20% referral points calculation. Defaults to MRP if blank.</span>
+                                </div>
+                                <div class="col-md-6 d-flex flex-column justify-content-center gap-2 pt-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" name="referral_eligible" value="1" class="form-check-input" id="refEligible" checked>
+                                        <label class="form-check-label fw-semibold text-dark small" for="refEligible">
+                                            Referral Eligible (Can be referred to earn points)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="checkbox" name="self_dealer_eligible" value="1" class="form-check-input" id="sdEligible" checked>
+                                        <label class="form-check-label fw-semibold text-dark small" for="sdEligible">
+                                            Self Dealer Activator (Booking this activates Self Dealer status + 20% points)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Warranty Information</label>
                             <input type="text" name="warranty_info" class="form-control" value="3 Years Comprehensive Battery & Motor Warranty">

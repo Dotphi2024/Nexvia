@@ -102,6 +102,44 @@
                          <span class="nav-text">Service Requests</span>
                     </a>
                </li>
+
+               <li class="menu-title">Self Dealer Program</li>
+
+               <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.self_dealers.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:user-id-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Self Dealers</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.self_dealers.transactions') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:wallet-money-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Incentive Transactions</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.self_dealers.fraud_flags') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:danger-triangle-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Fraud Flags</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.referral.config.settings') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:tuning-2-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Referral Incentive Config</span>
+                    </a>
+               </li>
           </ul>
      </div>
 
