@@ -21,10 +21,10 @@
 
      <div class="scrollbar" data-simplebar>
           <ul class="navbar-nav" id="navbar-nav">
-               <li class="menu-title">Navigation</li>
+               <li class="menu-title">Overview</li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.dashboard') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:home-smile-outline"></iconify-icon>
                          </span>
@@ -32,21 +32,21 @@
                     </a>
                </li>
 
-               <li class="menu-title">Users & Customers</li>
+               <li class="menu-title">Users</li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.customers.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.customers.*') ? 'active' : '' }}" href="{{ route('admin.customers.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:users-group-two-rounded-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Customer Accounts</span>
+                         <span class="nav-text">Customers</span>
                     </a>
                </li>
 
-               <li class="menu-title">E-Commerce & Products</li>
+               <li class="menu-title">Catalog</li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.categories.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}" href="{{ route('admin.categories.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:widget-3-outline"></iconify-icon>
                          </span>
@@ -55,67 +55,56 @@
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.products.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:box-minimalistic-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Products & Inventory</span>
+                         <span class="nav-text">Products</span>
                     </a>
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.banners.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.banners.*') ? 'active' : '' }}" href="{{ route('admin.banners.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:gallery-wide-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Home Banners</span>
+                         <span class="nav-text">Banners</span>
                     </a>
                </li>
 
-               <li class="menu-title">Booking Engine</li>
+               <li class="menu-title">Bookings</li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.bookings.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.bookings.*') ? 'active' : '' }}" href="{{ route('admin.bookings.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:ticket-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Bookings & Balances</span>
+                         <span class="nav-text">Bookings</span>
                     </a>
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.booking.engine.settings') }}">
-                         <span class="nav-icon">
-                              <iconify-icon icon="solar:settings-outline"></iconify-icon>
-                         </span>
-                         <span class="nav-text">Booking Engine Controls</span>
-                    </a>
-               </li>
-
-               <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.transfers.audit') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.transfers.*') ? 'active' : '' }}" href="{{ route('admin.transfers.audit') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:transfer-horizontal-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Transfers Audit</span>
+                         <span class="nav-text">Transfers</span>
                     </a>
                </li>
 
-               <li class="menu-title">Support & Service</li>
-
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.service.requests.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.booking.engine.*') ? 'active' : '' }}" href="{{ route('admin.booking.engine.settings') }}">
                          <span class="nav-icon">
-                              <iconify-icon icon="solar:shield-check-outline"></iconify-icon>
+                              <iconify-icon icon="solar:settings-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Service Requests</span>
+                         <span class="nav-text">Booking Settings</span>
                     </a>
                </li>
 
-               <li class="menu-title">Self Dealer Program</li>
+               <li class="menu-title">Referrals & Dealers</li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.self_dealers.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.self_dealers.index') || request()->routeIs('admin.self_dealers.show') ? 'active' : '' }}" href="{{ route('admin.self_dealers.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:user-id-outline"></iconify-icon>
                          </span>
@@ -124,16 +113,16 @@
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.self_dealers.transactions') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.self_dealers.transactions') ? 'active' : '' }}" href="{{ route('admin.self_dealers.transactions') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:wallet-money-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Incentive Transactions</span>
+                         <span class="nav-text">Transactions</span>
                     </a>
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.self_dealers.fraud_flags') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.self_dealers.fraud_flags') ? 'active' : '' }}" href="{{ route('admin.self_dealers.fraud_flags') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:danger-triangle-outline"></iconify-icon>
                          </span>
@@ -142,11 +131,22 @@
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.referral.config.settings') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.referral.config.*') ? 'active' : '' }}" href="{{ route('admin.referral.config.settings') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:tuning-2-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Referral Incentive Config</span>
+                         <span class="nav-text">Referral Settings</span>
+                    </a>
+               </li>
+
+               <li class="menu-title">Support</li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.service.requests.*') ? 'active' : '' }}" href="{{ route('admin.service.requests.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:shield-check-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Service Requests</span>
                     </a>
                </li>
           </ul>

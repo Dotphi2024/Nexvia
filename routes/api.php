@@ -116,11 +116,15 @@ Route::prefix('customer')->group(function () {
         Route::post('/bookings',                          [BookingApiController::class, 'store']);
         Route::get('/bookings/{id}',                      [BookingApiController::class, 'show']);
         Route::post('/bookings/{id}/pay-balance',         [BookingApiController::class, 'payBalance']);
+        Route::post('/bookings/{id}/cancel',              [BookingApiController::class, 'cancel']);
         Route::post('/bookings/{id}/transfer',            [BookingApiController::class, 'initiateTransfer']);
         Route::post('/bookings/{id}/transfer/confirm',    [BookingApiController::class, 'confirmTransfer']);
 
-        // Referral & Product Credit Wallet Dashboard Route
+        // Referral & Product Credit Wallet Dashboard & Detailed Ledger Routes
         Route::get('/referral-dashboard',                 [ReferralWalletApiController::class, 'dashboard']);
+        Route::match(['get', 'post'], '/referrals',       [ReferralWalletApiController::class, 'referrals']);
+        Route::match(['get', 'post'], '/my-referrals',    [ReferralWalletApiController::class, 'referrals']);
+        Route::match(['get', 'post'], '/referrals/list',  [ReferralWalletApiController::class, 'referrals']);
 
         // Multi-item Order Checkout & Delivery Tracking Routes
         Route::post('/orders/checkout',                   [OrderDeliveryApiController::class, 'checkout']);
@@ -218,6 +222,8 @@ Route::post('/booking',                                 [BookingApiController::c
 Route::get('/bookings',                                 [BookingApiController::class, 'index']);
 Route::get('/booking',                                  [BookingApiController::class, 'index']);
 Route::get('/bookings/{id}',                            [BookingApiController::class, 'show']);
+Route::post('/bookings/{id}/cancel',                     [BookingApiController::class, 'cancel']);
+Route::post('/booking/{id}/cancel',                      [BookingApiController::class, 'cancel']);
 
 // Direct Address Routes (/api/addresses/*)
 Route::match(['get', 'post'], '/addresses/list',         [UserAddressController::class, 'index']);
@@ -227,6 +233,12 @@ Route::post('/addresses/add',                            [UserAddressController:
 Route::match(['delete', 'post'], '/addresses/remove',    [UserAddressController::class, 'destroy']);
 Route::match(['delete', 'post'], '/addresses/delete',    [UserAddressController::class, 'destroy']);
 Route::delete('/addresses/{id?}',                        [UserAddressController::class, 'destroy']);
+
+// Direct Referral Routes (/api/referrals, /api/my-referrals)
+Route::middleware('customer.auth')->group(function () {
+    Route::match(['get', 'post'], '/referrals',    [ReferralWalletApiController::class, 'referrals']);
+    Route::match(['get', 'post'], '/my-referrals', [ReferralWalletApiController::class, 'referrals']);
+});
 
 // =============================================================================
 // V1 SELF DEALER & REFERRAL API SPECIFICATION (DOCUMENTATION SECTION 17)

@@ -8,8 +8,11 @@ use App\Models\BookingTransfer;
 use App\Models\Product;
 use App\Models\Customer;
 use App\Models\WalletTransaction;
+use App\Models\Referral;
+use App\Models\SelfDealerWallet;
 use App\Services\ReferralCommissionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -452,10 +455,15 @@ class BookingApiController extends Controller
             $referralService = app(ReferralCommissionService::class);
             $referral = $referralService->processReferralBooking($booking);
 
-            // 8. Activate Self Dealer status for buyer if product is self-dealer eligible
+            // 8. Activate or Reactivate Self Dealer status for buyer if product is self-dealer eligible
             $activatedSelfDealer = false;
-            if ($product->self_dealer_eligible && !$user->is_self_dealer) {
+            if ($product->self_dealer_eligible && (!$user->is_self_dealer || $user->self_dealer_status !== 'active')) {
                 $activatedSelfDealer = $referralService->activateSelfDealer($user, $booking);
+            }
+
+            // 9. Auto-approve pending referrals if full payment was completed upfront
+            if ($paymentStatus === 'fully_paid') {
+                $referralService->autoApprovePendingReferralsForBooking($booking);
             }
 
             $mainImageUrl = \App\Helpers\ImageHelper::resolve($product->main_image);
@@ -592,7 +600,7 @@ class BookingApiController extends Controller
      */
     public function payBalance(Request $request, $id)
     {
-        $user = $request->user('customer');
+        $user = $this->resolveCustomer($request);
         if (!$user) {
             return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
         }
@@ -645,16 +653,38 @@ class BookingApiController extends Controller
         $booking->booking_status = 'balance_paid';
         $booking->save();
 
+        // Auto-approve any pending referral/activation points linked to this now fully-paid booking
+        $referralService = app(\App\Services\ReferralCommissionService::class);
+        $autoApprovedCount = $referralService->autoApprovePendingReferralsForBooking($booking);
+
+        // Enforce activation stake rule if wallet points were used
+        $stakeResult = ['cancelled' => false];
+        if ($creditApplied > 0) {
+            $stakeResult = $referralService->checkAndEnforceActivationStake($user, $creditApplied);
+        }
+
+        $message = 'Balance payment completed successfully.';
+        if ($autoApprovedCount > 0) {
+            $message .= " {$autoApprovedCount} pending credit/referral reward(s) have been auto-approved to available balance.";
+        }
+        if ($stakeResult['cancelled']) {
+            $message .= ' Notice: Your Self-Dealer status has been cancelled because your initial 20% activation credit was consumed. Purchase an eligible product to reactivate.';
+        }
+
         return response()->json([
             'status'  => true,
-            'message' => 'Balance payment completed successfully.',
+            'message' => $message,
             'data'    => [
-                'booking_number'        => $booking->booking_number,
-                'credit_applied'        => (float)$creditApplied,
-                'cash_paid'             => (float)$remainingCashToPay,
-                'balance_amount'        => (float)$booking->balance_amount,
-                'payment_status'        => $booking->payment_status,
-                'wallet_balance_remain' => (float)($user->wallet_balance ?? 0),
+                'booking_number'          => $booking->booking_number,
+                'credit_applied'          => (float)$creditApplied,
+                'cash_paid'               => (float)$remainingCashToPay,
+                'balance_amount'          => (float)$booking->balance_amount,
+                'payment_status'          => $booking->payment_status,
+                'referrals_auto_approved' => $autoApprovedCount,
+                'wallet_balance_remain'   => (float)($user->wallet_balance ?? 0),
+                'self_dealer_cancelled'   => $stakeResult['cancelled'],
+                'self_dealer_status'      => $user->fresh()->self_dealer_status,
+                'is_self_dealer'          => (bool) $user->fresh()->is_self_dealer,
             ],
         ]);
     }
@@ -772,5 +802,156 @@ class BookingApiController extends Controller
                 'transfer_status'  => 'pending_admin_approval',
             ],
         ]);
+    }
+
+    /**
+     * POST /api/customer/bookings/{id}/cancel
+     * Cancel an active booking, reverse any pending/available referral credits,
+     * revoke Self-Dealer status if this was the activation booking, and refund redeemed credits if any.
+     */
+    public function cancel(Request $request, $id)
+    {
+        $user = $this->resolveCustomer($request);
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $booking = Booking::where('id', $id)->where('user_id', $user->id)->first();
+        if (!$booking) {
+            // Also attempt lookup by booking_number if id is alphanumeric
+            $booking = Booking::where('booking_number', $id)->where('user_id', $user->id)->first();
+        }
+
+        if (!$booking) {
+            return response()->json(['status' => false, 'message' => 'Booking not found or does not belong to you.'], 404);
+        }
+
+        if ($booking->booking_status === 'cancelled') {
+            return response()->json([
+                'status'  => false,
+                'message' => 'This booking is already cancelled.',
+                'data'    => [
+                    'booking_number'      => $booking->booking_number,
+                    'booking_status'      => $booking->booking_status,
+                    'cancellation_reason' => $booking->cancellation_reason,
+                    'cancelled_at'        => $booking->cancelled_at ? $booking->cancelled_at->toIso8601String() : null,
+                ],
+            ], 400);
+        }
+
+        if (in_array(strtolower($booking->booking_status), ['delivered', 'completed'])) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Cannot cancel a booking that has already been delivered or completed.',
+            ], 400);
+        }
+
+        if ($booking->transfer_status === 'transferred') {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Cannot cancel a booking that has been transferred to another customer.',
+            ], 400);
+        }
+
+        $bodyJson = json_decode($request->getContent(), true);
+        if (!is_array($bodyJson)) {
+            $bodyJson = [];
+        }
+        $reason = $request->input('reason') ?? ($bodyJson['reason'] ?? 'Cancelled by customer via API');
+
+        return DB::transaction(function () use ($booking, $user, $reason) {
+            $booking->booking_status      = 'cancelled';
+            $booking->cancellation_reason = $reason;
+            $booking->cancelled_at        = now();
+            $booking->save();
+
+            $referralService = app(ReferralCommissionService::class);
+
+            // 1. Reverse any referral & activation credits associated with this booking
+            $referrals = Referral::where('booking_id', $booking->id)
+                ->whereIn('status', ['pending', 'available'])
+                ->get();
+
+            $reversedCount = 0;
+            foreach ($referrals as $ref) {
+                if ($referralService->reverseReferral($ref, "Booking {$booking->booking_number} cancelled: {$reason}")) {
+                    $reversedCount++;
+                }
+            }
+
+            // 2. If this was the user's Self-Dealer activation booking, revoke Self-Dealer status
+            $selfDealerCancelled = false;
+            if ($user->activation_booking_id == $booking->id) {
+                $user->is_self_dealer     = false;
+                $user->self_dealer_status = 'cancelled';
+                $user->save();
+                $selfDealerCancelled = true;
+            }
+
+            // 3. Refund any NEXVIA product credits redeemed towards this booking or its balance
+            $redemptions = WalletTransaction::where('booking_id', $booking->id)
+                ->where('status', 'redeemed')
+                ->where('type', 'debit')
+                ->get();
+
+            $totalRefundedPoints = 0.00;
+            foreach ($redemptions as $redemption) {
+                $refundAmt = (float) $redemption->amount;
+                if ($refundAmt > 0) {
+                    $user->wallet_balance = ($user->wallet_balance ?? 0) + $refundAmt;
+
+                    $dealerWallet = SelfDealerWallet::where('user_id', $user->id)->first();
+                    if ($dealerWallet) {
+                        $dealerWallet->available_points = ($dealerWallet->available_points ?? 0) + $refundAmt;
+                        $dealerWallet->redeemed_points  = max(0, ($dealerWallet->redeemed_points ?? 0) - $refundAmt);
+                        $dealerWallet->save();
+                    }
+
+                    WalletTransaction::create([
+                        'user_id'          => $user->id,
+                        'amount'           => $refundAmt,
+                        'type'             => 'credit',
+                        'source'           => 'booking_cancellation_refund',
+                        'transaction_type' => 'refund',
+                        'status'           => 'available',
+                        'booking_id'       => $booking->id,
+                        'description'      => "Refund of redeemed points for cancelled booking {$booking->booking_number}",
+                        'available_at'     => now(),
+                    ]);
+
+                    $totalRefundedPoints += $refundAmt;
+                }
+            }
+
+            if ($totalRefundedPoints > 0) {
+                $user->save();
+            }
+
+            $msg = "Booking {$booking->booking_number} has been cancelled successfully.";
+            if ($selfDealerCancelled) {
+                $msg .= " Your Self-Dealer status has been revoked because this was your activation booking.";
+            }
+            if ($totalRefundedPoints > 0) {
+                $msg .= " Redeemed product credits of ₹" . number_format($totalRefundedPoints, 2) . " have been refunded to your wallet.";
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => $msg,
+                'data'    => [
+                    'booking_id'             => $booking->id,
+                    'booking_number'         => $booking->booking_number,
+                    'booking_status'         => 'cancelled',
+                    'cancellation_reason'    => $reason,
+                    'cancelled_at'           => $booking->cancelled_at->toIso8601String(),
+                    'referrals_reversed'     => $reversedCount,
+                    'self_dealer_revoked'    => $selfDealerCancelled,
+                    'self_dealer_status'     => $user->fresh()->self_dealer_status,
+                    'is_self_dealer'         => (bool) $user->fresh()->is_self_dealer,
+                    'credits_refunded'       => (float) $totalRefundedPoints,
+                    'current_wallet_balance' => (float) ($user->fresh()->wallet_balance ?? 0),
+                ],
+            ]);
+        });
     }
 }

@@ -113,15 +113,25 @@ class OrderDeliveryApiController extends Controller
                 OrderItem::create($item);
             }
 
-            // Log wallet redemption if applied
+            // Log wallet redemption if applied & enforce activation stake rule
             if ($productCreditApplied > 0) {
+                $dealerWallet = \App\Models\SelfDealerWallet::where('user_id', $user->id)->first();
+                if ($dealerWallet) {
+                    $dealerWallet->redeemPoints($productCreditApplied);
+                }
+
                 WalletTransaction::create([
-                    'user_id'     => $user->id,
-                    'amount'      => $productCreditApplied,
-                    'type'        => 'debit',
-                    'source'      => 'booking_redemption',
-                    'description' => "Redeemed NEXVIA Product Credit (₹" . number_format($productCreditApplied, 2) . ") for Order {$order->order_number}",
+                    'user_id'          => $user->id,
+                    'amount'           => $productCreditApplied,
+                    'type'             => 'debit',
+                    'source'           => 'booking_redemption',
+                    'transaction_type' => 'redemption',
+                    'status'           => 'redeemed',
+                    'description'      => "Redeemed NEXVIA Product Credit (₹" . number_format($productCreditApplied, 2) . ") for Order {$order->order_number}",
                 ]);
+
+                $referralService = app(\App\Services\ReferralCommissionService::class);
+                $referralService->checkAndEnforceActivationStake($user, $productCreditApplied);
             }
 
             // Initialize 7-Stage Delivery

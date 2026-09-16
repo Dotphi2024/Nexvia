@@ -40,6 +40,9 @@ class CustomerCategoryProgress extends Model
      */
     public function getCurrentRate(): float
     {
+        if ($this->category && $this->category->commission_percentage !== null && (float) $this->category->commission_percentage > 0) {
+            return (float) $this->category->commission_percentage;
+        }
         return ReferralStageConfig::getRateForStage($this->current_stage);
     }
 

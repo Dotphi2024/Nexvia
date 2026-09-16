@@ -24,8 +24,8 @@ class ReferralCommissionService
 
     public function activateSelfDealer(Customer $customer, Booking $booking): bool
     {
-        if ($customer->is_self_dealer) {
-            return false; // Already a self dealer
+        if ($customer->is_self_dealer && $customer->self_dealer_status === 'active') {
+            return false; // Already an active self dealer
         }
 
         $product = $booking->product;
@@ -34,11 +34,11 @@ class ReferralCommissionService
         }
 
         return DB::transaction(function () use ($customer, $booking, $product) {
-            // 1. Generate unique Self Dealer Code and Referral Code
-            $selfDealerCode = $this->generateSelfDealerCode();
-            $referralCode   = $this->generateReferralCode($customer);
+            // 1. Generate unique Self Dealer Code and Referral Code (preserve existing if reactivating)
+            $selfDealerCode = $customer->self_dealer_code ?: $this->generateSelfDealerCode();
+            $referralCode   = $customer->referral_code ?: $this->generateReferralCode($customer);
 
-            // 2. Activate Self Dealer Status
+            // 2. Activate or Reactivate Self Dealer Status
             $customer->is_self_dealer           = true;
             $customer->self_dealer_code         = $selfDealerCode;
             $customer->referral_code            = $referralCode;
@@ -164,6 +164,13 @@ class ReferralCommissionService
             // Get current stage rate from DB config (NOT hardcoded)
             $currentStage   = $progress->current_stage;
             $stageRate      = ReferralStageConfig::getRateForStage($currentStage);
+
+            // If category has an independent custom commission percentage configured, apply it
+            $categoryObj = Category::find($categoryId);
+            if ($categoryObj && $categoryObj->commission_percentage !== null && (float) $categoryObj->commission_percentage > 0) {
+                $stageRate = (float) $categoryObj->commission_percentage;
+            }
+
             $eligibleValue  = $product->eligible_referral_value ?? $product->mrp;
             $pointsEarned   = $eligibleValue * ($stageRate / 100);
 
@@ -272,6 +279,29 @@ class ReferralCommissionService
         });
     }
 
+    /**
+     * Auto-approves any pending referral/activation points linked to a completed/fully-paid booking.
+     * Retains the manual qualify action in Admin for manual review/override.
+     *
+     * @param Booking $booking
+     * @return int Number of referrals qualified
+     */
+    public function autoApprovePendingReferralsForBooking(Booking $booking): int
+    {
+        $pendingReferrals = Referral::where('booking_id', $booking->id)
+            ->where('status', 'pending')
+            ->get();
+
+        $approvedCount = 0;
+        foreach ($pendingReferrals as $referral) {
+            if ($this->qualifyReferral($referral)) {
+                $approvedCount++;
+            }
+        }
+
+        return $approvedCount;
+    }
+
     // =========================================================================
     // STEP 4 — REVERSE REFERRAL
     // Called when order is cancelled, returned, or fraud confirmed.
@@ -376,5 +406,64 @@ class ReferralCommissionService
         } while (Customer::where('referral_code', $code)->exists());
 
         return $code;
+    }
+
+    // =========================================================================
+    // STAKE ENFORCEMENT — 20% ACTIVATION CREDIT RETENTION RULE
+    // The initial 20% activation credit must always be retained in the wallet.
+    // If the user redeems points such that their balance dips into this 20%
+    // activation credit, their Self-Dealer status is immediately CANCELLED.
+    // To reactivate, they must purchase an eligible product again.
+    // =========================================================================
+
+    public function getRequiredActivationStake(Customer $customer): float
+    {
+        $activationRecord = Referral::where('referrer_id', $customer->id)
+            ->where('transaction_type', 'activation')
+            ->latest('id')
+            ->first();
+
+        return $activationRecord ? (float) $activationRecord->credit_earned : 0.00;
+    }
+
+    public function checkAndEnforceActivationStake(Customer $customer, float $redeemedPoints = 0.0): array
+    {
+        if (!$customer->is_self_dealer || $customer->self_dealer_status !== 'active') {
+            return ['cancelled' => false, 'reason' => null];
+        }
+
+        $requiredStake = $this->getRequiredActivationStake($customer);
+        if ($requiredStake <= 0) {
+            return ['cancelled' => false, 'reason' => null];
+        }
+
+        $wallet = SelfDealerWallet::where('user_id', $customer->id)->first();
+        $remainingBalance = $wallet ? (float)$wallet->available_points : (float)($customer->wallet_balance ?? 0);
+
+        // If remaining balance falls below the initial 20% activation credit:
+        if ($remainingBalance < $requiredStake) {
+            $customer->is_self_dealer     = false;
+            $customer->self_dealer_status = 'cancelled';
+            $customer->save();
+
+            WalletTransaction::create([
+                'user_id'              => $customer->id,
+                'amount'               => 0.00,
+                'type'                 => 'debit',
+                'source'               => 'self_dealer_cancelled',
+                'transaction_type'     => 'status_change',
+                'status'               => 'redeemed',
+                'description'          => "Self-Dealer status CANCELLED: Initial 20% activation credit (₹" . number_format($requiredStake, 2) . ") was consumed. Minimum ₹" . number_format($requiredStake, 2) . " must be retained to maintain Self-Dealer privileges.",
+            ]);
+
+            return [
+                'cancelled'      => true,
+                'required_stake' => $requiredStake,
+                'remaining'      => $remainingBalance,
+                'message'        => "Your Self-Dealer status has been cancelled because your initial 20% activation credit (₹" . number_format($requiredStake, 2) . ") was used. To reactivate your Self-Dealer status, you must purchase an eligible product.",
+            ];
+        }
+
+        return ['cancelled' => false, 'reason' => null];
     }
 }

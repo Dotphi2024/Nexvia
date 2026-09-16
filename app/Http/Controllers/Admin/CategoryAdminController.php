@@ -54,11 +54,11 @@ class CategoryAdminController extends Controller
         $category = Category::findOrFail($id);
 
         $request->validate([
-            'name'                  => 'required|string|max:255',
-            'type'                  => 'required|string',
+            'name' => 'required|string|max:255',
+            'type' => 'required|string',
             'commission_percentage' => 'nullable|numeric|min:0|max:100',
-            'image'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'description'           => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'description' => 'nullable|string',
         ]);
 
         if ($request->hasFile('image')) {

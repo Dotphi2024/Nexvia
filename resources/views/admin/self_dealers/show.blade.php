@@ -144,6 +144,8 @@
                         <tr>
                             <th class="ps-3">#</th>
                             <th>Type</th>
+                            <th>Referred Customer</th>
+                            <th>Booking #</th>
                             <th>Category</th>
                             <th>Stage</th>
                             <th>Cycle</th>
@@ -166,12 +168,35 @@
                                     <span class="badge bg-primary">Referral</span>
                                 @endif
                             </td>
+                            <td>
+                                @if($referral->referee)
+                                    <strong class="text-dark d-block fs-13">{{ $referral->referee->name }}</strong>
+                                    <span class="text-muted micro">{{ $referral->referee->phone }}</span>
+                                @else
+                                    <span class="text-muted small">Own Purchase</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($referral->booking)
+                                    <a href="{{ route('admin.bookings.show', $referral->booking_id) }}" class="fw-bold text-primary text-decoration-none fs-13">
+                                        {{ $referral->booking->booking_number }}
+                                    </a>
+                                @else
+                                    <span class="text-muted small">—</span>
+                                @endif
+                            </td>
                             <td>{{ $referral->category->name ?? '—' }}</td>
-                            <td>{{ $referral->referral_stage ? 'Stage '.$referral->referral_stage : '—' }}</td>
+                            <td>
+                                @if($referral->referral_stage)
+                                    <span class="badge bg-info-subtle text-info fw-bold">Stage {{ $referral->referral_stage }}</span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
                             <td>{{ $referral->cycle_number ?? '—' }}</td>
                             <td>₹{{ number_format($referral->eligible_product_value, 2) }}</td>
-                            <td>{{ $referral->benefit_percentage }}%</td>
-                            <td class="fw-semibold">{{ number_format($referral->credit_earned, 0) }}</td>
+                            <td><span class="fw-bold text-dark">{{ $referral->benefit_percentage }}%</span></td>
+                            <td class="fw-bold text-success">{{ number_format($referral->credit_earned, 0) }} pts</td>
                             <td>
                                 @if($referral->status === 'pending')
                                     <span class="badge bg-warning text-dark">Pending</span>
@@ -223,7 +248,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="11" class="text-center py-4 text-muted">No referral transactions found.</td>
+                            <td colspan="13" class="text-center py-4 text-muted">No referral transactions found.</td>
                         </tr>
                         @endforelse
                     </tbody>

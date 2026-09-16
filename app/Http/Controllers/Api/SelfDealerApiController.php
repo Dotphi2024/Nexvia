@@ -55,10 +55,16 @@ class SelfDealerApiController extends Controller
                 'activation_booking_id'    => $user->activation_booking_id,
                 'activation_product_name'  => $activationBooking ? $activationBooking->product_name : null,
                 'wallet'                   => [
-                    'available_points' => (float) $wallet->available_points,
-                    'pending_points'   => (float) $wallet->pending_points,
-                    'redeemed_points'  => (float) $wallet->redeemed_points,
-                    'total_earned'     => (float) $wallet->total_earned,
+                    'available_points'           => (float) $wallet->available_points,
+                    'pending_points'             => (float) $wallet->pending_points,
+                    'redeemed_points'            => (float) $wallet->redeemed_points,
+                    'total_earned'               => (float) $wallet->total_earned,
+                    'required_activation_stake'  => (float) app(\App\Services\ReferralCommissionService::class)->getRequiredActivationStake($user),
+                    'free_spendable_points'      => (float) max(0, (float)$wallet->available_points - app(\App\Services\ReferralCommissionService::class)->getRequiredActivationStake($user)),
+                ],
+                'stake_retention_policy'   => [
+                    'required_stake_points'      => (float) app(\App\Services\ReferralCommissionService::class)->getRequiredActivationStake($user),
+                    'rule'                       => 'The initial 20% activation credit must be maintained in your wallet. If your balance dips into this 20% deposit, your Self-Dealer status will be cancelled and require purchasing an eligible product to reactivate.',
                 ],
                 'rule_version'             => 'Variant A (10% → 12% → 15% → 18% → 20% → Reset)',
             ],
@@ -259,52 +265,7 @@ class SelfDealerApiController extends Controller
      */
     public function referrals(Request $request)
     {
-        $user = $request->user('customer') ?? $request->get('authenticated_customer') ?? $request->user();
-        if (!$user) {
-            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
-        }
-
-        $perPage = (int) ($request->input('per_page') ?? 20);
-        $referrals = Referral::with(['referee', 'booking', 'category'])
-            ->where('referrer_id', $user->id)
-            ->latest()
-            ->paginate($perPage);
-
-        $formatted = $referrals->getCollection()->map(function ($ref) {
-            $refereePhone = $ref->referee ? $ref->referee->phone : null;
-            $maskedPhone  = $refereePhone
-                ? substr($refereePhone, 0, 2) . '******' . substr($refereePhone, -2)
-                : 'N/A';
-
-            return [
-                'referral_id'            => $ref->id,
-                'referee_name'           => $ref->referee ? $ref->referee->name : 'Customer',
-                'referee_phone_masked'   => $maskedPhone,
-                'booking_number'         => $ref->booking ? $ref->booking->booking_number : null,
-                'category_name'          => $ref->category ? $ref->category->name : null,
-                'stage'                  => $ref->referral_stage,
-                'cycle_number'           => $ref->cycle_number,
-                'benefit_percentage'     => (float) $ref->benefit_percentage,
-                'product_value'          => (float) $ref->product_value,
-                'eligible_product_value' => (float) $ref->eligible_product_value,
-                'credit_earned'          => (float) $ref->credit_earned,
-                'status'                 => $ref->status, // pending, qualified, reversed
-                'notes'                  => $ref->notes,
-                'date'                   => $ref->created_at ? $ref->created_at->format('Y-m-d H:i') : null,
-                'approved_at'            => $ref->approved_at ? $ref->approved_at->format('Y-m-d H:i') : null,
-            ];
-        });
-
-        return response()->json([
-            'status'     => true,
-            'pagination' => [
-                'current_page' => $referrals->currentPage(),
-                'last_page'    => $referrals->lastPage(),
-                'per_page'     => $referrals->perPage(),
-                'total'        => $referrals->total(),
-            ],
-            'data'       => $formatted,
-        ]);
+        return app(ReferralWalletApiController::class)->referrals($request);
     }
 
     /**
@@ -478,14 +439,29 @@ class SelfDealerApiController extends Controller
             }
             $booking->save();
 
+            // Enforce activation stake rule:
+            // The initial 20% activation credit must always be retained in the wallet.
+            // If redemption dips into the initial 20% activation credit, Self-Dealer status is cancelled.
+            $referralService = app(\App\Services\ReferralCommissionService::class);
+            $stakeResult     = $referralService->checkAndEnforceActivationStake($user, $pointsToRedeem);
+
+            $message = "Successfully redeemed {$pointsToRedeem} points toward your booking.";
+            if ($stakeResult['cancelled']) {
+                $message .= " Notice: Your Self-Dealer status has been cancelled because your initial 20% activation credit was consumed. Purchase an eligible product to reactivate.";
+            }
+
             return response()->json([
                 'status'  => true,
-                'message' => "Successfully redeemed {$pointsToRedeem} points toward your booking.",
+                'message' => $message,
                 'data'    => [
                     'points_redeemed'          => $pointsToRedeem,
                     'remaining_balance_due'    => (float) $booking->balance_amount,
                     'booking_payment_status'   => $booking->payment_status,
                     'remaining_wallet_points'  => (float) $wallet->available_points,
+                    'self_dealer_cancelled'    => $stakeResult['cancelled'],
+                    'self_dealer_status'       => $user->fresh()->self_dealer_status,
+                    'is_self_dealer'           => (bool) $user->fresh()->is_self_dealer,
+                    'cancellation_notice'      => $stakeResult['message'] ?? null,
                 ],
             ]);
         });

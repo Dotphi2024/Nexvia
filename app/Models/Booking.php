@@ -36,11 +36,14 @@ class Booking extends Model
         'city',
         'state',
         'qr_code_hash',
+        'cancellation_reason',
+        'cancelled_at',
     ];
 
     protected $casts = [
         'booking_date' => 'date',
         'balance_due_date' => 'date',
+        'cancelled_at' => 'datetime',
         'mrp' => 'decimal:2',
         'booking_amount' => 'decimal:2',
         'balance_amount' => 'decimal:2',

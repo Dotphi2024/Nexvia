@@ -11,7 +11,7 @@ return new class extends Migration
         // 1. Extend users table — add missing Self Dealer fields only
         // (is_self_dealer, self_dealer_code, referral_code already exist)
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('self_dealer_status', ['inactive', 'pending', 'active', 'suspended'])->default('inactive')->after('self_dealer_code');
+            $table->enum('self_dealer_status', ['inactive', 'pending', 'active', 'suspended', 'cancelled'])->default('inactive')->after('self_dealer_code');
             $table->timestamp('self_dealer_activated_at')->nullable()->after('self_dealer_status');
             $table->foreignId('activation_booking_id')->nullable()->constrained('bookings')->onDelete('set null')->after('self_dealer_activated_at');
             $table->string('terms_version', 20)->nullable()->after('activation_booking_id');

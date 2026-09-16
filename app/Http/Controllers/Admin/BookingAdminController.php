@@ -72,11 +72,46 @@ class BookingAdminController extends Controller
             'payment_status' => 'required|string',
         ]);
 
+        $oldStatus = $booking->booking_status;
+
         $booking->update([
             'booking_status' => $request->booking_status,
             'payment_status' => $request->payment_status,
         ]);
 
-        return back()->with('success', 'Booking status updated successfully!');
+        $referralService = app(\App\Services\ReferralCommissionService::class);
+
+        // Auto-approve pending referrals if booking is fully paid or completed/delivered
+        $approvedMsg = '';
+        if ($booking->payment_status === 'fully_paid' || in_array($booking->booking_status, ['delivered', 'completed'])) {
+            $approvedCount = $referralService->autoApprovePendingReferralsForBooking($booking);
+            if ($approvedCount > 0) {
+                $approvedMsg = " ({$approvedCount} referral credit(s) auto-approved)";
+            }
+        }
+
+        // If booking was cancelled by Admin, reverse any active or pending referrals
+        if ($booking->booking_status === 'cancelled' && $oldStatus !== 'cancelled') {
+            $booking->cancelled_at = now();
+            $booking->cancellation_reason = 'Cancelled by Admin';
+            $booking->save();
+
+            $referrals = \App\Models\Referral::where('booking_id', $booking->id)
+                ->whereIn('status', ['pending', 'available'])
+                ->get();
+
+            foreach ($referrals as $ref) {
+                $referralService->reverseReferral($ref, "Booking {$booking->booking_number} cancelled by Admin");
+            }
+
+            $user = $booking->user;
+            if ($user && $user->activation_booking_id == $booking->id) {
+                $user->is_self_dealer = false;
+                $user->self_dealer_status = 'cancelled';
+                $user->save();
+            }
+        }
+
+        return back()->with('success', 'Booking status updated successfully!' . $approvedMsg);
     }
 }

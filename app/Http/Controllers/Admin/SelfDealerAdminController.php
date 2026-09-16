@@ -73,7 +73,7 @@ class SelfDealerAdminController extends Controller
             ->get();
 
         $referrals = Referral::where('referrer_id', $id)
-            ->with(['booking', 'category'])
+            ->with(['booking', 'category', 'referee'])
             ->latest()
             ->paginate(15);
 
