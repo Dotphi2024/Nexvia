@@ -149,6 +149,17 @@
                          <span class="nav-text">Service Requests</span>
                     </a>
                </li>
+
+               <li class="menu-title">Content & Policies</li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.pages.*') ? 'active' : '' }}" href="{{ route('admin.pages.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:document-text-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Pages & Policies</span>
+                    </a>
+               </li>
           </ul>
      </div>
 

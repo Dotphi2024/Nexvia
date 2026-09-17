@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\BookingAdminController;
 use App\Http\Controllers\Admin\BookingEngineController;
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\BannerAdminController;
+use App\Http\Controllers\Admin\PageAdminController;
 
 // AdminPanel Routes
 Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->group(function () {
@@ -80,4 +81,16 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     // =========================================================================
     Route::get('/referral-config', [\App\Http\Controllers\Admin\ReferralStageConfigController::class, 'settings'])->name('admin.referral.config.settings');
     Route::post('/referral-config', [\App\Http\Controllers\Admin\ReferralStageConfigController::class, 'update'])->name('admin.referral.config.update');
+
+    // =========================================================================
+    // CMS PAGES & POLICY MANAGEMENT
+    // =========================================================================
+    Route::get('/pages', [PageAdminController::class, 'index'])->name('admin.pages.index');
+    Route::get('/pages/create', [PageAdminController::class, 'create'])->name('admin.pages.create');
+    Route::post('/pages', [PageAdminController::class, 'store'])->name('admin.pages.store');
+    Route::get('/pages/{id}/edit', [PageAdminController::class, 'edit'])->name('admin.pages.edit');
+    Route::put('/pages/{id}', [PageAdminController::class, 'update'])->name('admin.pages.update');
+    Route::post('/pages/{id}/update', [PageAdminController::class, 'update'])->name('admin.pages.update.post');
+    Route::post('/pages/{id}/status', [PageAdminController::class, 'toggleStatus'])->name('admin.pages.status');
+    Route::delete('/pages/{id}', [PageAdminController::class, 'destroy'])->name('admin.pages.destroy');
 });

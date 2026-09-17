@@ -15,10 +15,21 @@ use App\Http\Controllers\Api\WishlistApiController;
 use App\Http\Controllers\Api\CartApiController;
 use App\Http\Controllers\Api\CheckoutApiController;
 use App\Http\Controllers\Api\PaymentApiController;
+use App\Http\Controllers\Api\PageApiController;
 
 Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
 });
+
+// Privacy Policy & CMS Dynamic Pages Public APIs
+Route::match(['get', 'post'], '/privacy-policy',        [PageApiController::class, 'privacyPolicy']);
+Route::match(['get', 'post'], '/terms-and-conditions',  [PageApiController::class, 'termsAndConditions']);
+Route::match(['get', 'post'], '/terms-conditions',      [PageApiController::class, 'termsAndConditions']);
+Route::match(['get', 'post'], '/refund-policy',         [PageApiController::class, 'refundPolicy']);
+Route::match(['get', 'post'], '/about-us',              [PageApiController::class, 'aboutUs']);
+Route::match(['get', 'post'], '/contact-us',            [PageApiController::class, 'contactUs']);
+Route::match(['get', 'post'], '/pages',                 [PageApiController::class, 'index']);
+Route::match(['get', 'post'], '/pages/{slugOrId}',      [PageApiController::class, 'show']);
 
 // Categories & Products Public APIs
 Route::get('/categories',           [CategoryApiController::class, 'index']);
@@ -88,6 +99,13 @@ Route::prefix('customer')->group(function () {
     Route::get('/products',              [ProductApiController::class, 'index']);
     Route::post('/products',             [ProductApiController::class, 'index']);
     Route::get('/products/{idOrSlug}',   [ProductApiController::class, 'show']);
+    Route::match(['get', 'post'], '/privacy-policy',        [PageApiController::class, 'privacyPolicy']);
+    Route::match(['get', 'post'], '/terms-and-conditions',  [PageApiController::class, 'termsAndConditions']);
+    Route::match(['get', 'post'], '/refund-policy',         [PageApiController::class, 'refundPolicy']);
+    Route::match(['get', 'post'], '/about-us',              [PageApiController::class, 'aboutUs']);
+    Route::match(['get', 'post'], '/contact-us',            [PageApiController::class, 'contactUs']);
+    Route::match(['get', 'post'], '/pages',                 [PageApiController::class, 'index']);
+    Route::match(['get', 'post'], '/pages/{slugOrId}',      [PageApiController::class, 'show']);
     Route::post('/register',           [CustomerAuthController::class, 'register']);
     Route::post('/login',              [CustomerAuthController::class, 'login']);
     Route::post('/send-otp',           [CustomerAuthController::class, 'sendOtp']);

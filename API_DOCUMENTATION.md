@@ -20,6 +20,7 @@
 9. [Self-Dealer Ecosystem & 5-Stage Cycle](#9-self-dealer-ecosystem--5-stage-cycle)
 10. [Order Delivery Tracking](#10-order-delivery-tracking)
 11. [Warranties, Service Tickets & Installations](#11-warranties-service-tickets--installations)
+12. [CMS Dynamic Pages, Policies & Points](#12-cms-dynamic-pages-policies--points)
 
 ---
 
@@ -1045,6 +1046,174 @@
   "notes": "Wall mount bracket already available."
 }
 ```
+
+
+---
+
+## 12. CMS Dynamic Pages, Policies & Points
+
+All pages configured and managed via the Admin Panel (Privacy Policy, Terms and Conditions, Refund Policy, About Us, etc.) can be retrieved dynamically via public REST endpoints. Each page response includes both the full formatted `content` (HTML/body text) and a structured `points` array (key highlights, terms, and policy bullet points with `title` and `description`) specifically designed for clean mobile application and web frontend consumption.
+
+### 12.1 Fetch Privacy Policy
+* **Method**: `GET` or `POST`
+* **URL**: `/api/privacy-policy` (or `/api/customer/privacy-policy`)
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Privacy policy retrieved successfully.",
+  "data": {
+    "id": 1,
+    "title": "Privacy Policy",
+    "slug": "privacy-policy",
+    "excerpt": "Learn how NEXVIA collects, protects, uses, and shares your personal information across our platform and services.",
+    "content": "<h2>Privacy Policy for NEXVIA</h2><p>At NEXVIA, accessible from our official website and mobile applications, the privacy of our visitors and customers is of extreme importance...</p>",
+    "points": [
+      {
+        "title": "Information We Collect",
+        "description": "We collect personal information that you provide when registering an account, booking products, managing referral wallets, or contacting customer support (e.g. name, phone number, email address, shipping address, identity verification documents, and payment details)."
+      },
+      {
+        "title": "How We Use Your Information",
+        "description": "We utilize collected data to operate, maintain, and provide the features of NEXVIA, fulfill product bookings, process 20% advance payments and final settlements, administer referral commissions, schedule doorstep deliveries, and provide customer support."
+      },
+      {
+        "title": "Data Protection & Security",
+        "description": "We deploy industry-standard 256-bit SSL encryption, tokenized authentication, and secure access protocols to safeguard personal information from unauthorized access, alteration, disclosure, or destruction."
+      },
+      {
+        "title": "Cookies and Tracking Technologies",
+        "description": "NEXVIA uses cookies and session tokens to record visitor preferences, track active sessions, optimize website/app performance, and provide tailored product recommendations."
+      },
+      {
+        "title": "Third-Party Service Providers",
+        "description": "We do not sell your personal data. We only share necessary data with trusted third parties strictly to facilitate transactions, such as payment gateways, SMS/OTP notification providers, and verified logistics partners."
+      },
+      {
+        "title": "User Rights & Data Control",
+        "description": "You have the right to inspect, update, or request the deletion of your personal account data at any time through your account dashboard or by contacting our grievance officer."
+      }
+    ],
+    "meta_title": "Privacy Policy - NEXVIA",
+    "meta_description": "Read NEXVIA's privacy policy to understand how we protect and manage your personal data and privacy.",
+    "meta_keywords": "privacy policy, nexvia privacy, data security, user rights",
+    "sort_order": 1,
+    "updated_at": "2026-09-17T07:33:30+00:00",
+    "created_at": "2026-09-17T07:33:30+00:00"
+  }
+}
+```
+
+---
+
+### 12.2 List All Active CMS Pages
+* **Method**: `GET` or `POST`
+* **URL**: `/api/pages` (or `/api/customer/pages`)
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Pages list retrieved successfully.",
+  "total": 5,
+  "data": [
+    {
+      "id": 1,
+      "title": "Privacy Policy",
+      "slug": "privacy-policy",
+      "excerpt": "Learn how NEXVIA collects, protects, uses, and shares your personal information across our platform and services.",
+      "points_count": 6,
+      "points": [ ... ],
+      "sort_order": 1,
+      "updated_at": "2026-09-17T07:33:30+00:00"
+    },
+    {
+      "id": 2,
+      "title": "Terms and Conditions",
+      "slug": "terms-and-conditions",
+      "excerpt": "Terms, rules, and guidelines governing user accounts, product bookings, referral credits, and platform services at NEXVIA.",
+      "points_count": 5,
+      "points": [ ... ],
+      "sort_order": 2,
+      "updated_at": "2026-09-17T07:33:30+00:00"
+    }
+  ]
+}
+```
+
+---
+
+### 12.3 Fetch Specific Page by Slug or ID
+* **Method**: `GET` or `POST`
+* **URL**: `/api/pages/{slugOrId}` (or `/api/customer/pages/{slugOrId}`)
+* **Auth**: Public
+* **URL Parameters**:
+  * `slugOrId`: Page slug (e.g. `terms-and-conditions`, `refund-policy`, `about-us`, `contact-us`, `privacy-policy`) or numeric Database ID.
+
+#### Example Request:
+`GET /api/pages/terms-and-conditions`
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Terms and Conditions retrieved successfully.",
+  "data": {
+    "id": 2,
+    "title": "Terms and Conditions",
+    "slug": "terms-and-conditions",
+    "excerpt": "Terms, rules, and guidelines governing user accounts, product bookings, referral credits, and platform services at NEXVIA.",
+    "content": "<h2>Terms and Conditions of Use</h2><p>Welcome to NEXVIA. These terms and conditions outline the rules and regulations...</p>",
+    "points": [
+      {
+        "title": "Account Registration & Eligibility",
+        "description": "Users must provide accurate, verified phone numbers and identity credentials. You are responsible for safeguarding your login credentials and one-time passwords (OTPs)."
+      },
+      {
+        "title": "20% Booking Engine & 60-Day Settlement",
+        "description": "Customers can secure select catalog products by paying a 20% upfront booking deposit. The remaining 80% balance must be settled within the designated 60-day settlement window before product dispatch and doorstep delivery."
+      },
+      {
+        "title": "Self Dealer Referral Program",
+        "description": "Self-dealers earn referral rewards and tier milestones based on verified purchases. Any fraudulent self-referrals, fake accounts, or system abuse will result in commission forfeiture and account suspension."
+      },
+      {
+        "title": "Doorstep Delivery & Installation",
+        "description": "Upon complete payment verification, deliveries and scheduled technician installations are coordinated through certified logistics and service technicians."
+      },
+      {
+        "title": "Intellectual Property",
+        "description": "All trademarks, logos, system software, product designs, and content displayed on NEXVIA are the intellectual property of NEXVIA and protected under applicable laws."
+      }
+    ],
+    "meta_title": "Terms & Conditions - NEXVIA",
+    "meta_description": "Review the official terms and conditions for using NEXVIA and booking products.",
+    "meta_keywords": "terms and conditions, booking rules, user agreement, nexvia terms",
+    "sort_order": 2,
+    "updated_at": "2026-09-17T07:33:30+00:00",
+    "created_at": "2026-09-17T07:33:30+00:00"
+  }
+}
+```
+
+---
+
+### 12.4 Direct Convenience Policy Shortcuts
+* **Auth**: Public
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/privacy-policy` | `GET`, `POST` | Fetches active Privacy Policy document & structured points |
+| `/api/terms-and-conditions` | `GET`, `POST` | Fetches active Terms and Conditions document & structured points |
+| `/api/terms-conditions` | `GET`, `POST` | Alias for Terms and Conditions |
+| `/api/refund-policy` | `GET`, `POST` | Fetches active Refund & Cancellation Policy & structured points |
+| `/api/about-us` | `GET`, `POST` | Fetches About Us company overview & points |
+| `/api/contact-us` | `GET`, `POST` | Fetches Contact, Helpline & Grievance support details & points |
+
+*(All above shortcuts are also accessible under `/api/customer/*`)*
 
 ---
 
