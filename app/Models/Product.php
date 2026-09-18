@@ -63,4 +63,27 @@ class Product extends Model
     {
         return $this->hasMany(Wishlist::class, 'product_id');
     }
+
+    /**
+     * Ensure booking_amount is always calculated if not explicitly set (default 20% of MRP)
+     */
+    public function getBookingAmountAttribute($value)
+    {
+        if ($value !== null && (float) $value > 0) {
+            return (float) $value;
+        }
+        $pct = (float) ($this->booking_percentage ?: 20.00);
+        return round(((float) $this->mrp) * ($pct / 100), 2);
+    }
+
+    /**
+     * Ensure balance_amount is always calculated if not explicitly set (MRP minus booking amount)
+     */
+    public function getBalanceAmountAttribute($value)
+    {
+        if ($value !== null && (float) $value > 0) {
+            return (float) $value;
+        }
+        return max(0.00, round(((float) $this->mrp) - (float) $this->booking_amount, 2));
+    }
 }

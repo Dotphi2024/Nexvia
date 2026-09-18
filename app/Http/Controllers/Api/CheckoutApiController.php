@@ -248,6 +248,21 @@ class CheckoutApiController extends Controller
                         'payable_later'          => round($totalBalance, 2),
                         'total_payable'          => $grandTotal,
                     ],
+                    'payment_options' => [
+                        'online_gateway' => [
+                            'name'        => 'Razorpay / Cards / Net Banking',
+                            'enabled'     => true,
+                        ],
+                        'upi_qr' => [
+                            'name'         => 'Scan & Pay via UPI QR Code',
+                            'enabled'      => true,
+                            'account_name' => 'DLS AGRO INFRAVENTURE PRIVATE LIMITED',
+                            'upi_id'       => 'dlsagroin.09@idfcbank',
+                            'bank_name'    => 'IDFC FIRST Bank',
+                            'qr_image_url' => asset('images/dls_payment_qr.png'),
+                            'instructions' => 'Scan with any UPI App (GPay, PhonePe, Paytm, BHIM)',
+                        ],
+                    ],
                     'items' => $computedItems,
                 ],
             ], 200);

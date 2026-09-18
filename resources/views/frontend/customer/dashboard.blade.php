@@ -65,13 +65,17 @@
                                     <span class="micro text-danger d-block">80% Balance</span>
                                     <strong class="text-danger small">₹{{ number_format($booking->balance_amount, 0) }}</strong>
                                 </div>
-                            </div>
-
-                            <!-- 60-DAY COUNTDOWN TIMER & PROGRESS BAR -->
+                                                      <!-- 60-DAY COUNTDOWN TIMER & PROGRESS BAR -->
                             @if($booking->payment_status !== 'fully_paid')
                                 <div class="mb-3">
+                                    @if($booking->balance_payment_mode === 'emi')
+                                        <div class="badge bg-primary-subtle text-primary border mb-2 d-inline-block text-wrap text-start">
+                                            <iconify-icon icon="solar:calendar-bold" class="me-1 align-middle"></iconify-icon>
+                                            EMI Active: {{ $booking->emi_installments_paid }} of {{ $booking->emi_tenure_months }} Paid (₹{{ number_format($booking->emi_monthly_amount, 0) }}/mo)
+                                        </div>
+                                    @endif
                                     <div class="d-flex justify-content-between small mb-1">
-                                        <span class="fw-bold text-dark">60-Day Balance Payment Window</span>
+                                        <span class="fw-bold text-dark">Balance Due: ₹{{ number_format($booking->balance_amount, 0) }}</span>
                                         <span class="fw-bold text-danger">{{ $booking->days_remaining }} Days Remaining</span>
                                     </div>
                                     <div class="progress" style="height: 10px;">
@@ -90,12 +94,164 @@
                                 </a>
 
                                 @if($booking->payment_status !== 'fully_paid')
-                                    <form action="{{ route('booking.pay.balance', $booking->booking_number) }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="btn btn-success btn-sm fw-bold">
-                                            Pay Balance (₹{{ number_format($booking->balance_amount, 0) }})
-                                        </button>
-                                    </form>
+                                    <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#payBalanceModal{{ $booking->id }}">
+                                        <iconify-icon icon="solar:card-2-bold" class="me-1 align-middle"></iconify-icon> Pay Balance (EMI / Full)
+                                    </button>
+
+                                    <!-- Pay Balance Settlement Modal -->
+                                    <div class="modal fade" id="payBalanceModal{{ $booking->id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                                            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                                                <div class="modal-header bg-primary text-white">
+                                                    <div>
+                                                        <h6 class="modal-title fw-bold mb-0">
+                                                            <iconify-icon icon="solar:wallet-money-bold" class="me-1 align-middle text-warning"></iconify-icon>
+                                                            Pay Remaining 80% Balance – #{{ $booking->booking_number }}
+                                                        </h6>
+                                                        <span class="small text-white-50">Remaining Balance: ₹{{ number_format($booking->balance_amount, 2) }}</span>
+                                                    </div>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body p-4 text-start">
+                                                    <!-- Nav Pills -->
+                                                    <ul class="nav nav-pills nav-fill mb-3 bg-light p-1 rounded-3" role="tablist">
+                                                        <li class="nav-item">
+                                                            <button class="nav-link active fw-bold py-2" data-bs-toggle="pill" data-bs-target="#dash-tab-full{{ $booking->id }}" type="button">
+                                                                1. Full Amount
+                                                            </button>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <button class="nav-link fw-bold py-2" data-bs-toggle="pill" data-bs-target="#dash-tab-emi{{ $booking->id }}" type="button">
+                                                                2. Easy EMI
+                                                            </button>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <button class="nav-link fw-bold py-2" data-bs-toggle="pill" data-bs-target="#dash-tab-flex{{ $booking->id }}" type="button">
+                                                                3. Flexible Amount
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+
+                                                    <div class="tab-content">
+                                                        <!-- TAB 1: FULL -->
+                                                        <div class="tab-pane fade show active" id="dash-tab-full{{ $booking->id }}">
+                                                            <div class="text-center p-3 bg-light rounded-3 border mb-3">
+                                                                <span class="text-muted small d-block">Full Balance Amount Due:</span>
+                                                                <h3 class="fw-bold text-success my-1">₹{{ number_format($booking->balance_amount, 2) }}</h3>
+                                                                <span class="badge bg-success-subtle text-success micro">Clear balance in full</span>
+                                                            </div>
+                                                            <form action="{{ route('booking.pay.balance', $booking->booking_number) }}" method="POST" enctype="multipart/form-data">
+                                                                @csrf
+                                                                <input type="hidden" name="payment_mode" value="full">
+                                                                <div class="mb-2">
+                                                                    <label class="form-label small fw-semibold text-muted">Transaction ID / UTR (Optional)</label>
+                                                                    <input type="text" name="reference_no" class="form-control form-control-sm" placeholder="e.g. UPI UTR 425123456789">
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-semibold text-muted d-flex justify-content-between mb-1">
+                                                                        <span>Payment Proof</span>
+                                                                        <span class="badge bg-light text-muted border micro">Optional</span>
+                                                                    </label>
+                                                                    <input type="file" name="payment_receipt" class="form-control form-control-sm" accept="image/*,.pdf">
+                                                                </div>
+                                                                <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
+                                                                    Confirm Full Payment (₹{{ number_format($booking->balance_amount, 0) }})
+                                                                </button>
+                                                            </form>
+                                                        </div>
+
+                                                        <!-- TAB 2: EMI -->
+                                                        <div class="tab-pane fade" id="dash-tab-emi{{ $booking->id }}">
+                                                            @php
+                                                                $cBal = (float)$booking->balance_amount;
+                                                                $dTenure = $booking->emi_tenure_months ?: 6;
+                                                            @endphp
+                                                            <form action="{{ route('booking.pay.balance', $booking->booking_number) }}" method="POST" enctype="multipart/form-data">
+                                                                @csrf
+                                                                <input type="hidden" name="payment_mode" value="emi">
+
+                                                                <label class="form-label fw-bold text-dark small">Select Tenure:</label>
+                                                                <div class="row g-2 mb-3">
+                                                                    @foreach([3, 6, 9, 12] as $m)
+                                                                        <div class="col-6 col-sm-3">
+                                                                            <input type="radio" class="btn-check" name="emi_tenure" id="dash_emi_{{ $booking->id }}_{{ $m }}" value="{{ $m }}" {{ $dTenure == $m ? 'checked' : '' }} onchange="document.getElementById('dashEmiVal{{ $booking->id }}').innerText = '₹' + Math.round({{ $cBal }} / {{ $m }}).toLocaleString('en-IN')">
+                                                                            <label class="btn btn-outline-primary w-100 p-2 text-center rounded-3" for="dash_emi_{{ $booking->id }}_{{ $m }}">
+                                                                                <strong>{{ $m }} Mo</strong>
+                                                                                <span class="d-block micro">₹{{ number_format(round($cBal / $m, 0)) }}/m</span>
+                                                                            </label>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+
+                                                                <div class="p-3 bg-light rounded border text-center mb-3">
+                                                                    <span class="small text-muted d-block">Monthly Installment:</span>
+                                                                    <h4 class="fw-bold text-primary mb-0" id="dashEmiVal{{ $booking->id }}">
+                                                                        ₹{{ number_format(round($cBal / $dTenure, 0)) }}
+                                                                    </h4>
+                                                                </div>
+
+                                                                <div class="row g-2 mb-3">
+                                                                    <div class="col-sm-6">
+                                                                        <label class="form-label small fw-semibold text-muted">Transaction ID / UTR (Optional)</label>
+                                                                        <input type="text" name="reference_no" class="form-control form-control-sm" placeholder="e.g. UPI UTR 425123456789">
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="form-label small fw-semibold text-muted d-flex justify-content-between mb-1">
+                                                                            <span>Payment Proof</span>
+                                                                            <span class="badge bg-light text-muted border micro">Optional</span>
+                                                                        </label>
+                                                                        <input type="file" name="payment_receipt" class="form-control form-control-sm" accept="image/*,.pdf">
+                                                                    </div>
+                                                                </div>
+
+                                                                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">
+                                                                    Pay Current EMI Installment
+                                                                </button>
+                                                            </form>
+                                                        </div>
+
+                                                        <!-- TAB 3: FLEXIBLE -->
+                                                        <div class="tab-pane fade" id="dash-tab-flex{{ $booking->id }}">
+                                                            <form action="{{ route('booking.pay.balance', $booking->booking_number) }}" method="POST" enctype="multipart/form-data">
+                                                                @csrf
+                                                                <input type="hidden" name="payment_mode" value="flexible">
+
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-bold text-dark">Enter Custom Amount to Pay (₹):</label>
+                                                                    <input type="number" name="custom_amount" class="form-control fw-bold fs-5" min="100" max="{{ (float)$booking->balance_amount }}" step="1" value="{{ min(5000, (float)$booking->balance_amount) }}" required>
+                                                                    <span class="micro text-muted">Remaining Balance: ₹{{ number_format($booking->balance_amount, 2) }}</span>
+                                                                </div>
+
+                                                                <div class="row g-2 mb-3">
+                                                                    <div class="col-sm-6">
+                                                                        <label class="form-label small fw-semibold text-muted">Transaction ID / UTR (Optional)</label>
+                                                                        <input type="text" name="reference_no" class="form-control form-control-sm" placeholder="e.g. UPI UTR 425123456789">
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="form-label small fw-semibold text-muted d-flex justify-content-between mb-1">
+                                                                            <span>Payment Proof</span>
+                                                                            <span class="badge bg-light text-muted border micro">Optional</span>
+                                                                        </label>
+                                                                        <input type="file" name="payment_receipt" class="form-control form-control-sm" accept="image/*,.pdf">
+                                                                    </div>
+                                                                </div>
+
+                                                                <button type="submit" class="btn btn-warning w-100 py-2 fw-bold text-dark shadow-sm">
+                                                                    Pay Custom Amount
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="p-3 bg-light rounded-3 border text-center mt-3">
+                                                        <span class="micro text-muted d-block mb-1">Scan directly with UPI (Google Pay, PhonePe, Paytm, BHIM):</span>
+                                                        <img src="{{ asset('images/dls_payment_qr.png') }}" alt="UPI QR Code" class="img-fluid rounded border bg-white p-1" style="max-height: 140px;">
+                                                        <span class="d-block micro font-monospace mt-1 text-danger">UPI ID: dlsagroin.09@idfcbank</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 @endif
                             </div>
                         </div>

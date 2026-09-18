@@ -237,6 +237,14 @@ class PaymentApiController extends Controller
                         'color'   => '#0D6EFD',
                     ],
                 ],
+                'upi_qr' => [
+                    'enabled'       => true,
+                    'account_name'  => 'DLS AGRO INFRAVENTURE PRIVATE LIMITED',
+                    'upi_id'        => 'dlsagroin.09@idfcbank',
+                    'bank_name'     => 'IDFC FIRST Bank',
+                    'qr_image_url'  => asset('images/dls_payment_qr.png'),
+                    'instructions'  => 'Scan this QR code with any UPI app (GPay, PhonePe, Paytm, BHIM) to transfer',
+                ],
             ], 200);
 
         } catch (\Exception $e) {

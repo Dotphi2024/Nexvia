@@ -36,13 +36,10 @@ class CustomerCategoryProgress extends Model
     }
 
     /**
-     * Get the current stage rate from DB config (Variant A: 10/12/15/18/20)
+     * Get the current stage rate from DB config (Variant A: 10/12/15/18/20 in increasing order)
      */
     public function getCurrentRate(): float
     {
-        if ($this->category && $this->category->commission_percentage !== null && (float) $this->category->commission_percentage > 0) {
-            return (float) $this->category->commission_percentage;
-        }
         return ReferralStageConfig::getRateForStage($this->current_stage);
     }
 

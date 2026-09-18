@@ -23,7 +23,20 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.active'   => \App\Http\Middleware\EnsureAdminIsActive::class,
             'customer.auth'  => \App\Http\Middleware\CustomerApiTokenMiddleware::class,
             'driver.auth'    => \App\Http\Middleware\DriverApiTokenMiddleware::class,
+            'dsp.auth'       => \App\Http\Middleware\DspApiTokenMiddleware::class,
         ]);
+
+        $middleware->redirectTo(
+            guests: function (\Illuminate\Http\Request $request) {
+                if ($request->is('dsp*')) {
+                    return route('dsp.login');
+                }
+                if ($request->is('admin*')) {
+                    return route('admin.login');
+                }
+                return route('dsp.login');
+            }
+        );
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -52,6 +52,10 @@ return [
             'driver' => 'session',
             'provider' => 'customers',
         ],
+        'dsp' => [
+            'driver' => 'session',
+            'provider' => 'dsps',
+        ],
     ],
 
     /*
@@ -87,6 +91,10 @@ return [
         'customers' => [
             'driver' => 'eloquent',
             'model' => App\Models\Customer::class,
+        ],
+        'dsps' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\DspApplication::class,
         ],
         // 'users' => [
         //     'driver' => 'database',

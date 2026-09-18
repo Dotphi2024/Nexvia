@@ -53,10 +53,82 @@
                             <th>Non-Refundable Policy Agreed</th>
                             <td><span class="badge bg-success">Yes (Accepted)</span></td>
                         </tr>
+                        @if($booking->payment_receipt)
+                            <tr>
+                                <th>Customer Payment Proof</th>
+                                <td>
+                                    <a href="{{ asset($booking->payment_receipt) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-semibold">
+                                        <iconify-icon icon="solar:document-text-bold" class="me-1 align-middle"></iconify-icon> View Receipt / Proof File
+                                    </a>
+                                    @if(preg_match('/\.(jpg|jpeg|png|webp)$/i', $booking->payment_receipt))
+                                        <div class="mt-2">
+                                            <a href="{{ asset($booking->payment_receipt) }}" target="_blank">
+                                                <img src="{{ asset($booking->payment_receipt) }}" alt="Receipt" class="img-thumbnail" style="max-height: 140px;">
+                                            </a>
+                                        </div>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
         </div>
+
+        @php
+            $adminHistory = is_array($booking->balance_payments_history) ? $booking->balance_payments_history : [];
+        @endphp
+        @if(!empty($adminHistory))
+            <!-- Balance Payments & EMI Ledger -->
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Balance Payment Transactions & Proofs</h5>
+                    <span class="badge bg-primary">{{ count($adminHistory) }} Payment(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Mode</th>
+                                <th>Amount</th>
+                                <th>Ref / UTR</th>
+                                <th>Receipt Proof</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($adminHistory as $i => $txn)
+                                <tr>
+                                    <td>{{ $i + 1 }}</td>
+                                    <td>
+                                        @if(($txn['mode'] ?? '') === 'emi')
+                                            <span class="badge bg-info text-dark">EMI Month {{ $txn['installment_no'] ?? ($i + 1) }}</span>
+                                        @elseif(($txn['mode'] ?? '') === 'flexible')
+                                            <span class="badge bg-warning text-dark">Flexible</span>
+                                        @else
+                                            <span class="badge bg-success">Full</span>
+                                        @endif
+                                    </td>
+                                    <td class="fw-bold">₹{{ number_format($txn['amount'] ?? 0, 2) }}</td>
+                                    <td class="font-monospace small">{{ $txn['reference_no'] ?? ($txn['payment_id'] ?? '-') }}</td>
+                                    <td>
+                                        @if(!empty($txn['receipt_file']))
+                                            <a href="{{ asset($txn['receipt_file']) }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2 small">
+                                                <iconify-icon icon="solar:paperclip-bold" class="align-middle"></iconify-icon> View
+                                            </a>
+                                        @else
+                                            <span class="text-muted small">None</span>
+                                        @endif
+                                    </td>
+                                    <td class="small">{{ \Carbon\Carbon::parse($txn['paid_at'] ?? now())->format('d M, Y H:i') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
 
         <!-- Transfer History Audit Trail -->
         <div class="card">
@@ -123,6 +195,20 @@
 
                     <button type="submit" class="btn btn-primary w-100">Update Booking</button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Official Payment QR Code Reference -->
+        <div class="card mt-3">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fs-14">Official Payment QR Code</h5>
+                <span class="badge bg-primary-subtle text-primary micro">IDFC Bank</span>
+            </div>
+            <div class="card-body text-center p-3">
+                <img src="{{ asset('images/dls_payment_qr.png') }}" alt="UPI QR Code" class="img-fluid rounded border p-2 bg-white mb-2 shadow-sm" style="max-height: 200px;">
+                <div class="small fw-bold text-dark">DLS AGRO INFRAVENTURE PVT LTD</div>
+                <div class="font-monospace micro text-danger fw-bold mt-1">dlsagroin.09@idfcbank</div>
+                <span class="micro text-muted d-block mt-1">Share this QR code with customer for 80% balance remittance.</span>
             </div>
         </div>
     </div>

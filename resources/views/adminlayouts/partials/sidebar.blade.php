@@ -72,6 +72,26 @@
                     </a>
                </li>
 
+               <li class="menu-title">DLS Farm Equipments</li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dls_farm_equipments.categories.*') ? 'active' : '' }}" href="{{ route('admin.dls_farm_equipments.categories.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:widget-3-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Categories</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dls_farm_equipments.products.*') ? 'active' : '' }}" href="{{ route('admin.dls_farm_equipments.products.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:box-minimalistic-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Products</span>
+                    </a>
+               </li>
+
                <li class="menu-title">Bookings</li>
 
                <li class="nav-item">
@@ -136,6 +156,26 @@
                               <iconify-icon icon="solar:tuning-2-outline"></iconify-icon>
                          </span>
                          <span class="nav-text">Referral Settings</span>
+                    </a>
+               </li>
+
+               <li class="menu-title">Delivery & Partners</li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dsp.*') && !request()->routeIs('admin.dsp.payouts.*') ? 'active' : '' }}" href="{{ route('admin.dsp.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:box-minimalistic-bold-duotone"></iconify-icon>
+                         </span>
+                         <span class="nav-text">DSP Partners</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dsp.payouts.*') ? 'active' : '' }}" href="{{ route('admin.dsp.payouts.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:hand-money-bold-duotone"></iconify-icon>
+                         </span>
+                         <span class="nav-text">DSP Redemptions</span>
                     </a>
                </li>
 

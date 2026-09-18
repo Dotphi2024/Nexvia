@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
+use App\Http\Controllers\Admin\DlsFarmCategoryAdminController;
+use App\Http\Controllers\Admin\DlsFarmProductAdminController;
 use App\Http\Controllers\Admin\BookingAdminController;
 use App\Http\Controllers\Admin\BookingEngineController;
 use App\Http\Controllers\Admin\ServiceRequestController;
@@ -31,6 +33,28 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::post('/products/{id}/status', [ProductAdminController::class, 'toggleStatus'])->name('admin.products.status');
     Route::post('/products/{id}/featured', [ProductAdminController::class, 'toggleFeatured'])->name('admin.products.featured');
     Route::delete('/products/{id}', [ProductAdminController::class, 'destroy'])->name('admin.products.destroy');
+
+    // =========================================================================
+    // DLS FARM EQUIPMENTS MANAGEMENT
+    // =========================================================================
+    Route::prefix('dls-farm-equipments')->name('admin.dls_farm_equipments.')->group(function () {
+        // Categories
+        Route::get('/categories', [DlsFarmCategoryAdminController::class, 'index'])->name('categories.index');
+        Route::post('/categories', [DlsFarmCategoryAdminController::class, 'store'])->name('categories.store');
+        Route::put('/categories/{id}', [DlsFarmCategoryAdminController::class, 'update'])->name('categories.update');
+        Route::post('/categories/{id}/update', [DlsFarmCategoryAdminController::class, 'update'])->name('categories.update.post');
+        Route::delete('/categories/{id}', [DlsFarmCategoryAdminController::class, 'destroy'])->name('categories.destroy');
+
+        // Products
+        Route::get('/products', [DlsFarmProductAdminController::class, 'index'])->name('products.index');
+        Route::get('/products/create', [DlsFarmProductAdminController::class, 'create'])->name('products.create');
+        Route::post('/products', [DlsFarmProductAdminController::class, 'store'])->name('products.store');
+        Route::get('/products/{id}/edit', [DlsFarmProductAdminController::class, 'edit'])->name('products.edit');
+        Route::put('/products/{id}', [DlsFarmProductAdminController::class, 'update'])->name('products.update');
+        Route::post('/products/{id}/status', [DlsFarmProductAdminController::class, 'toggleStatus'])->name('products.status');
+        Route::post('/products/{id}/featured', [DlsFarmProductAdminController::class, 'toggleFeatured'])->name('products.featured');
+        Route::delete('/products/{id}', [DlsFarmProductAdminController::class, 'destroy'])->name('products.destroy');
+    });
 
     // Banner & Slider Management
     Route::get('/banners', [BannerAdminController::class, 'index'])->name('admin.banners.index');
@@ -93,4 +117,23 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::post('/pages/{id}/update', [PageAdminController::class, 'update'])->name('admin.pages.update.post');
     Route::post('/pages/{id}/status', [PageAdminController::class, 'toggleStatus'])->name('admin.pages.status');
     Route::delete('/pages/{id}', [PageAdminController::class, 'destroy'])->name('admin.pages.destroy');
+
+    // =========================================================================
+    // AUTHORISED DELIVERY & SERVICE PARTNER (DSP) MANAGEMENT
+    // =========================================================================
+    Route::prefix('dsp-partners')->name('admin.dsp.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\DspAdminController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\DspAdminController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\DspAdminController::class, 'store'])->name('store');
+        Route::get('/{id}', [\App\Http\Controllers\Admin\DspAdminController::class, 'show'])->name('show');
+        Route::post('/{id}/status', [\App\Http\Controllers\Admin\DspAdminController::class, 'updateStatus'])->name('update.status');
+        Route::post('/{id}/password', [\App\Http\Controllers\Admin\DspAdminController::class, 'updatePassword'])->name('update.password');
+        Route::delete('/{id}', [\App\Http\Controllers\Admin\DspAdminController::class, 'destroy'])->name('destroy');
+    });
+
+    // DSP Cash Redemptions & Payouts Management
+    Route::prefix('dsp-payouts')->name('admin.dsp.payouts.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\DspPayoutAdminController::class, 'index'])->name('index');
+        Route::post('/{id}/status', [\App\Http\Controllers\Admin\DspPayoutAdminController::class, 'updateStatus'])->name('status');
+    });
 });

@@ -14,6 +14,10 @@ Route::get('/products', function () {
 
 Route::get('/login', function () {
     return redirect()->route('admin.dashboard');
+})->name('login');
+
+Route::get('/customer/login', function () {
+    return redirect()->route('login');
 })->name('customer.login');
 
 Route::get('/pages/{slug}', function ($slug) {
@@ -31,9 +35,40 @@ Route::get('/terms-and-conditions', function () {
     return view('frontend.pages.show', compact('page'));
 })->name('terms.conditions');
 
+// Authorised Delivery & Service Partner (DSP) Public Application Routes
+Route::get('/dsp/apply', [\App\Http\Controllers\DspPublicController::class, 'create'])->name('dsp.apply');
+Route::post('/dsp/apply', [\App\Http\Controllers\DspPublicController::class, 'store'])->name('dsp.apply.post');
+Route::get('/dsp/success', [\App\Http\Controllers\DspPublicController::class, 'success'])->name('dsp.success');
+Route::get('/dsp/available-by-pincode', [\App\Http\Controllers\DspPublicController::class, 'availableByPincode'])->name('dsp.available.pincode');
+
+// Dedicated DSP Partner Portal Authentication Routes
+Route::get('/dsp/login', [\App\Http\Controllers\Dsp\DspAuthController::class, 'showLoginForm'])->name('dsp.login');
+Route::post('/dsp/login', [\App\Http\Controllers\Dsp\DspAuthController::class, 'login'])->name('dsp.login.post');
+Route::match(['get', 'post'], '/dsp/logout', [\App\Http\Controllers\Dsp\DspAuthController::class, 'logout'])->name('dsp.logout');
+
+// Dedicated DSP Partner Authenticated Portal
+Route::prefix('dsp')->middleware('auth:dsp')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'dashboard'])->name('dsp.dashboard');
+    Route::get('/deliveries', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'deliveries'])->name('dsp.deliveries');
+    Route::get('/deliveries/{id}', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'deliveryDetail'])->name('dsp.deliveries.show');
+    Route::post('/deliveries/{id}/status', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'updateDeliveryStatus'])->name('dsp.deliveries.status');
+    Route::get('/wallet', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'wallet'])->name('dsp.wallet');
+    Route::post('/wallet/redeem', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'requestPayout'])->name('dsp.wallet.redeem');
+    Route::get('/profile', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'profile'])->name('dsp.profile');
+    Route::post('/profile/update', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'updateProfile'])->name('dsp.profile.update');
+});
+
+// Booking Checkout & Receipt Web Routes
+Route::get('/checkout/{slug}', [\App\Http\Controllers\Frontend\BookingController::class, 'checkout'])->name('booking.checkout');
+Route::post('/checkout/{slug}', [\App\Http\Controllers\Frontend\BookingController::class, 'processCheckout'])->name('booking.process');
+Route::get('/booking/receipt/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'receipt'])->name('booking.receipt');
+Route::post('/booking/pay-balance/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'payBalance'])->name('booking.pay.balance');
+Route::get('/customer/dashboard', [\App\Http\Controllers\Frontend\CustomerDashboardController::class, 'index'])->name('customer.dashboard');
+Route::post('/customer/profile/update', [\App\Http\Controllers\Frontend\CustomerDashboardController::class, 'profileUpdate'])->name('customer.profile.update');
+
 // Direct product slug/id lookup fallback (e.g. /nexvia-55-inch-ultra-hd-4k-smart-led-tv)
 Route::get('/{slugOrId}', function ($slugOrId) {
-    if (!in_array($slugOrId, ['admin', 'api', 'login', 'register', 'dashboard', 'search', 'products', 'trending', 'pages'])) {
+    if (!in_array($slugOrId, ['admin', 'api', 'login', 'register', 'dashboard', 'search', 'products', 'trending', 'pages', 'dsp'])) {
         $page = \App\Models\Page::active()->where('slug', $slugOrId)->first();
         if ($page) {
             return view('frontend.pages.show', compact('page'));

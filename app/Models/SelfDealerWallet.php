@@ -32,6 +32,16 @@ class SelfDealerWallet extends Model
     }
 
     /**
+     * Credit points directly to available wallet (instant qualification)
+     */
+    public function creditAvailable(float $points): void
+    {
+        $this->available_points += $points;
+        $this->total_earned     += $points;
+        $this->save();
+    }
+
+    /**
      * Credit points to wallet (increases pending or available based on status)
      */
     public function creditPending(float $points): void

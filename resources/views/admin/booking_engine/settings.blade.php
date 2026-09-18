@@ -18,9 +18,9 @@
         </div>
     @endif
 
-    <div class="row justify-content-center">
+    <div class="row">
         <div class="col-lg-8">
-            <div class="card border border-light-subtle shadow-sm">
+            <div class="card border border-light-subtle shadow-sm mb-4">
                 <div class="card-header bg-white py-3 border-bottom">
                     <h6 class="fw-bold text-dark mb-0">Booking Engine Parameters (Section F Controls)</h6>
                 </div>
@@ -85,6 +85,32 @@
 
                         <button type="submit" class="btn btn-primary fw-semibold px-4">Update Booking Engine Settings</button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Official Payment QR Gateway Card -->
+        <div class="col-lg-4">
+            <div class="card border border-light-subtle shadow-sm mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <h6 class="fw-bold text-dark mb-0">
+                        <iconify-icon icon="solar:qr-code-bold" class="text-primary me-1 align-middle"></iconify-icon>
+                        Official UPI Payment QR
+                    </h6>
+                    <span class="badge bg-success-subtle text-success">ACTIVE</span>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <p class="micro text-muted mb-3">
+                        Configured as the default scan-and-pay UPI gateway for customer 20% bookings, 80% balance clearances, and DSP security deposits.
+                    </p>
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <img src="{{ asset('images/dls_payment_qr.png') }}" alt="UPI QR Code" class="img-fluid rounded border bg-white p-2 shadow-sm" style="max-height: 220px;">
+                    </div>
+                    <div class="text-start bg-light p-3 rounded-3 border font-monospace small">
+                        <div class="mb-1"><span class="text-muted">UPI ID:</span> <strong class="text-danger">dlsagroin.09@idfcbank</strong></div>
+                        <div class="mb-1"><span class="text-muted">Account:</span> <strong class="text-dark">DLS AGRO INFRAVENTURE PRIVATE LIMITED</strong></div>
+                        <div><span class="text-muted">Bank:</span> <strong class="text-dark">IDFC FIRST Bank</strong></div>
+                    </div>
                 </div>
             </div>
         </div>

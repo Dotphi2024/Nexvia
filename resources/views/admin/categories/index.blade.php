@@ -31,24 +31,14 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold text-dark">Category Name *</label>
                                 <input type="text" name="name" class="form-control" required
-                                    placeholder="e.g. Electric Scooters">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold text-dark">Category Type *</label>
-                                <select name="type" class="form-select" required>
-                                    <option value="electronics">Electronics</option>
-                                    <option value="electric_mobility">Electric Mobility</option>
-                                    <option value="appliances">Appliances</option>
-                                    <option value="vehicles">Vehicles</option>
-                                </select>
+                                    placeholder="e.g. Electric Scooters, Appliances, Solar Pumps">
                             </div>
 
                             <div class="row g-2 mb-3">
                                 <div class="col-md-7">
                                     <label class="form-label fw-semibold text-dark">Referral Code (e.g. TV, AC, EV)</label>
                                     <input type="text" name="referral_category_code" class="form-control text-uppercase"
-                                        placeholder="TV" maxlength="10">
+                                        placeholder="EV" maxlength="10">
                                 </div>
                                 <div class="col-md-5 d-flex align-items-end">
                                     <div class="form-check mb-2">
@@ -60,15 +50,9 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold text-dark">Referral Credit / Commission (%) *</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" max="100" name="commission_percentage"
-                                        class="form-control" value="10.00" placeholder="10.00" required>
-                                    <span class="input-group-text bg-light fw-bold text-muted">%</span>
-                                </div>
-                                <small class="text-muted">Set independent referral % for this category (e.g. 5.00 for Solar,
-                                    8.00 for EV, 12.00 for Electronics).</small>
+                            <div class="mb-3 p-2 bg-light rounded text-muted small">
+                                <i class="bx bx-trending-up text-primary me-1"></i>
+                                Referral incentives are applied directly via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stage Config</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20% in increasing order).
                             </div>
 
                             <div class="mb-3">
@@ -102,8 +86,8 @@
                                         <th>#</th>
                                         <th>Image</th>
                                         <th>Category Name</th>
-                                        <th>Type</th>
-                                        <th>Referral %</th>
+                                        <th>Products</th>
+                                        <th>Referral Rewards</th>
                                         <th class="text-end">Action</th>
                                     </tr>
                                 </thead>
@@ -128,16 +112,14 @@
                                                 <span class="text-muted micro">{{ $category->slug }}</span>
                                             </td>
                                             <td>
-                                                <span
-                                                    class="badge {{ $category->type === 'electric_mobility' ? 'bg-warning text-dark' : 'bg-primary' }}">
-                                                    {{ ucfirst(str_replace('_', ' ', $category->type)) }}
+                                                <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
+                                                    <i class="bx bx-box me-1"></i>{{ $category->products_count ?? $category->products->count() }} Products
                                                 </span>
                                             </td>
                                             <td>
                                                 @if($category->referral_eligible)
-                                                    <span
-                                                        class="badge bg-success-subtle text-success fs-13 font-monospace px-2 py-1">
-                                                        {{ number_format($category->commission_percentage ?? 10, 2) }}%
+                                                    <span class="badge bg-success-subtle text-success fs-12 px-2 py-1">
+                                                        <i class="bx bx-trending-up me-1"></i>Tier Stages (10% - 20%)
                                                     </span>
                                                 @else
                                                     <span class="badge bg-secondary-subtle text-muted">Disabled</span>
@@ -148,10 +130,8 @@
                                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                                         data-bs-toggle="modal" data-bs-target="#editCategoryModal"
                                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}"
-                                                        data-type="{{ $category->type }}"
                                                         data-referral-code="{{ $category->referral_category_code }}"
                                                         data-referral-eligible="{{ $category->referral_eligible ? '1' : '0' }}"
-                                                        data-commission="{{ $category->commission_percentage }}"
                                                         data-description="{{ $category->description }}"
                                                         data-image="{{ \App\Helpers\ImageHelper::resolve($category->image) }}"
                                                         data-action="{{ route('admin.categories.update', $category->id) }}">
@@ -162,8 +142,9 @@
                                                         class="d-inline">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit"
-                                                            class="btn btn-sm btn-outline-danger">Delete</button>
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="bx bx-trash"></i>
+                                                        </button>
                                                     </form>
                                                 </div>
                                             </td>
@@ -199,16 +180,6 @@
                                 placeholder="Category Name">
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Category Type *</label>
-                            <select name="type" id="editCategoryType" class="form-select" required>
-                                <option value="electronics">Electronics</option>
-                                <option value="electric_mobility">Electric Mobility</option>
-                                <option value="appliances">Appliances</option>
-                                <option value="vehicles">Vehicles</option>
-                            </select>
-                        </div>
-
                         <div class="row g-2 mb-3">
                             <div class="col-md-7">
                                 <label class="form-label fw-semibold text-dark">Referral Code (e.g. TV, AC, EV)</label>
@@ -225,14 +196,9 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Referral Credit / Commission (%) *</label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" min="0" max="100" name="commission_percentage"
-                                    id="editCommissionPercentage" class="form-control" required>
-                                <span class="input-group-text bg-light fw-bold text-muted">%</span>
-                            </div>
-                            <small class="text-muted">Independent referral percentage for this category.</small>
+                        <div class="mb-3 p-2 bg-light rounded text-muted small">
+                            <i class="bx bx-trending-up text-primary me-1"></i>
+                            Referral incentives are applied directly via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stage Config</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20% in increasing order).
                         </div>
 
                         <div class="mb-3">
@@ -274,10 +240,8 @@
 
                 const action = button.getAttribute('data-action');
                 const name = button.getAttribute('data-name') || '';
-                const type = button.getAttribute('data-type') || 'electronics';
                 const refCode = button.getAttribute('data-referral-code') || '';
                 const refEligible = button.getAttribute('data-referral-eligible') === '1';
-                const commission = button.getAttribute('data-commission') || '10.00';
                 const description = button.getAttribute('data-description') || '';
                 const image = button.getAttribute('data-image') || '';
 
@@ -285,10 +249,8 @@
                 form.action = action;
 
                 document.getElementById('editCategoryName').value = name;
-                document.getElementById('editCategoryType').value = type;
                 document.getElementById('editCategoryRefCode').value = refCode;
                 document.getElementById('editRefEligible').checked = refEligible;
-                document.getElementById('editCommissionPercentage').value = commission;
                 document.getElementById('editCategoryDescription').value = description;
 
                 const preview = document.getElementById('editCurrentImagePreview');

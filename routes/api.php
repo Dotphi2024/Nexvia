@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\CartApiController;
 use App\Http\Controllers\Api\CheckoutApiController;
 use App\Http\Controllers\Api\PaymentApiController;
 use App\Http\Controllers\Api\PageApiController;
+use App\Http\Controllers\Api\DspApiController;
 
 Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
@@ -47,6 +48,27 @@ Route::get('/products/detail/{idOrSlug}', [ProductApiController::class, 'show'])
 
 // Order Delivery Tracking Public API
 Route::get('/deliveries/{trackingNumber}', [OrderDeliveryApiController::class, 'trackDelivery']);
+
+// Authorised Delivery & Service Partner (DSP) APIs
+// Public DSP Routes
+Route::post('/dsp/apply',                      [DspApiController::class, 'store']);
+Route::get('/dsp/track/{applicationNumber}',   [DspApiController::class, 'track']);
+Route::post('/dsp/login',                      [DspApiController::class, 'login']);
+Route::match(['get', 'post'], '/dsp/available-by-pincode', [DspApiController::class, 'availableByPincode']);
+
+// Protected DSP Partner APIs (Require Bearer Token or dsp_id via dsp.auth middleware)
+Route::middleware(['dsp.auth'])->prefix('dsp')->group(function () {
+    Route::post('/logout',                     [DspApiController::class, 'logout']);
+    Route::match(['get', 'post'], '/dashboard', [DspApiController::class, 'dashboard']);
+    Route::get('/profile',                     [DspApiController::class, 'profile']);
+    Route::post('/profile',                    [DspApiController::class, 'updateProfile']);
+    Route::match(['get', 'post'], '/deliveries', [DspApiController::class, 'deliveries']);
+    Route::match(['get', 'post'], '/deliveries/{id}', [DspApiController::class, 'deliveryDetail']);
+    Route::post('/deliveries/{id}/status',     [DspApiController::class, 'updateDeliveryStatus']);
+    Route::match(['get', 'post'], '/wallet',    [DspApiController::class, 'wallet']);
+    Route::post('/wallet/redeem',              [DspApiController::class, 'requestPayout']);
+    Route::match(['get', 'post'], '/wallet/payout-requests', [DspApiController::class, 'payoutRequests']);
+});
 
 // Home Section Banners Public API (Home Index Page Sliders & Promos)
 Route::get('/home/banners',         [BannerApiController::class, 'index']);

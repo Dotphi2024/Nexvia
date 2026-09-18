@@ -16,7 +16,9 @@ class ProductAdminController extends Controller
         $categoryId = $request->query('category_id');
         $search = trim((string)$request->query('q'));
 
-        $query = Product::with('category');
+        $query = Product::whereHas('category', function ($q) {
+            $q->where('type', '!=', 'dls_farm_equipment');
+        })->with('category');
 
         if (!empty($categoryId)) {
             $query->where('category_id', $categoryId);
@@ -39,18 +41,22 @@ class ProductAdminController extends Controller
         }
 
         $products = $query->latest()->paginate(15)->withQueryString();
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::where('type', '!=', 'dls_farm_equipment')->orderBy('name')->get();
 
-        $totalCount = Product::count();
-        $trendingCount = Product::where('is_featured', true)->count();
-        $inactiveCount = Product::where('status', 'inactive')->count();
+        $baseCountQuery = Product::whereHas('category', function ($q) {
+            $q->where('type', '!=', 'dls_farm_equipment');
+        });
+
+        $totalCount = (clone $baseCountQuery)->count();
+        $trendingCount = (clone $baseCountQuery)->where('is_featured', true)->count();
+        $inactiveCount = (clone $baseCountQuery)->where('status', 'inactive')->count();
 
         return view('admin.products.index', compact('products', 'categories', 'filter', 'categoryId', 'search', 'totalCount', 'trendingCount', 'inactiveCount'));
     }
 
     public function create()
     {
-        $categories = Category::all();
+        $categories = Category::where('type', '!=', 'dls_farm_equipment')->orderBy('name')->get();
         return view('admin.products.create', compact('categories'));
     }
 
@@ -125,7 +131,7 @@ class ProductAdminController extends Controller
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-        $categories = Category::all();
+        $categories = Category::where('type', '!=', 'dls_farm_equipment')->orderBy('name')->get();
         return view('admin.products.edit', compact('product', 'categories'));
     }
 

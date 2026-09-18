@@ -17,18 +17,20 @@ class PageAdminController extends Controller
         $query = Page::query();
 
         if ($request->filled('search')) {
-            $search = trim($request->search);
+            $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'LIKE', "%{$search}%")
                   ->orWhere('slug', 'LIKE', "%{$search}%")
-                  ->orWhere('excerpt', 'LIKE', "%{$search}%");
+                  ->orWhere('excerpt', 'LIKE', "%{$search}%")
+                  ->orWhere('content', 'LIKE', "%{$search}%");
             });
         }
 
         if ($request->filled('status')) {
-            if ($request->status === 'active') {
+            $status = $request->input('status');
+            if ($status === 'active') {
                 $query->where('is_active', true);
-            } elseif ($request->status === 'inactive') {
+            } elseif ($status === 'inactive') {
                 $query->where('is_active', false);
             }
         }
@@ -66,8 +68,8 @@ class PageAdminController extends Controller
         ]);
 
         $slug = $request->filled('slug')
-            ? Str::slug($request->slug)
-            : Str::slug($request->title);
+            ? Str::slug($request->input('slug'))
+            : Str::slug($request->input('title'));
 
         // Ensure unique slug
         $baseSlug = $slug;
@@ -79,30 +81,33 @@ class PageAdminController extends Controller
 
         // Clean up points array
         $points = [];
-        if ($request->has('points') && is_array($request->points)) {
-            foreach ($request->points as $point) {
-                $pTitle = trim($point['title'] ?? '');
-                $pDesc = trim($point['description'] ?? '');
-                if (!empty($pTitle) || !empty($pDesc)) {
-                    $points[] = [
-                        'title'       => $pTitle,
-                        'description' => $pDesc,
-                    ];
+        $pointsInput = $request->input('points');
+        if (is_array($pointsInput)) {
+            foreach ($pointsInput as $point) {
+                if (is_array($point)) {
+                    $pTitle = trim($point['title'] ?? '');
+                    $pDesc = trim($point['description'] ?? '');
+                    if (!empty($pTitle) || !empty($pDesc)) {
+                        $points[] = [
+                            'title'       => $pTitle,
+                            'description' => $pDesc,
+                        ];
+                    }
                 }
             }
         }
 
         $page = Page::create([
-            'title'            => $request->title,
+            'title'            => $request->input('title'),
             'slug'             => $slug,
-            'excerpt'          => $request->excerpt,
-            'content'          => $request->content,
+            'excerpt'          => $request->input('excerpt'),
+            'content'          => $request->input('content'),
             'points'           => $points,
-            'meta_title'       => $request->meta_title,
-            'meta_description' => $request->meta_description,
-            'meta_keywords'    => $request->meta_keywords,
+            'meta_title'       => $request->input('meta_title'),
+            'meta_description' => $request->input('meta_description'),
+            'meta_keywords'    => $request->input('meta_keywords'),
             'is_active'        => $request->has('is_active'),
-            'sort_order'       => $request->sort_order ?? (Page::max('sort_order') + 1),
+            'sort_order'       => $request->filled('sort_order') ? (int) $request->input('sort_order') : ((Page::max('sort_order') ?? 0) + 1),
         ]);
 
         return redirect()->route('admin.pages.index')->with('success', "Page '{$page->title}' created successfully!");
@@ -139,8 +144,8 @@ class PageAdminController extends Controller
         ]);
 
         $slug = $request->filled('slug')
-            ? Str::slug($request->slug)
-            : Str::slug($request->title);
+            ? Str::slug($request->input('slug'))
+            : Str::slug($request->input('title'));
 
         // Ensure uniqueness if slug changed
         if ($slug !== $page->slug) {
@@ -155,29 +160,32 @@ class PageAdminController extends Controller
 
         // Clean up points array
         $points = [];
-        if ($request->has('points') && is_array($request->points)) {
-            foreach ($request->points as $point) {
-                $pTitle = trim($point['title'] ?? '');
-                $pDesc = trim($point['description'] ?? '');
-                if (!empty($pTitle) || !empty($pDesc)) {
-                    $points[] = [
-                        'title'       => $pTitle,
-                        'description' => $pDesc,
-                    ];
+        $pointsInput = $request->input('points');
+        if (is_array($pointsInput)) {
+            foreach ($pointsInput as $point) {
+                if (is_array($point)) {
+                    $pTitle = trim($point['title'] ?? '');
+                    $pDesc = trim($point['description'] ?? '');
+                    if (!empty($pTitle) || !empty($pDesc)) {
+                        $points[] = [
+                            'title'       => $pTitle,
+                            'description' => $pDesc,
+                        ];
+                    }
                 }
             }
         }
 
-        $page->title            = $request->title;
-        $page->excerpt          = $request->excerpt;
-        $page->content          = $request->content;
+        $page->title            = $request->input('title');
+        $page->excerpt          = $request->input('excerpt');
+        $page->content          = $request->input('content');
         $page->points           = $points;
-        $page->meta_title       = $request->meta_title;
-        $page->meta_description = $request->meta_description;
-        $page->meta_keywords    = $request->meta_keywords;
+        $page->meta_title       = $request->input('meta_title');
+        $page->meta_description = $request->input('meta_description');
+        $page->meta_keywords    = $request->input('meta_keywords');
         $page->is_active        = $request->has('is_active');
         if ($request->filled('sort_order')) {
-            $page->sort_order   = (int) $request->sort_order;
+            $page->sort_order   = (int) $request->input('sort_order');
         }
         $page->save();
 

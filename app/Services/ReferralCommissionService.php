@@ -161,20 +161,19 @@ class ReferralCommissionService
                 ]
             );
 
-            // Get current stage rate from DB config (NOT hardcoded)
-            $currentStage   = $progress->current_stage;
-            $stageRate      = ReferralStageConfig::getRateForStage($currentStage);
+            // Referral incentive percentage is taken directly from Referral Config in increasing order per stage
+            $currentStage  = $progress->current_stage;
+            $stageRate     = ReferralStageConfig::getRateForStage($currentStage);
 
-            // If category has an independent custom commission percentage configured, apply it
-            $categoryObj = Category::find($categoryId);
-            if ($categoryObj && $categoryObj->commission_percentage !== null && (float) $categoryObj->commission_percentage > 0) {
-                $stageRate = (float) $categoryObj->commission_percentage;
-            }
+            // Calculation base: calculated on the 20% amount filled while booking by the referred person
+            $eligibleValue = (float) ($booking->booking_amount > 0 ? $booking->booking_amount : ($product->booking_amount ?: ($product->mrp * 0.20)));
+            $pointsEarned  = round($eligibleValue * ($stageRate / 100), 2);
 
-            $eligibleValue  = $product->eligible_referral_value ?? $product->mrp;
-            $pointsEarned   = $eligibleValue * ($stageRate / 100);
+            $isInstant  = !$fraudResult['flagged'];
+            $status     = $isInstant ? 'available' : 'pending';
+            $approvedAt = $isInstant ? now() : null;
 
-            // Create Referral record (PENDING — not yet qualified)
+            // Create Referral record (Instantly available if not flagged for fraud)
             $referral = Referral::create([
                 'referrer_id'            => $referrer->id,
                 'referee_id'             => $referee->id,
@@ -185,30 +184,49 @@ class ReferralCommissionService
                 'product_value'          => $product->mrp,
                 'eligible_product_value' => $eligibleValue,
                 'credit_earned'          => $pointsEarned,
-                'status'                 => 'pending',
+                'status'                 => $status,
+                'approved_at'            => $approvedAt,
                 'transaction_type'       => 'referral',
                 'cycle_number'           => $progress->cycle_number,
                 'referral_stage'         => $currentStage,
                 'rule_version'           => 'v1.0',
                 'notes'                  => $fraudResult['flagged']
                     ? "FRAUD FLAG: {$fraudResult['reason']}"
-                    : "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of ₹{$eligibleValue}",
+                    : "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of ₹" . number_format($eligibleValue, 2) . " (20% booking amount)",
             ]);
 
-            // Add PENDING points to wallet
             $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $referrer->id]);
-            $wallet->creditPending($pointsEarned);
 
-            // Record Wallet Transaction (PENDING)
+            if ($isInstant) {
+                // Instantly credit points to referrer's available balance
+                $wallet->creditAvailable($pointsEarned);
+                $referrer->wallet_balance = ($referrer->wallet_balance ?? 0) + $pointsEarned;
+                $referrer->save();
+
+                // Advance referrer stage in increasing order immediately
+                $wasStage5 = ($progress->current_stage === 5);
+                $progress->advanceStage();
+
+                if ($wasStage5) {
+                    $referral->notes .= ' | CYCLE COMPLETED — Reset to Stage 1';
+                    $referral->save();
+                }
+            } else {
+                // Fraud flagged: keep pending until reviewed
+                $wallet->creditPending($pointsEarned);
+            }
+
+            // Record Wallet Transaction
             WalletTransaction::create([
                 'user_id'              => $referrer->id,
                 'amount'               => $pointsEarned,
                 'type'                 => 'credit',
                 'source'               => 'referral_incentive',
                 'booking_id'           => $booking->id,
-                'description'          => "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of ₹" . number_format($eligibleValue, 2),
+                'description'          => "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of 20% booking amount ₹" . number_format($eligibleValue, 2),
                 'transaction_type'     => 'referral_incentive',
-                'status'               => 'pending',
+                'status'               => $status,
+                'available_at'         => $approvedAt,
                 'referral_id'          => $referral->id,
                 'category_id'          => $categoryId,
                 'incentive_percentage' => $stageRate,

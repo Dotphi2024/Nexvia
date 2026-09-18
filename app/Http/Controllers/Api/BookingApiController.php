@@ -413,9 +413,18 @@ class BookingApiController extends Controller
                 ?? ($bodyJson['non_refundable_accepted'] ?? true)
             );
 
+            // DSP Partner matching or selection
+            $matchingService = app(\App\Services\DspMatchingService::class);
+            $dspId = $request->input('dsp_id') ?? ($bodyJson['dsp_id'] ?? null);
+            if (empty($dspId)) {
+                $matchedDsp = $matchingService->getBestMatchingDsp($pincode, $city, $state);
+                $dspId = $matchedDsp?->id;
+            }
+
             $booking = Booking::create([
                 'booking_number'          => $bookingNumber,
                 'user_id'                 => $user->id,
+                'dsp_id'                  => $dspId,
                 'product_id'              => $product->id,
                 'product_name'            => $product->name,
                 'model_code'              => $product->model_code,
@@ -439,6 +448,26 @@ class BookingApiController extends Controller
                 'city'                    => $city,
                 'state'                   => $state,
                 'qr_code_hash'            => $qrHash,
+                'payment_receipt'         => (function() use ($request, $bookingNumber) {
+                    if ($request->hasFile('payment_receipt')) {
+                        $f = $request->file('payment_receipt');
+                        $n = 'booking_' . $bookingNumber . '_' . time() . '.' . $f->getClientOriginalExtension();
+                        $dest = public_path('uploads/payment_receipts');
+                        if (!file_exists($dest)) mkdir($dest, 0755, true);
+                        $f->move($dest, $n);
+                        return 'uploads/payment_receipts/' . $n;
+                    }
+                    return null;
+                })(),
+            ]);
+
+            // Initialize Delivery Record for DSP Partner
+            $trackingNumber = 'TRK-' . rand(10000000, 99999999);
+            \App\Models\Delivery::create([
+                'booking_id'      => $booking->id,
+                'dsp_id'          => $dspId,
+                'tracking_number' => $trackingNumber,
+                'stage'           => 'order_confirmed',
             ]);
 
             // 6. Link referral code if passed during checkout
@@ -533,6 +562,14 @@ class BookingApiController extends Controller
                     'days_remaining'   => $booking->days_remaining,
                     'qr_code_hash'     => $booking->qr_code_hash,
                 ],
+                'upi_qr' => [
+                    'enabled'       => true,
+                    'account_name'  => 'DLS AGRO INFRAVENTURE PRIVATE LIMITED',
+                    'upi_id'        => 'dlsagroin.09@idfcbank',
+                    'bank_name'     => 'IDFC FIRST Bank',
+                    'qr_image_url'  => asset('images/dls_payment_qr.png'),
+                    'instructions'  => 'Scan this QR code with any UPI app to transfer booking or balance payment',
+                ],
             ], 201);
 
         } catch (\Exception $e) {
@@ -590,6 +627,14 @@ class BookingApiController extends Controller
                 'pincode'                 => $booking->pincode,
                 'qr_code_hash'            => $booking->qr_code_hash,
                 'non_refundable_accepted' => $booking->non_refundable_accepted,
+                'upi_qr'                  => [
+                    'enabled'       => true,
+                    'account_name'  => 'DLS AGRO INFRAVENTURE PRIVATE LIMITED',
+                    'upi_id'        => 'dlsagroin.09@idfcbank',
+                    'bank_name'     => 'IDFC FIRST Bank',
+                    'qr_image_url'  => asset('images/dls_payment_qr.png'),
+                    'instructions'  => 'Scan this QR code with any UPI app to transfer remaining balance',
+                ],
             ],
         ]);
     }
@@ -614,8 +659,27 @@ class BookingApiController extends Controller
             return response()->json(['status' => false, 'message' => 'Booking is already fully paid.'], 422);
         }
 
+        $mode = $request->input('payment_mode', 'full'); // full, emi, flexible
+        $currentBalance = (float)$booking->balance_amount;
+        $amountToPay = $currentBalance;
+        $tenure = null;
+        $emiMonthly = (float)($booking->emi_monthly_amount ?? 0);
+
+        if ($mode === 'flexible') {
+            $custom = (float)$request->input('custom_amount', 0);
+            if ($custom > 0) {
+                $amountToPay = min($custom, $currentBalance);
+            }
+        } elseif ($mode === 'emi') {
+            $tenure = (int)($request->input('emi_tenure') ?: ($booking->emi_tenure_months ?: 6));
+            if ($emiMonthly <= 0 || (int)$booking->emi_tenure_months !== $tenure) {
+                $emiMonthly = round($currentBalance / $tenure, 2);
+            }
+            $amountToPay = min($emiMonthly, $currentBalance);
+        }
+
         $useWalletCredit = (bool)$request->input('use_product_credit', false);
-        $balanceDue = $booking->balance_amount;
+        $balanceDue = $amountToPay;
         $creditApplied = 0.00;
 
         if ($useWalletCredit) {
@@ -623,7 +687,7 @@ class BookingApiController extends Controller
             $creditApplied = min($availableWallet, $balanceDue);
         }
 
-        $remainingCashToPay = $balanceDue - $creditApplied;
+        $remainingCashToPay = max(0, $balanceDue - $creditApplied);
 
         // Apply product credit if used
         if ($creditApplied > 0) {
@@ -648,10 +712,58 @@ class BookingApiController extends Controller
             ]);
         }
 
-        $booking->balance_amount = max(0, $booking->balance_amount - ($creditApplied + $remainingCashToPay));
-        $booking->payment_status = 'fully_paid';
-        $booking->booking_status = 'balance_paid';
-        $booking->save();
+        $newBalance = max(0, round($currentBalance - ($creditApplied + $remainingCashToPay), 2));
+        $isFullyPaid = ($newBalance <= 0);
+
+        // Optional Receipt Upload for Balance Payment
+        $balanceReceiptPath = null;
+        if ($request->hasFile('payment_receipt')) {
+            $rFile = $request->file('payment_receipt');
+            $rName = 'bal_' . $booking->booking_number . '_' . time() . '.' . $rFile->getClientOriginalExtension();
+            $destination = public_path('uploads/payment_receipts');
+            if (!file_exists($destination)) {
+                mkdir($destination, 0755, true);
+            }
+            $rFile->move($destination, $rName);
+            $balanceReceiptPath = 'uploads/payment_receipts/' . $rName;
+        }
+
+        // Record history entry
+        $history = is_array($booking->balance_payments_history) ? $booking->balance_payments_history : [];
+        $installmentNo = ($mode === 'emi') ? (($booking->emi_installments_paid ?? 0) + 1) : null;
+
+        $history[] = [
+            'payment_id'     => 'BAL-' . strtoupper(Str::random(8)),
+            'mode'           => $mode,
+            'amount'         => ($creditApplied + $remainingCashToPay),
+            'credit_applied' => $creditApplied,
+            'cash_paid'      => $remainingCashToPay,
+            'tenure_months'  => $tenure,
+            'installment_no' => $installmentNo,
+            'reference_no'   => $request->input('reference_no') ?: ('API-' . rand(10000000, 99999999)),
+            'receipt_file'   => $balanceReceiptPath,
+            'paid_at'        => now()->toDateTimeString(),
+        ];
+
+        $updateData = [
+            'balance_amount'           => $newBalance,
+            'balance_payment_mode'     => $mode,
+            'balance_payments_history' => $history,
+            'payment_status'           => $isFullyPaid ? 'fully_paid' : 'partial_paid',
+            'booking_status'           => $isFullyPaid ? 'balance_paid' : $booking->booking_status,
+        ];
+
+        if ($balanceReceiptPath) {
+            $updateData['payment_receipt'] = $balanceReceiptPath;
+        }
+
+        if ($mode === 'emi') {
+            $updateData['emi_tenure_months']    = $tenure;
+            $updateData['emi_monthly_amount']   = $emiMonthly;
+            $updateData['emi_installments_paid'] = ($booking->emi_installments_paid ?? 0) + 1;
+        }
+
+        $booking->update($updateData);
 
         // Auto-approve any pending referral/activation points linked to this now fully-paid booking
         $referralService = app(\App\Services\ReferralCommissionService::class);

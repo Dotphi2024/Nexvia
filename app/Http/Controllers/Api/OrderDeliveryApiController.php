@@ -134,10 +134,19 @@ class OrderDeliveryApiController extends Controller
                 $referralService->checkAndEnforceActivationStake($user, $productCreditApplied);
             }
 
-            // Initialize 7-Stage Delivery
+            // Match and assign Authorised DSP Partner
+            $matchingService = app(\App\Services\DspMatchingService::class);
+            $dspId = $request->input('dsp_id');
+            if (empty($dspId)) {
+                $matchedDsp = $matchingService->getBestMatchingDsp($request->pincode, $request->city, $request->state);
+                $dspId = $matchedDsp?->id;
+            }
+
+            // Initialize 7-Stage Delivery with DSP Partner
             $trackingNumber = 'TRK-' . rand(10000000, 99999999);
             $delivery = Delivery::create([
                 'order_id'        => $order->id,
+                'dsp_id'          => $dspId,
                 'tracking_number' => $trackingNumber,
                 'stage'           => 'order_confirmed',
             ]);

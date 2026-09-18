@@ -13,6 +13,7 @@ class Booking extends Model
     protected $fillable = [
         'booking_number',
         'user_id',
+        'dsp_id',
         'product_id',
         'product_name',
         'model_code',
@@ -38,6 +39,12 @@ class Booking extends Model
         'qr_code_hash',
         'cancellation_reason',
         'cancelled_at',
+        'payment_receipt',
+        'balance_payment_mode',
+        'emi_tenure_months',
+        'emi_monthly_amount',
+        'emi_installments_paid',
+        'balance_payments_history',
     ];
 
     protected $casts = [
@@ -47,13 +54,27 @@ class Booking extends Model
         'mrp' => 'decimal:2',
         'booking_amount' => 'decimal:2',
         'balance_amount' => 'decimal:2',
+        'emi_monthly_amount' => 'decimal:2',
         'quantity' => 'integer',
+        'emi_tenure_months' => 'integer',
+        'emi_installments_paid' => 'integer',
+        'balance_payments_history' => 'array',
         'non_refundable_accepted' => 'boolean',
     ];
 
     public function user()
     {
         return $this->belongsTo(Customer::class, 'user_id');
+    }
+
+    public function dsp()
+    {
+        return $this->belongsTo(DspApplication::class, 'dsp_id');
+    }
+
+    public function delivery()
+    {
+        return $this->hasOne(Delivery::class, 'booking_id');
     }
 
     public function product()
