@@ -14,15 +14,35 @@ use Illuminate\Http\Request;
 
 class ReferralWalletApiController extends Controller
 {
+    protected function resolveUser(Request $request)
+    {
+        $user = $request->user('customer') ?? $request->get('authenticated_customer') ?? $request->user();
+        if (!$user) {
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
+
+            if (!empty($token)) {
+                $user = Customer::where('api_token', $token)->first();
+            }
+        }
+        return $user;
+    }
+
     /**
      * GET /api/customer/referral-dashboard
      * Customer referral & wallet dashboard data.
      */
     public function dashboard(Request $request)
     {
-        $user = $request->user('customer');
+        $user = $this->resolveUser($request);
         if (!$user) {
-            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
+            return response()->json(['status' => false, 'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.'], 401);
         }
 
         // Ensure user has a referral code
@@ -145,9 +165,9 @@ class ReferralWalletApiController extends Controller
      */
     public function referrals(Request $request)
     {
-        $user = $request->user('customer') ?? $request->get('authenticated_customer') ?? $request->user();
+        $user = $this->resolveUser($request);
         if (!$user) {
-            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
+            return response()->json(['status' => false, 'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.'], 401);
         }
 
         // 1. Overall Metrics across all referrals of this user

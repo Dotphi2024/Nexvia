@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 class WishlistApiController extends Controller
 {
     /**
-     * Resolve the current customer from token, middleware attributes, or request parameter.
+     * Resolve customer strictly from authorization token.
      */
     protected function resolveCustomer(Request $request)
     {
@@ -19,19 +19,16 @@ class WishlistApiController extends Controller
 
         if (!$customer) {
             $bodyJson = json_decode($request->getContent(), true) ?? [];
-            $userId = $request->input('user_id')
-                ?? $request->input('userId')
-                ?? $request->input('customer_id')
-                ?? $request->input('customerId')
-                ?? $request->input('id')
-                ?? ($bodyJson['user_id'] ?? null)
-                ?? ($bodyJson['userId'] ?? null)
-                ?? ($bodyJson['customer_id'] ?? null)
-                ?? ($bodyJson['customerId'] ?? null)
-                ?? ($bodyJson['id'] ?? null);
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
 
-            if (!empty($userId)) {
-                $customer = Customer::find($userId);
+            if (!empty($token)) {
+                $customer = Customer::where('api_token', $token)->first();
             }
         }
 
@@ -139,7 +136,7 @@ class WishlistApiController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User authentication or User ID is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -177,7 +174,7 @@ class WishlistApiController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User authentication or User ID is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -232,7 +229,7 @@ class WishlistApiController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User authentication or User ID is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -294,7 +291,7 @@ class WishlistApiController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User authentication or User ID is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -338,7 +335,7 @@ class WishlistApiController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User authentication or User ID is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -370,7 +367,7 @@ class WishlistApiController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User authentication or User ID is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 

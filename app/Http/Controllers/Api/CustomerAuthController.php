@@ -634,25 +634,31 @@ class CustomerAuthController extends Controller
      */
     public function profile(Request $request, $id = null)
     {
-        $authCustomer = $request->get('authenticated_customer') ?? $request->user();
-        $customerId   = $id ?? $request->input('customer_id') ?? $request->input('id') ?? $authCustomer?->id;
+        $customer = $request->get('authenticated_customer') ?? $request->user();
 
-        if (!$customerId) {
+        if (!$customer) {
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
+
+            if (!empty($token)) {
+                $customer = Customer::where('api_token', $token)->first();
+            }
+        }
+
+        if (!$customer) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Customer ID or Authorization token is required.',
-            ], 422);
+                'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
+            ], 401);
         }
 
         try {
-            $customer = $authCustomer && $authCustomer->id == $customerId ? $authCustomer : Customer::find($customerId);
-
-            if (!$customer) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Customer not found.',
-                ], 404);
-            }
 
             $customerData = $customer->toArray();
             unset($customerData['otp_expires_at'], $customerData['phone_verified_at'], $customerData['email_verified_at'], $customerData['profile_pic']);
@@ -699,16 +705,31 @@ class CustomerAuthController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        $authCustomer = $request->get('authenticated_customer') ?? $request->user();
-        $targetId     = $request->input('id') ?? $request->input('user_id') ?? $request->input('customer_id') ?? $authCustomer?->id;
+        $customer = $request->get('authenticated_customer') ?? $request->user();
 
-        if (!$targetId) {
+        if (!$customer) {
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
+
+            if (!empty($token)) {
+                $customer = Customer::where('api_token', $token)->first();
+            }
+        }
+
+        if (!$customer) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Customer ID or Authorization token is required.',
-                'error'   => 'Customer ID is required',
-            ], 422);
+                'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
+            ], 401);
         }
+
+        $targetId = $customer->id;
 
         $fullName = $request->input('fullName') ?? $request->input('name');
         if ($fullName) {
@@ -743,7 +764,6 @@ class CustomerAuthController extends Controller
         }
 
         try {
-            $customer = $authCustomer && $authCustomer->id == $targetId ? $authCustomer : Customer::findOrFail($targetId);
 
             if ($addressVal) {
                 $customer->address = $addressVal;
@@ -852,12 +872,27 @@ class CustomerAuthController extends Controller
         }
 
         try {
-            $customer = $request->get('authenticated_customer');
+            $customer = $request->get('authenticated_customer') ?? $request->user();
+
+            if (!$customer) {
+                $bodyJson = json_decode($request->getContent(), true) ?? [];
+                $token = $request->bearerToken()
+                    ?? $request->input('api_token')
+                    ?? $request->input('token')
+                    ?? $request->header('api_token')
+                    ?? $request->header('token')
+                    ?? ($bodyJson['api_token'] ?? null)
+                    ?? ($bodyJson['token'] ?? null);
+
+                if (!empty($token)) {
+                    $customer = Customer::where('api_token', $token)->first();
+                }
+            }
 
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -888,39 +923,33 @@ class CustomerAuthController extends Controller
      * Customer Logout API
      *
      * POST /api/customer/logout or /api/auth/logout or /api/logout
-     * Requires: user_id (or id, customer_id)
+     * Strictly requires authorization token.
      */
     public function logout(Request $request)
     {
         try {
-            $bodyJson = json_decode($request->getContent(), true) ?? [];
+            $customer = $request->get('authenticated_customer') ?? $request->user();
 
-            // Extract user ID from query, body, or JSON payload
-            $userId = $request->input('user_id')
-                ?? $request->input('id')
-                ?? $request->input('customer_id')
-                ?? ($bodyJson['user_id'] ?? null)
-                ?? ($bodyJson['id'] ?? null)
-                ?? ($bodyJson['customer_id'] ?? null);
+            if (!$customer) {
+                $bodyJson = json_decode($request->getContent(), true) ?? [];
+                $token = $request->bearerToken()
+                    ?? $request->input('api_token')
+                    ?? $request->input('token')
+                    ?? $request->header('api_token')
+                    ?? $request->header('token')
+                    ?? ($bodyJson['api_token'] ?? null)
+                    ?? ($bodyJson['token'] ?? null);
 
-            // MANDATORY CHECK: Do NOT logout without User ID!
-            if (empty($userId)) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'User ID is required to logout. Please pass user_id (or id).',
-                    'errors'  => [
-                        'user_id' => ['The user_id field is required.'],
-                    ],
-                ], 422);
+                if (!empty($token)) {
+                    $customer = Customer::where('api_token', $token)->first();
+                }
             }
-
-            $customer = Customer::find($userId);
 
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => "User not found with ID: {$userId}. Cannot perform logout.",
-                ], 404);
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required to logout.',
+                ], 401);
             }
 
             // Invalidate/clear active api_token
@@ -939,11 +968,10 @@ class CustomerAuthController extends Controller
             return response()->json([
                 'status'  => true,
                 'message' => 'User logged out successfully.',
-                'user_id' => (int) $userId,
                 'data'    => [
-                    'user_id' => (int) $userId,
-                    'name'    => $customer->name,
-                    'phone'   => $customer->phone,
+                    'id'    => $customer->id,
+                    'name'  => $customer->name,
+                    'phone' => $customer->phone,
                 ],
             ], 200);
 

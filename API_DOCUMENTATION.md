@@ -3,7 +3,7 @@
 > **Base URL**: `http://127.0.0.1:8000` (Local) / `https://your-domain.com` (Production)  
 > **API Version**: `v1` / `Current`  
 > **Headers**: `Accept: application/json`, `Content-Type: application/json`  
-> **Authentication**: `Authorization: Bearer <api_token>` or `token=<api_token>` (query/body/header) or `id=<customer_id>`
+> **Authentication**: Strictly via Authorization Token (`Authorization: Bearer <api_token>` header, or `token` / `api_token` query/body parameter). Using `user_id` / `id` for authentication or impersonation is strictly forbidden and will return HTTP 401.
 
 ---
 
@@ -197,6 +197,27 @@
     "id": 42,
     "name": "Rahul M. Sharma",
     "email": "rahul.sharma@example.com"
+  }
+}
+```
+
+---
+
+### 1.7 Customer Logout
+* **Method**: `POST`
+* **URL**: `/api/auth/logout` (or `/api/customer/logout`, `/api/logout`)
+* **Auth**: Required (`customer.auth` or `Authorization: Bearer <api_token>`)
+* **Headers**: `Authorization: Bearer <api_token>` (strictly required)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "User logged out successfully.",
+  "data": {
+    "id": 42,
+    "name": "Rahul Sharma",
+    "phone": "9876543210"
   }
 }
 ```

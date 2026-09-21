@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 class CheckoutApiController extends Controller
 {
     /**
-     * Resolve the current customer from token, middleware attributes, or request parameter.
+     * Resolve customer strictly from authorization token.
      */
     protected function resolveCustomer(Request $request)
     {
@@ -20,17 +20,16 @@ class CheckoutApiController extends Controller
 
         if (!$customer) {
             $bodyJson = json_decode($request->getContent(), true) ?? [];
-            $userId = $request->input('user_id')
-                ?? $request->input('userId')
-                ?? $request->input('customer_id')
-                ?? $request->input('customerId')
-                ?? ($bodyJson['user_id'] ?? null)
-                ?? ($bodyJson['userId'] ?? null)
-                ?? ($bodyJson['customer_id'] ?? null)
-                ?? ($bodyJson['customerId'] ?? null);
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
 
-            if (!empty($userId)) {
-                $customer = Customer::find($userId);
+            if (!empty($token)) {
+                $customer = Customer::where('api_token', $token)->first();
             }
         }
 
@@ -111,7 +110,7 @@ class CheckoutApiController extends Controller
             if (empty($itemsToCompute)) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'No product specified for calculation. Provide { productId, selectedColor, quantity } or user_id.',
+                    'message' => 'No product specified for calculation. Provide { productId, selectedColor, quantity } or authorization token to calculate from active cart.',
                 ], 422);
             }
 

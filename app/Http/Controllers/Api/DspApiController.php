@@ -772,7 +772,7 @@ class DspApiController extends Controller
     }
 
     /**
-     * Resolve customer from request token, user_id, or middleware
+     * Resolve customer strictly from authorization token or middleware
      */
     protected function resolveCustomer(Request $request): ?Customer
     {
@@ -785,6 +785,7 @@ class DspApiController extends Controller
         $token = $request->bearerToken()
             ?? $request->input('api_token')
             ?? $request->input('token')
+            ?? $request->header('api_token')
             ?? $request->header('token')
             ?? ($bodyJson['api_token'] ?? null)
             ?? ($bodyJson['token'] ?? null);
@@ -792,15 +793,6 @@ class DspApiController extends Controller
         if (!empty($token)) {
             $found = Customer::where('api_token', $token)->first();
             if ($found) return $found;
-        }
-
-        $userId = $request->input('user_id')
-            ?? $request->input('customer_id')
-            ?? ($bodyJson['user_id'] ?? null)
-            ?? ($bodyJson['customer_id'] ?? null);
-
-        if (!empty($userId)) {
-            return Customer::find($userId);
         }
 
         return null;

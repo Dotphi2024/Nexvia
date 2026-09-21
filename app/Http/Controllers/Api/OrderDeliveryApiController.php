@@ -16,15 +16,35 @@ use Illuminate\Support\Str;
 
 class OrderDeliveryApiController extends Controller
 {
+    protected function resolveUser(Request $request)
+    {
+        $user = $request->user('customer') ?? $request->get('authenticated_customer') ?? $request->user();
+        if (!$user) {
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
+
+            if (!empty($token)) {
+                $user = \App\Models\Customer::where('api_token', $token)->first();
+            }
+        }
+        return $user;
+    }
+
     /**
      * POST /api/customer/orders/checkout
      * Multi-item Cart Checkout with Product Credit redemption & 7-stage delivery initiation.
      */
     public function checkout(Request $request)
     {
-        $user = $request->user('customer');
+        $user = $this->resolveUser($request);
         if (!$user) {
-            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
+            return response()->json(['status' => false, 'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.'], 401);
         }
 
         $validator = Validator::make($request->all(), [
