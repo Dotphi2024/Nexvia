@@ -257,9 +257,10 @@
 }
 ```
 
-> **Commission Structure Breakdown**:
-> - `commission_percentage`: **Part 2 Reward** — Category-specific referral commission percentage (e.g. `5.00%` or `10.00%`) credited to the referrer when the customer completes payment of the remaining 80% balance.
-> - `stages_cycle`: **Part 1 Reward** — Stage-based incentives (`10% → 12% → 15% → 18% → 20%`) earned instantly by the referrer upon confirmation of the 20% booking deposit.
+> **Referral Reward Structure Breakdown**:
+> - Stage-based incentives (`10% → 12% → 15% → 18% → 20%`) are defined in Referral Stage Config.
+> - When a referred customer pays their 20% booking deposit, the referrer receives rewards calculated at their current eligible stage percentage on that deposit.
+> - When the customer completes the remaining 80% balance (via EMI, lump-sum, or flexible payments), the **exact same eligible stage percentage** is applied to the 80% balance as well. There is no separate 80% referral percentage when adding or configuring categories.
 
 ---
 
@@ -669,7 +670,7 @@
 > 2. `payment_mode: "emi"` — Pays the calculated monthly EMI installment (`emi_tenure`: 3, 6, 9, or 12 months).
 > 3. `payment_mode: "flexible"` — Allows customer to pay **any custom amount** (minimum ₹100, up to current balance) at any time within the 60 days until the balance reaches ₹0.
 >
-> **Referral Part 2 Reward (Category Completion)**: When the remaining balance reaches ₹0 (`payment_status: "fully_paid"`), the system automatically triggers `award80PercentCategoryCompletionCredit()`, crediting the product category's commission percentage (e.g. 5.00%) to the referrer's wallet!
+> **Referral Balance Completion Reward**: When the remaining balance reaches ₹0 (`payment_status: "fully_paid"`), the system automatically triggers `award80PercentCategoryCompletionCredit()`, applying the **exact same eligible referral percentage** (from the referrer's stage when the 20% booking deposit was made) to the 80% balance amount and crediting the referrer's wallet!
 
 #### Request Body (Flexible Custom Amount Example)
 ```json

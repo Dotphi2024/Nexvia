@@ -365,8 +365,21 @@ class ReferralCommissionService
             return null;
         }
 
-        // 5. Category Commission Percentage: fallback to 5.00% if not set
-        $categoryRate = (float) ($category->commission_percentage ?: 5.00);
+        // 5. Eligible referral percentage: exactly the same percentage applied to the 20% booking deposit
+        $initialReferral = Referral::where('booking_id', $booking->id)
+            ->where('transaction_type', 'referral')
+            ->first();
+
+        if ($initialReferral && (float)$initialReferral->benefit_percentage > 0) {
+            $eligibleRate = (float) $initialReferral->benefit_percentage;
+            $stage        = $initialReferral->referral_stage;
+        } else {
+            $progress = CustomerCategoryProgress::where('user_id', $referrer->id)
+                ->where('category_id', $category->id)
+                ->first();
+            $stage        = $progress ? (int)$progress->current_stage : 1;
+            $eligibleRate = ReferralStageConfig::getRateForStage($stage);
+        }
 
         // 6. Base amount: 80% balance amount (or MRP - booking deposit)
         $bookingDeposit = (float) $booking->booking_amount;
@@ -376,13 +389,13 @@ class ReferralCommissionService
             $eightyPercentBase = round($mrpTotal * 0.80, 2);
         }
 
-        // Calculate credit earned
-        $creditEarned = round($eightyPercentBase * ($categoryRate / 100), 2);
+        // Calculate credit earned using same eligible percentage
+        $creditEarned = round($eightyPercentBase * ($eligibleRate / 100), 2);
         if ($creditEarned <= 0) {
             return null;
         }
 
-        return DB::transaction(function () use ($referrer, $referee, $booking, $product, $category, $categoryRate, $eightyPercentBase, $creditEarned) {
+        return DB::transaction(function () use ($referrer, $referee, $booking, $product, $category, $eligibleRate, $stage, $eightyPercentBase, $creditEarned) {
             // Create Referral Record
             $referral = Referral::create([
                 'referrer_id'            => $referrer->id,
@@ -390,15 +403,16 @@ class ReferralCommissionService
                 'booking_id'             => $booking->id,
                 'category_id'            => $category->id,
                 'sequence_in_category'   => 0,
-                'benefit_percentage'     => $categoryRate,
+                'benefit_percentage'     => $eligibleRate,
                 'product_value'          => $product->mrp,
                 'eligible_product_value' => $eightyPercentBase,
                 'credit_earned'          => $creditEarned,
                 'status'                 => 'available',
                 'approved_at'            => now(),
                 'transaction_type'       => 'category_completion',
+                'referral_stage'         => $stage,
                 'rule_version'           => 'v1.0',
-                'notes'                  => "80% Balance Completion Reward | Category: {$category->name} ({$categoryRate}%) on 80% balance ₹" . number_format($eightyPercentBase, 2),
+                'notes'                  => "80% Balance Completion Reward | {$eligibleRate}% (same as 20% deposit stage) on 80% balance ₹" . number_format($eightyPercentBase, 2),
             ]);
 
             // Credit to Referrer's Wallet
@@ -415,13 +429,14 @@ class ReferralCommissionService
                 'type'                 => 'credit',
                 'source'               => 'category_completion_reward',
                 'booking_id'           => $booking->id,
-                'description'          => "80% Balance Completion Reward for {$product->name} (Category: {$category->name} - {$categoryRate}%)",
+                'description'          => "80% Balance Completion Reward for {$product->name} ({$eligibleRate}% applied to 80% balance ₹" . number_format($eightyPercentBase, 2) . ")",
                 'transaction_type'     => 'category_completion',
                 'status'               => 'available',
                 'available_at'         => now(),
                 'referral_id'          => $referral->id,
                 'category_id'          => $category->id,
-                'incentive_percentage' => $categoryRate,
+                'incentive_percentage' => $eligibleRate,
+                'referral_stage'       => $stage,
                 'rule_version'         => 'v1.0',
             ]);
 

@@ -50,19 +50,9 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold text-dark">80% Balance Referral Commission (%)</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" max="100" name="commission_percentage" class="form-control"
-                                        placeholder="5.00" value="5.00">
-                                    <span class="input-group-text">%</span>
-                                </div>
-                                <small class="text-muted">Awarded to referrer upon 80% balance completion.</small>
-                            </div>
-
                             <div class="mb-3 p-2 bg-light rounded text-muted small">
                                 <i class="bx bx-trending-up text-primary me-1"></i>
-                                20% Deposit incentive is applied via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stages</a> (10% &rarr; 20%), and 80% balance triggers category commission.
+                                Referral incentives are applied via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stages</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20%). The exact same eligible stage percentage applied to the 20% booking deposit is also applied to the 80% balance upon completion.
                             </div>
 
                             <div class="mb-3">
@@ -130,12 +120,12 @@
                                                 @if($category->referral_eligible)
                                                     <div>
                                                         <span class="badge bg-success-subtle text-success fs-12 px-2 py-1">
-                                                            <i class="bx bx-trending-up me-1"></i>Deposit: 10% - 20%
+                                                            <i class="bx bx-trending-up me-1"></i>Incentive: 10% - 20%
                                                         </span>
                                                     </div>
                                                     <div class="mt-1">
-                                                        <span class="badge bg-info-subtle text-info fs-12 px-2 py-1">
-                                                            <i class="bx bx-check-shield me-1"></i>80% Bal: {{ number_format($category->commission_percentage ?? 5.00, 2) }}%
+                                                        <span class="badge bg-info-subtle text-info micro px-2 py-0.5">
+                                                            <i class="bx bx-check-shield me-1"></i>Applied to 20% & 80%
                                                         </span>
                                                     </div>
                                                 @else
@@ -149,7 +139,6 @@
                                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}"
                                                         data-referral-code="{{ $category->referral_category_code }}"
                                                         data-referral-eligible="{{ $category->referral_eligible ? '1' : '0' }}"
-                                                        data-commission-percentage="{{ $category->commission_percentage ?? 5.00 }}"
                                                         data-description="{{ $category->description }}"
                                                         data-image="{{ \App\Helpers\ImageHelper::resolve($category->image) }}"
                                                         data-action="{{ route('admin.categories.update', $category->id) }}">
@@ -214,19 +203,9 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">80% Balance Referral Commission (%)</label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" min="0" max="100" name="commission_percentage" id="editCommissionPercentage" class="form-control"
-                                    placeholder="5.00">
-                                <span class="input-group-text">%</span>
-                            </div>
-                            <small class="text-muted">Awarded to referrer upon 80% balance completion.</small>
-                        </div>
-
                         <div class="mb-3 p-2 bg-light rounded text-muted small">
                             <i class="bx bx-trending-up text-primary me-1"></i>
-                            20% Deposit incentive is applied via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stages</a> (10% &rarr; 20%), and 80% balance triggers category commission.
+                            Referral incentives are applied via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stages</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20%). The exact same eligible stage percentage applied to the 20% booking deposit is also applied to the 80% balance upon completion.
                         </div>
 
                         <div class="mb-3">
@@ -270,7 +249,6 @@
                 const name = button.getAttribute('data-name') || '';
                 const refCode = button.getAttribute('data-referral-code') || '';
                 const refEligible = button.getAttribute('data-referral-eligible') === '1';
-                const commPerc = button.getAttribute('data-commission-percentage') || '5.00';
                 const description = button.getAttribute('data-description') || '';
                 const image = button.getAttribute('data-image') || '';
 
@@ -280,7 +258,6 @@
                 document.getElementById('editCategoryName').value = name;
                 document.getElementById('editCategoryRefCode').value = refCode;
                 document.getElementById('editRefEligible').checked = refEligible;
-                document.getElementById('editCommissionPercentage').value = commPerc;
                 document.getElementById('editCategoryDescription').value = description;
 
                 const preview = document.getElementById('editCurrentImagePreview');
