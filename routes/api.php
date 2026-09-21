@@ -55,6 +55,7 @@ Route::post('/dsp/apply',                      [DspApiController::class, 'store'
 Route::get('/dsp/track/{applicationNumber}',   [DspApiController::class, 'track']);
 Route::post('/dsp/login',                      [DspApiController::class, 'login']);
 Route::match(['get', 'post'], '/dsp/available-by-pincode', [DspApiController::class, 'availableByPincode']);
+Route::match(['get', 'post'], '/dsp/nearby',               [DspApiController::class, 'nearby']);
 
 // Protected DSP Partner APIs (Require Bearer Token or dsp_id via dsp.auth middleware)
 Route::middleware(['dsp.auth'])->prefix('dsp')->group(function () {
@@ -156,6 +157,8 @@ Route::prefix('customer')->group(function () {
         Route::post('/bookings',                          [BookingApiController::class, 'store']);
         Route::get('/bookings/{id}',                      [BookingApiController::class, 'show']);
         Route::post('/bookings/{id}/pay-balance',         [BookingApiController::class, 'payBalance']);
+        Route::post('/bookings/{id}/reallocate',          [BookingApiController::class, 'reallocate']);
+        Route::post('/bookings/{id}/select-dsp',          [BookingApiController::class, 'selectDsp']);
         Route::post('/bookings/{id}/cancel',              [BookingApiController::class, 'cancel']);
         Route::post('/bookings/{id}/transfer',            [BookingApiController::class, 'initiateTransfer']);
         Route::post('/bookings/{id}/transfer/confirm',    [BookingApiController::class, 'confirmTransfer']);
@@ -262,6 +265,10 @@ Route::post('/booking',                                 [BookingApiController::c
 Route::get('/bookings',                                 [BookingApiController::class, 'index']);
 Route::get('/booking',                                  [BookingApiController::class, 'index']);
 Route::get('/bookings/{id}',                            [BookingApiController::class, 'show']);
+Route::post('/bookings/{id}/reallocate',                   [BookingApiController::class, 'reallocate']);
+Route::post('/booking/{id}/reallocate',                    [BookingApiController::class, 'reallocate']);
+Route::post('/bookings/{id}/select-dsp',                   [BookingApiController::class, 'selectDsp']);
+Route::post('/booking/{id}/select-dsp',                    [BookingApiController::class, 'selectDsp']);
 Route::post('/bookings/{id}/cancel',                     [BookingApiController::class, 'cancel']);
 Route::post('/booking/{id}/cancel',                      [BookingApiController::class, 'cancel']);
 

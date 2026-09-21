@@ -12,7 +12,7 @@ class CustomerApiTokenMiddleware
     /**
      * Handle an incoming request for protected Customer APIs.
      *
-     * Expects: Header "Authorization: Bearer <token>" or parameter "token"
+     * Strictly requires authorization token: Header "Authorization: Bearer <token>" or parameter "token" / "api_token"
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -24,40 +24,31 @@ class CustomerApiTokenMiddleware
             }
         }
 
-        $userId = $request->input('id')
-            ?? $request->input('user_id')
-            ?? $request->input('customer_id')
-            ?? ($trimmedJson['id'] ?? null)
-            ?? ($trimmedJson['user_id'] ?? null)
-            ?? ($trimmedJson['customer_id'] ?? null);
-
+        // Strictly extract authorization token
         $token = $request->bearerToken()
+            ?? $request->input('api_token')
             ?? $request->input('token')
+            ?? $request->header('api_token')
             ?? $request->header('token')
+            ?? $request->json('api_token')
             ?? $request->json('token')
+            ?? ($trimmedJson['api_token'] ?? null)
             ?? ($trimmedJson['token'] ?? null)
-            ?? ($trimmedJson['refreshToken'] ?? null)
             ?? ($trimmedJson['access_token'] ?? null);
 
-        $customer = null;
-
-        if (!empty($userId)) {
-            $customer = Customer::find($userId);
-        } elseif (!empty($token)) {
-            $customer = Customer::where('api_token', $token)->first();
-        }
-
-        if (empty($userId) && empty($token)) {
+        if (empty($token)) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Unauthenticated. User ID (id) or Authorization Token is required.',
+                'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
             ], 401);
         }
+
+        $customer = Customer::where('api_token', $token)->first();
 
         if (!$customer) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Unauthenticated. Invalid User ID or token.',
+                'message' => 'Unauthenticated. Invalid or expired authorization token.',
             ], 401);
         }
 

@@ -13,7 +13,7 @@ class UserAddressController extends Controller
      * GET /api/user/addresses
      * Fetch user saved delivery addresses
     /**
-     * Resolve customer from token or user_id parameter.
+     * Resolve customer strictly from authorization token.
      */
     protected function resolveCustomer(Request $request)
     {
@@ -21,15 +21,16 @@ class UserAddressController extends Controller
 
         if (!$customer) {
             $bodyJson = json_decode($request->getContent(), true) ?? [];
-            $userId = $request->input('user_id')
-                ?? $request->input('userId')
-                ?? $request->input('customer_id')
-                ?? $request->input('customerId')
-                ?? ($bodyJson['user_id'] ?? null)
-                ?? ($bodyJson['userId'] ?? null);
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
 
-            if (!empty($userId)) {
-                $customer = \App\Models\Customer::find($userId);
+            if (!empty($token)) {
+                $customer = \App\Models\Customer::where('api_token', $token)->first();
             }
         }
 
@@ -48,7 +49,7 @@ class UserAddressController extends Controller
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Unauthenticated. User token or user_id is required.',
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
                 ], 401);
             }
 
@@ -85,7 +86,7 @@ class UserAddressController extends Controller
         if (!$customer) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Unauthenticated. User token or user_id is required.',
+                'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
             ], 401);
         }
 
@@ -197,12 +198,12 @@ class UserAddressController extends Controller
      */
     public function destroy(Request $request, $id = null)
     {
-        $customer = $request->get('authenticated_customer') ?? $request->user();
+        $customer = $this->resolveCustomer($request);
 
         if (!$customer) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Unauthenticated.',
+                'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required.',
             ], 401);
         }
 

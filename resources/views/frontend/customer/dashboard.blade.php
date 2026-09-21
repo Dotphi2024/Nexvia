@@ -44,8 +44,12 @@
                                     <span class="badge bg-primary font-monospace">#{{ $booking->booking_number }}</span>
                                     <h5 class="fw-bold text-dark mb-0 mt-1">{{ $booking->product_name }}</h5>
                                 </div>
-                                @if($booking->payment_status === 'fully_paid')
+                                @if($booking->booking_status === 'reallocated')
+                                    <span class="badge bg-secondary text-white px-3 py-2">REALLOCATED</span>
+                                @elseif($booking->payment_status === 'fully_paid')
                                     <span class="badge bg-success text-white px-3 py-2">FULLY PAID</span>
+                                @elseif($booking->can_reallocate_paid_amount)
+                                    <span class="badge bg-danger text-white px-3 py-2">60-DAYS EXPIRED</span>
                                 @else
                                     <span class="badge bg-warning text-dark px-3 py-2">BALANCE DUE</span>
                                 @endif
@@ -65,8 +69,20 @@
                                     <span class="micro text-danger d-block">80% Balance</span>
                                     <strong class="text-danger small">₹{{ number_format($booking->balance_amount, 0) }}</strong>
                                 </div>
-                                                      <!-- 60-DAY COUNTDOWN TIMER & PROGRESS BAR -->
-                            @if($booking->payment_status !== 'fully_paid')
+                            </div>
+
+                            <!-- 60-DAY COUNTDOWN TIMER & PROGRESS BAR -->
+                            @if($booking->booking_status === 'reallocated')
+                                <div class="alert alert-info py-2 px-3 small rounded-3 mb-3">
+                                    <iconify-icon icon="solar:info-circle-bold" class="me-1 align-middle text-primary"></iconify-icon>
+                                    <strong>Reallocated to Wallet:</strong> Paid amount ₹{{ number_format($booking->filled_amount, 2) }} is credited to your Product Credits wallet.
+                                </div>
+                            @elseif($booking->can_reallocate_paid_amount)
+                                <div class="alert alert-warning py-2 px-3 small rounded-3 mb-3">
+                                    <iconify-icon icon="solar:clock-circle-bold" class="me-1 align-middle text-danger"></iconify-icon>
+                                    <strong>60-Day Period Concluded:</strong> You can use your filled amount of ₹{{ number_format($booking->filled_amount, 2) }} to purchase another item.
+                                </div>
+                            @elseif($booking->payment_status !== 'fully_paid')
                                 <div class="mb-3">
                                     @if($booking->balance_payment_mode === 'emi')
                                         <div class="badge bg-primary-subtle text-primary border mb-2 d-inline-block text-wrap text-start">
@@ -88,15 +104,28 @@
                                 </div>
                             @endif
 
-                            <div class="d-flex justify-content-between align-items-center pt-2 mt-auto border-top">
+                            <div class="d-flex justify-content-between align-items-center pt-2 mt-auto border-top gap-2 flex-wrap">
                                 <a href="{{ route('booking.receipt', $booking->booking_number) }}" class="btn btn-outline-primary btn-sm fw-semibold">
                                     View Digital Receipt
                                 </a>
 
-                                @if($booking->payment_status !== 'fully_paid')
+                                @if($booking->can_reallocate_paid_amount)
+                                    <form action="{{ route('booking.reallocate', $booking->booking_number) }}" method="POST" onsubmit="return confirm('Transfer your paid amount of ₹{{ number_format($booking->filled_amount, 2) }} into Product Credit to purchase another item?');" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-warning btn-sm fw-bold text-dark shadow-sm">
+                                            <iconify-icon icon="solar:cart-large-minimalistic-bold" class="me-1 align-middle"></iconify-icon>
+                                            Buy Another Item (₹{{ number_format($booking->filled_amount, 0) }})
+                                        </button>
+                                    </form>
+                                @elseif($booking->booking_status === 'reallocated')
+                                    <a href="{{ url('/products') }}" class="btn btn-primary btn-sm fw-bold">
+                                        <iconify-icon icon="solar:shop-2-bold" class="me-1 align-middle"></iconify-icon> Browse Products
+                                    </a>
+                                @elseif($booking->payment_status !== 'fully_paid')
                                     <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#payBalanceModal{{ $booking->id }}">
                                         <iconify-icon icon="solar:card-2-bold" class="me-1 align-middle"></iconify-icon> Pay Balance (EMI / Full)
                                     </button>
+                                @endif
 
                                     <!-- Pay Balance Settlement Modal -->
                                     <div class="modal fade" id="payBalanceModal{{ $booking->id }}" tabindex="-1" aria-hidden="true">

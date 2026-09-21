@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\DspApplication;
 use App\Models\Delivery;
 use App\Models\Booking;
+use App\Models\Customer;
+use App\Models\UserAddress;
 use App\Models\DspWalletTransaction;
 use App\Models\DspPayoutRequest;
 use App\Services\DspMatchingService;
@@ -770,40 +772,145 @@ class DspApiController extends Controller
     }
 
     /**
-     * GET /api/dsp/available-by-pincode
-     * Public API returning matching DSP partners for customer delivery pincode
+     * Resolve customer from request token, user_id, or middleware
      */
-    public function availableByPincode(Request $request)
+    protected function resolveCustomer(Request $request): ?Customer
     {
-        $pincode  = $request->query('pincode', $request->input('pincode'));
-        $district = $request->query('district', $request->input('district'));
-        $state    = $request->query('state', $request->input('state'));
+        $customer = $request->attributes->get('authenticated_customer') ?? $request->user();
+        if ($customer instanceof Customer) {
+            return $customer;
+        }
 
+        $bodyJson = json_decode($request->getContent(), true) ?? [];
+        $token = $request->bearerToken()
+            ?? $request->input('api_token')
+            ?? $request->input('token')
+            ?? $request->header('token')
+            ?? ($bodyJson['api_token'] ?? null)
+            ?? ($bodyJson['token'] ?? null);
+
+        if (!empty($token)) {
+            $found = Customer::where('api_token', $token)->first();
+            if ($found) return $found;
+        }
+
+        $userId = $request->input('user_id')
+            ?? $request->input('customer_id')
+            ?? ($bodyJson['user_id'] ?? null)
+            ?? ($bodyJson['customer_id'] ?? null);
+
+        if (!empty($userId)) {
+            return Customer::find($userId);
+        }
+
+        return null;
+    }
+
+    /**
+     * GET or POST /api/dsp/nearby or /api/customer/dsp/nearby
+     * Load all nearby authorised DSP delivery partners based on pincode OR user address.
+     * Allows customer to view, select, and assign the delivery partner.
+     */
+    public function nearby(Request $request)
+    {
+        $bodyJson = json_decode($request->getContent(), true) ?? [];
+
+        // 1. Direct input parameters
+        $pincode  = $request->query('pincode', $request->input('pincode', $bodyJson['pincode'] ?? null));
+        $address  = $request->query('address', $request->input('address', $bodyJson['address'] ?? null));
+        $district = $request->query('district', $request->input('district', $bodyJson['district'] ?? ($bodyJson['city'] ?? $request->input('city'))));
+        $state    = $request->query('state', $request->input('state', $bodyJson['state'] ?? null));
+        $source   = 'query_parameters';
+
+        // 2. If pincode is not explicitly provided, extract 6-digit PIN from address string
+        if (empty($pincode) && !empty($address)) {
+            if (preg_match('/\b[1-9][0-9]{5}\b/', (string)$address, $matches)) {
+                $pincode = $matches[0];
+                $source = 'extracted_from_address';
+            }
+        }
+
+        // 3. If still empty, resolve logged-in customer's saved address or profile
+        if (empty($pincode) && empty($address)) {
+            $customer = $this->resolveCustomer($request);
+            if ($customer) {
+                $defaultAddr = UserAddress::where('user_id', $customer->id)
+                    ->orderByDesc('is_default')
+                    ->first();
+
+                if ($defaultAddr) {
+                    $pincode  = $defaultAddr->pincode;
+                    $address  = $defaultAddr->address;
+                    $district = $district ?: $defaultAddr->city;
+                    $state    = $state ?: $defaultAddr->state;
+                    $source   = 'customer_saved_address';
+                } elseif (!empty($customer->pincode) || !empty($customer->address)) {
+                    $pincode  = $customer->pincode;
+                    $address  = $customer->address;
+                    $district = $district ?: $customer->city;
+                    $state    = $state ?: $customer->state;
+                    $source   = 'customer_profile';
+                }
+            }
+        }
+
+        // 4. Find matching DSPs via matching service
         $matchingService = app(DspMatchingService::class);
         $dsps = $matchingService->findAvailableDsps($pincode, $district, $state);
 
-        $formatted = $dsps->map(function ($dsp) {
+        $hasDirectMatch = false;
+        $formatted = $dsps->values()->map(function ($dsp, $index) use (&$hasDirectMatch) {
+            $isDirect = ($dsp->match_type ?? '') === 'exact_pincode';
+            if ($isDirect) {
+                $hasDirectMatch = true;
+            }
+
             return [
                 'id'                 => $dsp->id,
                 'business_name'      => $dsp->business_name ?: $dsp->applicant_name,
                 'applicant_name'     => $dsp->applicant_name,
                 'mobile'             => $dsp->mobile,
+                'email'              => $dsp->email,
+                'territory_area'     => $dsp->preferred_territory_area ?: ($dsp->district . ', ' . $dsp->state),
                 'district'           => $dsp->district,
                 'state'              => $dsp->state,
                 'premises_address'   => $dsp->complete_address,
                 'premises_pincode'   => $dsp->premises_pincode,
+                'serviced_pincodes'  => $dsp->servicedPincodesArray(),
                 'match_type'         => $dsp->match_type ?? 'regional',
                 'match_label'        => $dsp->match_label ?? 'Delivery Partner',
+                'is_direct_match'    => $isDirect,
+                'is_recommended'     => ($index === 0),
                 'technicians_count'  => (int)$dsp->technicians_count,
                 'vehicles_count'     => $dsp->total_vehicles,
+                'commission_rate'    => '5.0%',
             ];
         });
 
         return response()->json([
             'status' => true,
-            'count'  => $formatted->count(),
-            'dsps'   => $formatted,
+            'search_criteria' => [
+                'pincode'          => $pincode,
+                'district'         => $district,
+                'state'            => $state,
+                'address_queried'  => $address,
+                'detection_source' => $source,
+            ],
+            'count'                      => $formatted->count(),
+            'has_direct_pincode_partner' => $hasDirectMatch,
+            'recommended_dsp'            => $formatted->first(),
+            'dsps'                       => $formatted,
+            'nearby_dsps'                => $formatted,
         ]);
+    }
+
+    /**
+     * GET /api/dsp/available-by-pincode
+     * Public API returning matching DSP partners for customer delivery pincode (alias for nearby)
+     */
+    public function availableByPincode(Request $request)
+    {
+        return $this->nearby($request);
     }
 
     /**

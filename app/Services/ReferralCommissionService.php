@@ -317,7 +317,116 @@ class ReferralCommissionService
             }
         }
 
+        // Also trigger 80% completion category credit if eligible
+        $this->award80PercentCategoryCompletionCredit($booking);
+
         return $approvedCount;
+    }
+
+    /**
+     * STEP 3B — AWARD 80% BALANCE COMPLETION REWARD ACCORDING TO CATEGORY
+     * Triggered when the customer completes the remaining 80% balance (via EMI, lump-sum, or flexible payments).
+     * Calculates referral credits based on the Product's Category commission_percentage and credits the Referrer.
+     */
+    public function award80PercentCategoryCompletionCredit(Booking $booking): ?Referral
+    {
+        // 1. Ensure booking balance is completed
+        if ($booking->payment_status !== 'fully_paid' && (float)$booking->balance_amount > 0) {
+            return null;
+        }
+
+        // 2. Prevent duplicate award for this booking
+        $existing = Referral::where('booking_id', $booking->id)
+            ->where('transaction_type', 'category_completion')
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        // 3. Resolve referred customer and their referrer
+        $referee = Customer::find($booking->user_id);
+        if (!$referee || !$referee->referred_by_id) {
+            return null;
+        }
+
+        $referrer = Customer::find($referee->referred_by_id);
+        if (!$referrer || !$referrer->is_self_dealer || $referrer->self_dealer_status !== 'active') {
+            return null;
+        }
+
+        // 4. Resolve Product & Category
+        $product = $booking->product ?: \App\Models\Product::find($booking->product_id);
+        if (!$product) {
+            return null;
+        }
+
+        $category = $product->category ?: Category::find($product->category_id);
+        if (!$category) {
+            return null;
+        }
+
+        // 5. Category Commission Percentage: fallback to 5.00% if not set
+        $categoryRate = (float) ($category->commission_percentage ?: 5.00);
+
+        // 6. Base amount: 80% balance amount (or MRP - booking deposit)
+        $bookingDeposit = (float) $booking->booking_amount;
+        $mrpTotal       = (float) ($booking->mrp > 0 ? $booking->mrp : ($bookingDeposit * 5));
+        $eightyPercentBase = max(0.00, round($mrpTotal - $bookingDeposit, 2));
+        if ($eightyPercentBase <= 0) {
+            $eightyPercentBase = round($mrpTotal * 0.80, 2);
+        }
+
+        // Calculate credit earned
+        $creditEarned = round($eightyPercentBase * ($categoryRate / 100), 2);
+        if ($creditEarned <= 0) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($referrer, $referee, $booking, $product, $category, $categoryRate, $eightyPercentBase, $creditEarned) {
+            // Create Referral Record
+            $referral = Referral::create([
+                'referrer_id'            => $referrer->id,
+                'referee_id'             => $referee->id,
+                'booking_id'             => $booking->id,
+                'category_id'            => $category->id,
+                'sequence_in_category'   => 0,
+                'benefit_percentage'     => $categoryRate,
+                'product_value'          => $product->mrp,
+                'eligible_product_value' => $eightyPercentBase,
+                'credit_earned'          => $creditEarned,
+                'status'                 => 'available',
+                'approved_at'            => now(),
+                'transaction_type'       => 'category_completion',
+                'rule_version'           => 'v1.0',
+                'notes'                  => "80% Balance Completion Reward | Category: {$category->name} ({$categoryRate}%) on 80% balance ₹" . number_format($eightyPercentBase, 2),
+            ]);
+
+            // Credit to Referrer's Wallet
+            $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $referrer->id]);
+            $wallet->creditAvailable($creditEarned);
+
+            $referrer->wallet_balance = ($referrer->wallet_balance ?? 0) + $creditEarned;
+            $referrer->save();
+
+            // Record Wallet Transaction
+            WalletTransaction::create([
+                'user_id'              => $referrer->id,
+                'amount'               => $creditEarned,
+                'type'                 => 'credit',
+                'source'               => 'category_completion_reward',
+                'booking_id'           => $booking->id,
+                'description'          => "80% Balance Completion Reward for {$product->name} (Category: {$category->name} - {$categoryRate}%)",
+                'transaction_type'     => 'category_completion',
+                'status'               => 'available',
+                'available_at'         => now(),
+                'referral_id'          => $referral->id,
+                'category_id'          => $category->id,
+                'incentive_percentage' => $categoryRate,
+                'rule_version'         => 'v1.0',
+            ]);
+
+            return $referral;
+        });
     }
 
     // =========================================================================

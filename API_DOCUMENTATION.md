@@ -15,12 +15,13 @@
 4. [Cart & Wishlist](#4-cart--wishlist)
 5. [User Addresses](#5-user-addresses)
 6. [Checkout & Online Payments](#6-checkout--online-payments)
-7. [Flexi-Bookings & Balance Payments](#7-flexi-bookings--balance-payments)
-8. [Referral & Product Credit Wallet (New & Enhanced)](#8-referral--product-credit-wallet)
+7. [Flexi-Bookings, 60-Day Flexible Payments & Reallocation](#7-flexi-bookings-60-day-flexible-payments--reallocation)
+8. [Referral & Product Credit Wallet (2-Part Rewards)](#8-referral--product-credit-wallet)
 9. [Self-Dealer Ecosystem & 5-Stage Cycle](#9-self-dealer-ecosystem--5-stage-cycle)
 10. [Order Delivery Tracking](#10-order-delivery-tracking)
 11. [Warranties, Service Tickets & Installations](#11-warranties-service-tickets--installations)
 12. [CMS Dynamic Pages, Policies & Points](#12-cms-dynamic-pages-policies--points)
+13. [Authorised Delivery & Service Partner (DSP) Ecosystem](#13-authorised-delivery--service-partner-dsp-ecosystem)
 
 ---
 
@@ -234,6 +235,10 @@
   ]
 }
 ```
+
+> **Commission Structure Breakdown**:
+> - `commission_percentage`: **Part 2 Reward** — Category-specific referral commission percentage (e.g. `5.00%` or `10.00%`) credited to the referrer when the customer completes payment of the remaining 80% balance.
+> - `stages_cycle`: **Part 1 Reward** — Stage-based incentives (`10% → 12% → 15% → 18% → 20%`) earned instantly by the referrer upon confirmation of the 20% booking deposit.
 
 ---
 
@@ -552,11 +557,11 @@
 
 ---
 
-## 7. Flexi-Bookings & Balance Payments
+## 7. Flexi-Bookings, 60-Day Flexible Payments & Reallocation
 
 ### 7.1 List Customer Bookings
-* **Method**: `GET`
-* **URL**: `/api/customer/bookings` (or `/api/bookings`)
+* **Method**: `GET` or `POST`
+* **URL**: `/api/customer/bookings` (or `/api/bookings`, `/api/customer/bookings/list`)
 * **Auth**: Required (`customer.auth`)
 
 #### Response (`200 OK`)
@@ -571,11 +576,15 @@
       "mrp": 50000.0,
       "booking_amount_paid": 10000.0,
       "balance_amount_due": 40000.0,
+      "filled_amount": 10000.0,
       "booking_date": "2026-09-10",
       "balance_due_date": "2026-11-09",
       "payment_status": "partially_paid",
       "booking_status": "confirmed",
-      "days_remaining": 54
+      "days_remaining": 54,
+      "is_expired_60_days": false,
+      "can_reallocate_paid_amount": false,
+      "cancellation_allowed": false
     }
   ]
 }
@@ -583,10 +592,14 @@
 
 ---
 
-### 7.2 Create New Flexi-Booking (Token Down Payment)
+### 7.2 Create New Flexi-Booking (Token Down Payment: 20%)
 * **Method**: `POST`
-* **URL**: `/api/customer/bookings` (or `/api/bookings`)
+* **URL**: `/api/customer/bookings` (or `/api/bookings`, `/api/booking`)
 * **Auth**: Required (`customer.auth`)
+
+> **Strict Commitment Policy**: Once the 20% booking deposit is confirmed, the booking is **strictly non-cancellable and non-refundable**.
+>
+> **Referral Part 1 Reward**: The referrer instantly receives their **Part 1 Referral Stage Reward** (10% to 20% based on their active stage) computed on the 20% deposit amount.
 
 #### Request Body
 ```json
@@ -616,26 +629,43 @@
       "balance_amount_due": 40000.0,
       "token_percentage": 20.0,
       "balance_percentage": 80.0
-    }
+    },
+    "cancellation_allowed": false,
+    "days_remaining": 60
   }
 }
 ```
 
 ---
 
-### 7.3 Pay Remaining Balance (80%)
+### 7.3 Flexible 60-Day Balance Payments (Full, EMI, or Flexible Any Amount)
 * **Method**: `POST`
 * **URL**: `/api/customer/bookings/{id}/pay-balance`
 * **Auth**: Required (`customer.auth`)
 
-> **Auto-Approval**: When the booking becomes `fully_paid`, any pending referral incentive points and activation credits tied to this booking are **automatically approved** and moved to the available wallet balance. (The manual **Qualify** button in Admin remains available for overrides).
+> **Payment Modes**:
+> 1. `payment_mode: "full"` — Clears entire remaining balance at once.
+> 2. `payment_mode: "emi"` — Pays the calculated monthly EMI installment (`emi_tenure`: 3, 6, 9, or 12 months).
+> 3. `payment_mode: "flexible"` — Allows customer to pay **any custom amount** (minimum ₹100, up to current balance) at any time within the 60 days until the balance reaches ₹0.
 >
-> **Stake Enforcement**: If `use_product_credit` is `true`, wallet points are deducted. If the deduction dips into your 20% activation credit stake, Self-Dealer status is automatically cancelled!
+> **Referral Part 2 Reward (Category Completion)**: When the remaining balance reaches ₹0 (`payment_status: "fully_paid"`), the system automatically triggers `award80PercentCategoryCompletionCredit()`, crediting the product category's commission percentage (e.g. 5.00%) to the referrer's wallet!
 
-#### Request Body
+#### Request Body (Flexible Custom Amount Example)
 ```json
 {
-  "use_product_credit": true
+  "payment_mode": "flexible",
+  "custom_amount": 5000.00,
+  "reference_no": "UPI-UTR-9876543210",
+  "use_product_credit": false
+}
+```
+
+#### Request Body (EMI Mode Example)
+```json
+{
+  "payment_mode": "emi",
+  "emi_tenure": 6,
+  "reference_no": "UPI-UTR-9876543210"
 }
 ```
 
@@ -643,60 +673,33 @@
 ```json
 {
   "status": true,
-  "message": "Balance payment completed successfully. 1 pending credit/referral reward(s) have been auto-approved to available balance.",
+  "message": "Payment of ₹5,000.00 recorded successfully towards balance. Remaining balance: ₹35,000.00.",
   "data": {
     "booking_number": "BK-20260916-7788",
-    "credit_applied": 15000.0,
-    "cash_paid": 25000.0,
-    "balance_amount": 0.0,
-    "payment_status": "fully_paid",
-    "referrals_auto_approved": 1,
-    "wallet_balance_remain": 0.0,
-    "self_dealer_cancelled": false,
-    "self_dealer_status": "active",
-    "is_self_dealer": true
+    "amount_paid_now": 5000.0,
+    "balance_amount": 35000.0,
+    "filled_amount": 15000.0,
+    "payment_status": "partially_paid",
+    "payment_mode": "flexible",
+    "days_remaining": 48
   }
 }
 ```
 
 ---
 
-### 7.4 Cancel Booking
+### 7.4 Strict Non-Cancellable Policy Enforcement
 * **Method**: `POST`
-* **URL**: `/api/customer/bookings/{id}/cancel` (or `/api/bookings/{id}/cancel`)
+* **URL**: `/api/customer/bookings/{id}/cancel` (or `/api/bookings/{id}/cancel`, `/api/booking/{id}/cancel`)
 * **Auth**: Required (`customer.auth`)
 
-> **Actions Executed on Cancellation**:
-> 1. Marks booking status as `cancelled` with reason and timestamp `cancelled_at`.
-> 2. **Reverses referral credits**: Any pending or available referral/activation points tied to this booking are automatically reversed with audit history.
-> 3. **Revokes Self-Dealer status**: If this was the customer's activation booking (`activation_booking_id`), their Self-Dealer status is automatically revoked (`is_self_dealer = false`, `self_dealer_status = 'cancelled'`).
-> 4. **Refunds redeemed credits**: Any NEXVIA Product Credits that were redeemed towards this booking or balance are automatically refunded back to the user's wallet.
+> **Policy Rule**: In accordance with platform terms, once the 20% booking deposit is confirmed, bookings are strictly non-cancellable and non-refundable. Referral stage credits are locked upon booking. If the remaining balance is not paid within 60 days, the customer can reallocate their paid amount to purchase another item via Section 7.6.
 
-#### Request Body
+#### Response (`422 Unprocessable Entity`)
 ```json
 {
-  "reason": "Changed my mind / opted for alternate model"
-}
-```
-
-#### Response (`200 OK`)
-```json
-{
-  "status": true,
-  "message": "Booking BK-20260916-7788 has been cancelled successfully. Your Self-Dealer status has been revoked because this was your activation booking.",
-  "data": {
-    "booking_id": 88,
-    "booking_number": "BK-20260916-7788",
-    "booking_status": "cancelled",
-    "cancellation_reason": "Changed my mind / opted for alternate model",
-    "cancelled_at": "2026-09-16T12:55:00+05:30",
-    "referrals_reversed": 1,
-    "self_dealer_revoked": true,
-    "self_dealer_status": "cancelled",
-    "is_self_dealer": false,
-    "credits_refunded": 0.0,
-    "current_wallet_balance": 0.0
-  }
+  "status": false,
+  "message": "Cancellation is not permitted. Once the 20% booking deposit is confirmed, bookings are strictly non-cancellable and non-refundable."
 }
 ```
 
@@ -705,6 +708,124 @@
 ### 7.5 Transfer Booking Ownership
 * `POST /api/customer/bookings/{id}/transfer` — Request transfer (`to_name`, `to_phone`)
 * `POST /api/customer/bookings/{id}/transfer/confirm` — Confirm OTP for transfer
+
+---
+
+### 7.6 Post-60-Day Balance Reallocation ("Buy Another Item with Paid Amount")
+* **Method**: `POST`
+* **URL**: `/api/customer/bookings/{id}/reallocate`
+* **Aliases**: `/api/bookings/{id}/reallocate`, `/api/booking/{id}/reallocate`, `/booking/reallocate/{bookingNumber}` (Web)
+* **Auth**: Required (`customer.auth`)
+
+> **Eligibility Criteria**:
+> - `is_expired_60_days` must be `true` (`days_remaining <= 0` or `balance_due_date` is past).
+> - `payment_status` must NOT be `fully_paid`.
+> - `booking_status` must NOT already be `reallocated`.
+>
+> **Action**: Converts the total filled amount (`mrp - balance_amount`, including 20% initial deposit + all partial payments made) into NEXVIA Product Credits credited directly to the customer's wallet. Marks booking as `reallocated`. The customer can use this wallet balance to purchase any other item from the catalog.
+
+#### Request Body
+```json
+{}
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "₹15,000.00 from booking #BK-20260916-7788 has been reallocated to your Product Credits wallet. You can now use it to purchase another catalog product.",
+  "data": {
+    "booking_id": 88,
+    "booking_number": "BK-20260916-7788",
+    "reallocated_amount": 15000.0,
+    "new_wallet_balance": 15000.0,
+    "booking_status": "reallocated",
+    "product_catalog_url": "/products"
+  }
+}
+```
+
+---
+
+### 7.7 Get Single Booking Details
+* **Method**: `GET`
+* **URL**: `/api/customer/bookings/{id}` (or `/api/bookings/{id}`)
+* **Auth**: Required (`customer.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "id": 88,
+    "booking_number": "BK-20260916-7788",
+    "product_name": "NEXVIA 55-inch Ultra HD 4K Smart LED TV",
+    "model_code": "NEX-TV55-4K",
+    "mrp": 50000.0,
+    "booking_amount": 10000.0,
+    "balance_amount": 40000.0,
+    "filled_amount": 10000.0,
+    "booking_date": "2026-09-16",
+    "balance_due_date": "2026-11-15",
+    "days_remaining": 55,
+    "is_expired_60_days": false,
+    "can_reallocate_paid_amount": false,
+    "cancellation_allowed": false,
+    "payment_status": "partially_paid",
+    "booking_status": "confirmed",
+    "balance_payment_mode": "flexible",
+    "balance_payments_history": [
+      {
+        "amount": 10000.0,
+        "mode": "booking_deposit",
+        "reference_no": "UPI-DEP-12345",
+        "paid_at": "2026-09-16 10:00:00"
+      }
+    ],
+    "dsp": {
+      "id": 5,
+      "business_name": "Apex Mobility DSP Hub",
+      "mobile": "9876500000"
+    }
+  }
+}
+```
+
+---
+
+### 7.8 Select Delivery DSP Partner for Booking
+* **Method**: `POST`
+* **URL**: `/api/customer/bookings/{id}/select-dsp`
+* **Aliases**: `/api/bookings/{id}/select-dsp`, `/api/booking/{id}/select-dsp`, `/booking/select-dsp/{bookingNumber}` (Web)
+* **Auth**: Required (`customer.auth`)
+
+> Allows the customer to select their preferred Authorised DSP Partner (loaded from the nearby DSP API) to coordinate the doorstep delivery, unboxing, and certified installation.
+
+#### Request Body
+```json
+{
+  "dsp_id": 12
+}
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Partner 'Patil Logistics & Electric Mobility Hub' assigned to booking #BK-20260916-7788. Delivery and unboxing will be coordinated by this partner.",
+  "booking_number": "BK-20260916-7788",
+  "assigned_dsp": {
+    "id": 12,
+    "business_name": "Patil Logistics & Electric Mobility Hub",
+    "mobile": "9876501234",
+    "territory": "Pune Central & PCMC",
+    "address": "Shop 12, Market Yard, Pune",
+    "pincode": "411001",
+    "district": "Pune",
+    "state": "Maharashtra"
+  }
+}
+```
 
 ---
 
@@ -810,6 +931,23 @@
 * **Method**: `GET`
 * **URL**: `/api/customer/referral-dashboard`
 * **Auth**: Required (`customer.auth`)
+
+---
+
+### 8.3 Two-Part Referral Reward Structure Breakdown
+
+NEXVIA implements a structured two-part referral reward policy on all product bookings:
+
+| Reward Component | Trigger Event | Calculation Base | Commission Rate | Recipient Ledger Type |
+| :--- | :--- | :--- | :--- | :--- |
+| **Part 1: Deposit Stage Reward** | Instant upon payment of 20% booking deposit | 20% Deposit Amount (`booking_amount`) | Referrer's active Stage Tier: **10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20%** | `transaction_type: referral` |
+| **Part 2: Category Completion Reward** | When 80% balance is fully settled (via EMI, full, or flexible payments) | 80% Balance Amount (`mrp - booking_amount`) | Category Commission %: **e.g. 5.00%** (configured per category) | `transaction_type: category_completion` |
+
+> **Key Enforcement Details**:
+> 1. **No Cancellation**: Once Part 1 is awarded on deposit confirmation, bookings are strictly non-cancellable.
+> 2. **Flexible Payments**: Customers can pay any custom amount towards the 80% balance over the 60-day window.
+> 3. **Automatic Reward**: When the remaining balance reaches ₹0 (`fully_paid`), Part 2 Category Reward is automatically credited to the referrer's Product Credit wallet without requiring manual intervention.
+> 4. **Anti-Duplication**: Category completion rewards are guarded by idempotency keys to ensure they are credited exactly once per booking.
 
 ---
 
@@ -1214,6 +1352,482 @@ All pages configured and managed via the Admin Panel (Privacy Policy, Terms and 
 | `/api/contact-us` | `GET`, `POST` | Fetches Contact, Helpline & Grievance support details & points |
 
 *(All above shortcuts are also accessible under `/api/customer/*`)*
+
+---
+
+## 13. Authorised Delivery & Service Partner (DSP) Ecosystem
+
+Authorised Delivery & Service Partners (DSP) are NEXVIA's local territory hubs responsible for doorstep order deliveries, product unboxing, and certified technician installation. DSPs earn a fixed 5.0% commission on every order delivered and installed in their assigned pincodes.
+
+### 13.1 Apply as Delivery & Service Partner (DSP)
+* **Method**: `POST`
+* **URL**: `/api/dsp/apply`
+* **Auth**: Public
+
+#### Request Body (Multipart / JSON)
+```json
+{
+  "applicant_name": "Suresh Patil",
+  "business_name": "Patil Logistics & Electric Mobility Hub",
+  "mobile": "9876501234",
+  "whatsapp": "9876501234",
+  "email": "patil.dsp@example.com",
+  "address": "Shop 12, Market Yard, Pune",
+  "district": "Pune",
+  "state": "Maharashtra",
+  "pincode": "411001",
+  "preferred_territory_area": "Pune Central & PCMC",
+  "serviced_pincodes": "411001, 411002, 411018, 411033",
+  "delivery_team_size": 4,
+  "service_technicians_count": 2,
+  "experience_years": 5,
+  "notes": "Experienced in EV two-wheeler service and domestic appliance delivery."
+}
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Partner application submitted successfully.",
+  "data": {
+    "application_number": "DSP-202609-8812",
+    "status": "pending",
+    "track_url": "/api/dsp/track/DSP-202609-8812"
+  }
+}
+```
+
+---
+
+### 13.2 Track DSP Application Status
+* **Method**: `GET`
+* **URL**: `/api/dsp/track/{applicationNumber}`
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "application_number": "DSP-202609-8812",
+    "business_name": "Patil Logistics & Electric Mobility Hub",
+    "applicant_name": "Suresh Patil",
+    "mobile": "9876501234",
+    "status": "approved",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "serviced_pincodes": ["411001", "411002", "411018", "411033"],
+    "created_at": "2026-09-18T10:00:00Z"
+  }
+}
+```
+
+---
+
+### 13.3 DSP Partner Login
+* **Method**: `POST`
+* **URL**: `/api/dsp/login`
+* **Auth**: Public
+
+#### Request Body
+```json
+{
+  "mobile": "9876501234",
+  "password": "dsp@password123"
+}
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Partner authenticated successfully.",
+  "token": "d8f7e6c5b4a3...",
+  "dsp": {
+    "id": 12,
+    "application_number": "DSP-202609-8812",
+    "business_name": "Patil Logistics & Electric Mobility Hub",
+    "applicant_name": "Suresh Patil",
+    "mobile": "9876501234",
+    "email": "patil.dsp@example.com",
+    "territory_area": "Pune Central & PCMC",
+    "serviced_pincodes": ["411001", "411002", "411018", "411033"],
+    "status": "approved",
+    "wallet_balance": 18500.00,
+    "total_earned": 32000.00,
+    "total_redeemed": 13500.00,
+    "commission_rate": "5.0%"
+  }
+}
+```
+
+---
+
+### 13.4 Load Nearby DSP Delivery Partners (By Pincode or User Address)
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/nearby`
+* **Aliases**: `/api/customer/dsp/nearby`, `/api/dsp/available-by-pincode`
+* **Auth**: Public or Customer (`customer.auth` optional)
+
+> **Intelligent Multi-Source Detection**:
+> 1. **Explicit Pincode**: Pass `pincode=411001` as query or body parameter.
+> 2. **Address Text Parsing**: Pass `address="Flat 402, Sunshine Heights, MG Road, Pune, Maharashtra 411001"`. The API automatically extracts the 6-digit Indian PIN code using regex pattern matching.
+> 3. **Saved Customer Profile / Address**: If authenticated and neither `pincode` nor `address` is passed, the API automatically retrieves the customer's default saved delivery address from their profile.
+> 4. **Proximity-Ranked Results**:
+>    - `exact_pincode` (`"Direct Area Partner"` — Directly services the user's PIN code)
+>    - `district` (`"District Service Partner"` — Operating within the user's district)
+>    - `state` (`"State Regional Partner"` — In the user's state)
+>    - `authorized_hub` (`"Authorised Regional Hub"`)
+
+#### Request Examples:
+- `GET /api/dsp/nearby?pincode=411001`
+- `POST /api/dsp/nearby` with `{"address": "Flat 402, Sunshine Heights, Pune 411001"}`
+- `GET /api/customer/dsp/nearby` (automatically uses customer's default address)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "search_criteria": {
+    "pincode": "411001",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "address_queried": "Flat 402, Sunshine Heights, Pune 411001",
+    "detection_source": "extracted_from_address"
+  },
+  "count": 2,
+  "has_direct_pincode_partner": true,
+  "recommended_dsp": {
+    "id": 12,
+    "business_name": "Patil Logistics & Electric Mobility Hub",
+    "applicant_name": "Suresh Patil",
+    "mobile": "9876501234",
+    "email": "patil.dsp@example.com",
+    "territory_area": "Pune Central & PCMC",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "premises_address": "Shop 12, Market Yard, Pune",
+    "premises_pincode": "411001",
+    "serviced_pincodes": ["411001", "411002", "411018", "411033"],
+    "match_type": "exact_pincode",
+    "match_label": "Direct Area Partner",
+    "is_direct_match": true,
+    "is_recommended": true,
+    "technicians_count": 2,
+    "vehicles_count": 4,
+    "commission_rate": "5.0%"
+  },
+  "nearby_dsps": [
+    {
+      "id": 12,
+      "business_name": "Patil Logistics & Electric Mobility Hub",
+      "applicant_name": "Suresh Patil",
+      "mobile": "9876501234",
+      "email": "patil.dsp@example.com",
+      "territory_area": "Pune Central & PCMC",
+      "district": "Pune",
+      "state": "Maharashtra",
+      "premises_address": "Shop 12, Market Yard, Pune",
+      "premises_pincode": "411001",
+      "serviced_pincodes": ["411001", "411002", "411018", "411033"],
+      "match_type": "exact_pincode",
+      "match_label": "Direct Area Partner",
+      "is_direct_match": true,
+      "is_recommended": true,
+      "technicians_count": 2,
+      "vehicles_count": 4,
+      "commission_rate": "5.0%"
+    },
+    {
+      "id": 18,
+      "business_name": "Western Maharashtra Service Hub",
+      "applicant_name": "Vikas Shinde",
+      "mobile": "9822000000",
+      "email": "shinde@example.com",
+      "territory_area": "Pune District",
+      "district": "Pune",
+      "state": "Maharashtra",
+      "premises_address": "Plot 55, MIDC Bhosari, Pune",
+      "premises_pincode": "411026",
+      "serviced_pincodes": ["411026", "411039"],
+      "match_type": "district",
+      "match_label": "District Service Partner",
+      "is_direct_match": false,
+      "is_recommended": false,
+      "technicians_count": 5,
+      "vehicles_count": 6,
+      "commission_rate": "5.0%"
+    }
+  ]
+}
+```
+
+---
+
+### 13.5 DSP Partner Dashboard
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/dashboard`
+* **Auth**: Required (`dsp.auth` — `Bearer <api_token>` or `token` or `dsp_id`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "dsp": {
+      "id": 12,
+      "business_name": "Patil Logistics & Electric Mobility Hub",
+      "status": "approved"
+    },
+    "metrics": {
+      "assigned_deliveries": 8,
+      "in_transit": 2,
+      "completed_deliveries": 15,
+      "wallet_balance": 18500.00,
+      "total_earned": 32000.00
+    },
+    "recent_deliveries": [
+      {
+        "id": 105,
+        "tracking_number": "NEX-DEL-2026-9901",
+        "booking_number": "BK-20260916-7788",
+        "product_name": "NEXVIA 55-inch Ultra HD 4K Smart LED TV",
+        "customer_name": "Rahul Sharma",
+        "status": "in_transit",
+        "commission_amount": 2500.00
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 13.6 DSP Profile (View & Update)
+* **View Profile**: `GET /api/dsp/profile`
+* **Update Profile**: `POST /api/dsp/profile`
+* **Auth**: Required (`dsp.auth`)
+
+#### Request Body (Update)
+```json
+{
+  "business_name": "Patil Express Logistics",
+  "whatsapp": "9876501234",
+  "delivery_team_size": 6,
+  "service_technicians_count": 3
+}
+```
+
+---
+
+### 13.7 DSP Assigned Deliveries List
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/deliveries`
+* **Auth**: Required (`dsp.auth`)
+* **Query Parameters**:
+  * `status`: `all`, `assigned`, `in_transit`, `delivered`, `cancelled`
+  * `per_page`: `20`
+  * `page`: `1`
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 105,
+      "tracking_number": "NEX-DEL-2026-9901",
+      "booking_number": "BK-20260916-7788",
+      "customer_name": "Rahul Sharma",
+      "customer_phone": "9876543210",
+      "shipping_address": "Flat 402, Sunshine Heights, Mumbai",
+      "pincode": "411001",
+      "product_name": "NEXVIA 55-inch Ultra HD 4K Smart LED TV",
+      "quantity": 1,
+      "status": "in_transit",
+      "order_amount": 50000.00,
+      "dsp_commission": 2500.00,
+      "assigned_at": "2026-09-17T09:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 13.8 DSP Delivery Detail
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/deliveries/{id}`
+* **Auth**: Required (`dsp.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "id": 105,
+    "tracking_number": "NEX-DEL-2026-9901",
+    "booking_number": "BK-20260916-7788",
+    "customer": {
+      "name": "Rahul Sharma",
+      "phone": "9876543210",
+      "shipping_address": "Flat 402, Sunshine Heights, Mumbai",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411001"
+    },
+    "product": {
+      "id": 1,
+      "title": "NEXVIA 55-inch Ultra HD 4K Smart LED TV",
+      "model_code": "NEX-TV55-4K",
+      "color": "Midnight Black"
+    },
+    "delivery_status": "in_transit",
+    "delivery_boy_name": "Karan Singh",
+    "delivery_boy_phone": "9876509999",
+    "estimated_delivery_date": "2026-09-22",
+    "dsp_commission_amount": 2500.00,
+    "dsp_commission_paid": false
+  }
+}
+```
+
+---
+
+### 13.9 Update Delivery & Installation Status
+* **Method**: `POST`
+* **URL**: `/api/dsp/deliveries/{id}/status`
+* **Auth**: Required (`dsp.auth`)
+
+> **Automatic Earnings Credit**: When the status is set to `delivered` or `installed`, the 5.0% DSP partner commission is automatically credited to the DSP's wallet ledger!
+
+#### Request Body
+```json
+{
+  "status": "delivered",
+  "delivery_boy_name": "Karan Singh",
+  "delivery_boy_phone": "9876509999",
+  "delivery_notes": "Delivered in original box and unboxed in customer presence. Verified OTP.",
+  "otp": "452189"
+}
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Delivery status updated to delivered. DSP commission of ₹2,500.00 credited to wallet.",
+  "data": {
+    "delivery_id": 105,
+    "status": "delivered",
+    "delivered_at": "2026-09-21T11:20:00Z",
+    "commission_credited": 2500.00,
+    "new_dsp_wallet_balance": 21000.00
+  }
+}
+```
+
+---
+
+### 13.10 DSP Earnings & Wallet Ledger
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/wallet`
+* **Auth**: Required (`dsp.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "wallet": {
+    "balance": 21000.00,
+    "total_earned": 34500.00,
+    "total_redeemed": 13500.00
+  },
+  "transactions": [
+    {
+      "id": 501,
+      "type": "credit",
+      "amount": 2500.00,
+      "description": "5.0% Delivery & Service Commission on #BK-20260916-7788",
+      "reference_id": 105,
+      "balance_after": 21000.00,
+      "created_at": "2026-09-21T11:20:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 13.11 Request DSP Payout / Withdrawal
+* **Method**: `POST`
+* **URL**: `/api/dsp/wallet/redeem`
+* **Auth**: Required (`dsp.auth`)
+
+#### Request Body
+```json
+{
+  "amount": 10000.00,
+  "payment_mode": "bank_transfer",
+  "bank_account_number": "123456789012",
+  "bank_ifsc": "HDFC0001234",
+  "bank_beneficiary_name": "Patil Logistics",
+  "upi_id": null
+}
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Payout request for ₹10,000.00 submitted successfully.",
+  "data": {
+    "request_id": 44,
+    "amount": 10000.00,
+    "status": "pending",
+    "remaining_wallet_balance": 11000.00
+  }
+}
+```
+
+---
+
+### 13.12 List DSP Payout Requests
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/wallet/payout-requests`
+* **Auth**: Required (`dsp.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 44,
+      "amount": 10000.00,
+      "status": "pending",
+      "payment_mode": "bank_transfer",
+      "created_at": "2026-09-21T11:25:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 13.13 DSP Logout
+* **Method**: `POST`
+* **URL**: `/api/dsp/logout`
+* **Auth**: Required (`dsp.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Partner logged out successfully."
+}
+```
 
 ---
 

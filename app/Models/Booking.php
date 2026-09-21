@@ -104,4 +104,26 @@ class Booking extends Model
         }
         return Carbon::parse($this->balance_due_date)->isPast();
     }
+
+    public function getIsExpired60DaysAttribute()
+    {
+        if ($this->payment_status === 'fully_paid') {
+            return false;
+        }
+        if (!$this->balance_due_date) {
+            return false;
+        }
+        return ($this->days_remaining <= 0) || Carbon::parse($this->balance_due_date)->isPast();
+    }
+
+    public function getCanReallocatePaidAmountAttribute()
+    {
+        return $this->is_expired_60_days && $this->payment_status !== 'fully_paid' && $this->booking_status !== 'reallocated';
+    }
+
+    public function getFilledAmountAttribute()
+    {
+        return max(0, round((float) $this->mrp - (float) $this->balance_amount, 2));
+    }
 }
+

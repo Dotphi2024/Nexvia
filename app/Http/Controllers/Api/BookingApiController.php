@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\WalletTransaction;
 use App\Models\Referral;
 use App\Models\SelfDealerWallet;
+use App\Models\DspApplication;
 use App\Services\ReferralCommissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,32 +40,20 @@ class BookingApiController extends Controller
         $customer = $request->user('customer') ?? $request->attributes->get('authenticated_customer') ?? $request->user();
 
         if (!$customer) {
-            $bodyJson = json_decode($request->getContent(), true);
-            if (!is_array($bodyJson)) {
-                $bodyJson = [];
-            }
+            $bodyJson = json_decode($request->getContent(), true) ?? [];
 
-            $userId = $request->input('user_id')
-                ?? $request->input('userId')
-                ?? ($customerDetails['userId'] ?? null)
-                ?? ($customerDetails['user_id'] ?? null)
-                ?? ($bodyJson['user_id'] ?? null)
-                ?? ($bodyJson['userId'] ?? null);
+            $token = $request->bearerToken()
+                ?? $request->input('api_token')
+                ?? $request->input('token')
+                ?? $request->header('api_token')
+                ?? $request->header('token')
+                ?? $request->json('api_token')
+                ?? $request->json('token')
+                ?? ($bodyJson['api_token'] ?? null)
+                ?? ($bodyJson['token'] ?? null);
 
-            if (!empty($userId)) {
-                $customer = Customer::find($userId);
-            }
-        }
-
-        if (!$customer) {
-            $phone = $customerDetails['phone']
-                ?? $request->input('customer_phone')
-                ?? $request->input('phone')
-                ?? ($bodyJson['customer_phone'] ?? null)
-                ?? ($bodyJson['phone'] ?? null);
-
-            if (!empty($phone)) {
-                $customer = Customer::where('phone', $phone)->first();
+            if (!empty($token)) {
+                $customer = Customer::where('api_token', $token)->first();
             }
         }
 
@@ -247,20 +236,10 @@ class BookingApiController extends Controller
                 ?? ($bodyJson['customer_email'] ?? ($bodyJson['email'] ?? null));
 
             if (!$user) {
-                if (!empty($custPhone)) {
-                    $user = Customer::create([
-                        'name'     => $custName ?: 'NEXVIA Customer',
-                        'phone'    => $custPhone,
-                        'email'    => $custEmail ?: 'customer_' . time() . rand(10, 99) . '@nexvia.in',
-                        'password' => bcrypt(Str::random(12)),
-                        'role'     => 'customer',
-                    ]);
-                } else {
-                    return response()->json([
-                        'status'  => false,
-                        'message' => 'Customer information is required. Provide user_id, or customerDetails with name and phone.',
-                    ], 401);
-                }
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Unauthenticated. Authorization token (Bearer <api_token>) is required to create a booking.',
+                ], 401);
             }
 
             // 2. Resolve Product
@@ -617,6 +596,10 @@ class BookingApiController extends Controller
                 'balance_due_date'        => $booking->balance_due_date->format('Y-m-d'),
                 'days_remaining'          => $booking->days_remaining,
                 'is_overdue'              => $booking->is_overdue,
+                'is_expired_60_days'      => ($booking->days_remaining <= 0) || \Carbon\Carbon::parse($booking->balance_due_date)->isPast(),
+                'can_reallocate_paid_amount' => (($booking->days_remaining <= 0) || \Carbon\Carbon::parse($booking->balance_due_date)->isPast()) && ($booking->payment_status !== 'fully_paid') && ($booking->booking_status !== 'reallocated'),
+                'filled_amount'           => max(0.00, round(((float)$booking->mrp) - ((float)$booking->balance_amount), 2)),
+                'cancellation_allowed'    => false,
                 'payment_type'            => $booking->payment_type,
                 'payment_status'          => $booking->payment_status,
                 'booking_status'          => $booking->booking_status,
@@ -923,6 +906,20 @@ class BookingApiController extends Controller
      */
     public function cancel(Request $request, $id)
     {
+        return response()->json([
+            'status'  => false,
+            'message' => 'Cancellation is not permitted. Once the 20% booking deposit is confirmed, bookings are strictly non-cancellable and non-refundable.',
+        ], 422);
+    }
+
+    /**
+     * POST /api/customer/bookings/{id}/reallocate
+     * POST /api/bookings/{id}/reallocate
+     * If 60 days have passed and the balance is unpaid, customer can reallocate
+     * their total paid amount to their Product Credit wallet to buy another item.
+     */
+    public function reallocate(Request $request, $id)
+    {
         $user = $this->resolveCustomer($request);
         if (!$user) {
             return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
@@ -930,140 +927,132 @@ class BookingApiController extends Controller
 
         $booking = Booking::where('id', $id)->where('user_id', $user->id)->first();
         if (!$booking) {
-            // Also attempt lookup by booking_number if id is alphanumeric
             $booking = Booking::where('booking_number', $id)->where('user_id', $user->id)->first();
         }
 
         if (!$booking) {
-            return response()->json(['status' => false, 'message' => 'Booking not found or does not belong to you.'], 404);
+            return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
         }
 
-        if ($booking->booking_status === 'cancelled') {
+        if ($booking->payment_status === 'fully_paid') {
             return response()->json([
                 'status'  => false,
-                'message' => 'This booking is already cancelled.',
-                'data'    => [
-                    'booking_number'      => $booking->booking_number,
-                    'booking_status'      => $booking->booking_status,
-                    'cancellation_reason' => $booking->cancellation_reason,
-                    'cancelled_at'        => $booking->cancelled_at ? $booking->cancelled_at->toIso8601String() : null,
-                ],
-            ], 400);
+                'message' => 'This booking is already fully paid and cannot be reallocated.',
+            ], 422);
         }
 
-        if (in_array(strtolower($booking->booking_status), ['delivered', 'completed'])) {
+        if ($booking->booking_status === 'reallocated') {
             return response()->json([
                 'status'  => false,
-                'message' => 'Cannot cancel a booking that has already been delivered or completed.',
-            ], 400);
+                'message' => 'The paid amount for this booking has already been reallocated to product credit.',
+            ], 422);
         }
 
-        if ($booking->transfer_status === 'transferred') {
+        $isExpired = ($booking->days_remaining <= 0) || Carbon::parse($booking->balance_due_date)->isPast();
+        if (!$isExpired) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Cannot cancel a booking that has been transferred to another customer.',
-            ], 400);
+                'message' => "Reallocation is available only after the 60-day settlement period expires ({$booking->days_remaining} days remaining).",
+            ], 422);
         }
 
-        $bodyJson = json_decode($request->getContent(), true);
-        if (!is_array($bodyJson)) {
-            $bodyJson = [];
+        $totalPaid = max(0.00, round(((float)$booking->mrp) - ((float)$booking->balance_amount), 2));
+        if ($totalPaid <= 0) {
+            $totalPaid = (float) $booking->booking_amount;
         }
-        $reason = $request->input('reason') ?? ($bodyJson['reason'] ?? 'Cancelled by customer via API');
 
-        return DB::transaction(function () use ($booking, $user, $reason) {
-            $booking->booking_status      = 'cancelled';
-            $booking->cancellation_reason = $reason;
-            $booking->cancelled_at        = now();
+        return DB::transaction(function () use ($booking, $user, $totalPaid) {
+            $user->wallet_balance = ($user->wallet_balance ?? 0) + $totalPaid;
+            $user->save();
+
+            $dealerWallet = SelfDealerWallet::firstOrCreate(['user_id' => $user->id]);
+            $dealerWallet->creditAvailable($totalPaid);
+
+            WalletTransaction::create([
+                'user_id'          => $user->id,
+                'amount'           => $totalPaid,
+                'type'             => 'credit',
+                'source'           => 'booking_reallocation',
+                'booking_id'       => $booking->id,
+                'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from 60-day expired booking #{$booking->booking_number} to buy another item",
+                'transaction_type' => 'reallocation',
+                'status'           => 'available',
+                'available_at'     => now(),
+            ]);
+
+            $booking->booking_status = 'reallocated';
             $booking->save();
-
-            $referralService = app(ReferralCommissionService::class);
-
-            // 1. Reverse any referral & activation credits associated with this booking
-            $referrals = Referral::where('booking_id', $booking->id)
-                ->whereIn('status', ['pending', 'available'])
-                ->get();
-
-            $reversedCount = 0;
-            foreach ($referrals as $ref) {
-                if ($referralService->reverseReferral($ref, "Booking {$booking->booking_number} cancelled: {$reason}")) {
-                    $reversedCount++;
-                }
-            }
-
-            // 2. If this was the user's Self-Dealer activation booking, revoke Self-Dealer status
-            $selfDealerCancelled = false;
-            if ($user->activation_booking_id == $booking->id) {
-                $user->is_self_dealer     = false;
-                $user->self_dealer_status = 'cancelled';
-                $user->save();
-                $selfDealerCancelled = true;
-            }
-
-            // 3. Refund any NEXVIA product credits redeemed towards this booking or its balance
-            $redemptions = WalletTransaction::where('booking_id', $booking->id)
-                ->where('status', 'redeemed')
-                ->where('type', 'debit')
-                ->get();
-
-            $totalRefundedPoints = 0.00;
-            foreach ($redemptions as $redemption) {
-                $refundAmt = (float) $redemption->amount;
-                if ($refundAmt > 0) {
-                    $user->wallet_balance = ($user->wallet_balance ?? 0) + $refundAmt;
-
-                    $dealerWallet = SelfDealerWallet::where('user_id', $user->id)->first();
-                    if ($dealerWallet) {
-                        $dealerWallet->available_points = ($dealerWallet->available_points ?? 0) + $refundAmt;
-                        $dealerWallet->redeemed_points  = max(0, ($dealerWallet->redeemed_points ?? 0) - $refundAmt);
-                        $dealerWallet->save();
-                    }
-
-                    WalletTransaction::create([
-                        'user_id'          => $user->id,
-                        'amount'           => $refundAmt,
-                        'type'             => 'credit',
-                        'source'           => 'booking_cancellation_refund',
-                        'transaction_type' => 'refund',
-                        'status'           => 'available',
-                        'booking_id'       => $booking->id,
-                        'description'      => "Refund of redeemed points for cancelled booking {$booking->booking_number}",
-                        'available_at'     => now(),
-                    ]);
-
-                    $totalRefundedPoints += $refundAmt;
-                }
-            }
-
-            if ($totalRefundedPoints > 0) {
-                $user->save();
-            }
-
-            $msg = "Booking {$booking->booking_number} has been cancelled successfully.";
-            if ($selfDealerCancelled) {
-                $msg .= " Your Self-Dealer status has been revoked because this was your activation booking.";
-            }
-            if ($totalRefundedPoints > 0) {
-                $msg .= " Redeemed product credits of ₹" . number_format($totalRefundedPoints, 2) . " have been refunded to your wallet.";
-            }
 
             return response()->json([
                 'status'  => true,
-                'message' => $msg,
+                'message' => "Your paid amount of ₹" . number_format($totalPaid, 2) . " has been transferred to your Product Credit wallet. You can now use it to purchase another catalog item.",
                 'data'    => [
-                    'booking_id'             => $booking->id,
-                    'booking_number'         => $booking->booking_number,
-                    'booking_status'         => 'cancelled',
-                    'cancellation_reason'    => $reason,
-                    'cancelled_at'           => $booking->cancelled_at->toIso8601String(),
-                    'referrals_reversed'     => $reversedCount,
-                    'self_dealer_revoked'    => $selfDealerCancelled,
-                    'self_dealer_status'     => $user->fresh()->self_dealer_status,
-                    'is_self_dealer'         => (bool) $user->fresh()->is_self_dealer,
-                    'credits_refunded'       => (float) $totalRefundedPoints,
-                    'current_wallet_balance' => (float) ($user->fresh()->wallet_balance ?? 0),
+                    'booking_number'        => $booking->booking_number,
+                    'booking_status'        => $booking->booking_status,
+                    'reallocated_amount'    => $totalPaid,
+                    'wallet_balance'        => (float) $user->fresh()->wallet_balance,
                 ],
-            ]);
+            ], 200);
         });
     }
+
+    /**
+     * POST /api/customer/bookings/{id}/select-dsp or /api/bookings/{id}/select-dsp
+     * Select or assign an Authorised DSP Partner to deliver the booking to customer.
+     */
+    public function selectDsp(Request $request, $id)
+    {
+        $bodyJson = json_decode($request->getContent(), true) ?? [];
+        $user = $this->resolveCustomer($request);
+
+        $booking = is_numeric($id) ? Booking::find($id) : Booking::where('booking_number', $id)->first();
+        if (!$booking) {
+            return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
+        }
+
+        if ($user && $booking->user_id !== $user->id) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized access to this booking.'], 403);
+        }
+
+        $dspId = $request->input('dsp_id') ?? ($bodyJson['dsp_id'] ?? null);
+        if (empty($dspId)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'dsp_id is required to select a delivery partner.',
+            ], 422);
+        }
+
+        $dsp = DspApplication::find($dspId);
+        if (!$dsp) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Selected DSP partner does not exist.',
+            ], 404);
+        }
+
+        $booking->dsp_id = $dsp->id;
+        $booking->save();
+
+        // If delivery record exists, sync the DSP assignment
+        if ($booking->delivery) {
+            $booking->delivery->update(['dsp_id' => $dsp->id]);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => "DSP Partner '{$dsp->business_name}' assigned to booking #{$booking->booking_number}. Delivery and unboxing will be coordinated by this partner.",
+            'booking_number' => $booking->booking_number,
+            'assigned_dsp'   => [
+                'id'            => $dsp->id,
+                'business_name' => $dsp->business_name ?: $dsp->applicant_name,
+                'mobile'        => $dsp->mobile,
+                'territory'     => $dsp->preferred_territory_area,
+                'address'       => $dsp->complete_address,
+                'pincode'       => $dsp->premises_pincode,
+                'district'      => $dsp->district,
+                'state'         => $dsp->state,
+            ],
+        ], 200);
+    }
 }
+

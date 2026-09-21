@@ -39,6 +39,46 @@
                         </div>
                     @endif
 
+                    <!-- Strict Commitment & 60-Day Status Alert -->
+                    @if($booking->booking_status === 'reallocated')
+                        <div class="alert alert-info border-2 d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 p-3 rounded-4 shadow-sm" role="alert">
+                            <div class="d-flex align-items-center gap-2">
+                                <iconify-icon icon="solar:wallet-money-bold" class="fs-2 text-primary"></iconify-icon>
+                                <div>
+                                    <strong class="d-block text-dark">Amount Reallocated to Product Credits</strong>
+                                    <span class="small text-muted">Your paid amount of <strong>₹{{ number_format($booking->filled_amount, 2) }}</strong> has been transferred to your Product Credits wallet.</span>
+                                </div>
+                            </div>
+                            <a href="{{ url('/products') }}" class="btn btn-primary btn-sm fw-bold">
+                                <iconify-icon icon="solar:bag-heart-bold" class="me-1 align-middle"></iconify-icon> Browse Catalog to Buy Item
+                            </a>
+                        </div>
+                    @elseif($booking->can_reallocate_paid_amount)
+                        <div class="alert alert-warning border-2 border-warning d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 p-3 rounded-4 shadow-sm" role="alert">
+                            <div class="d-flex align-items-center gap-2">
+                                <iconify-icon icon="solar:clock-circle-bold" class="fs-2 text-warning"></iconify-icon>
+                                <div>
+                                    <strong class="d-block text-dark">60-Day Settlement Window Expired</strong>
+                                    <span class="small text-muted">The 60-day period for remaining balance payment has ended. You can convert your total paid amount of <strong>₹{{ number_format($booking->filled_amount, 2) }}</strong> into Product Credit to purchase another item.</span>
+                                </div>
+                            </div>
+                            <form action="{{ route('booking.reallocate', $booking->booking_number) }}" method="POST" onsubmit="return confirm('Transfer your paid amount of ₹{{ number_format($booking->filled_amount, 2) }} into Product Credit to buy another item?');">
+                                @csrf
+                                <button type="submit" class="btn btn-warning fw-bold text-dark shadow-sm">
+                                    <iconify-icon icon="solar:cart-large-minimalistic-bold" class="me-1 align-middle fs-5"></iconify-icon>
+                                    Buy Another Item with Paid Amount (₹{{ number_format($booking->filled_amount, 2) }})
+                                </button>
+                            </form>
+                        </div>
+                    @endif
+
+                    <div class="p-2 px-3 bg-light rounded-3 border d-flex align-items-center justify-content-between mb-4 small">
+                        <span class="text-muted">
+                            <iconify-icon icon="solar:shield-check-bold" class="text-success me-1 align-middle"></iconify-icon>
+                            <strong>Non-Cancellable Booking:</strong> Once the 20% deposit is paid, bookings are non-cancellable. Balance payable within 60 days via flexible amounts or EMI.
+                        </span>
+                    </div>
+
                     <!-- Customer & Receipt Summary -->
                     <div class="row g-3 mb-4 p-3 bg-light rounded-4">
                         <div class="col-sm-6">
@@ -212,16 +252,33 @@
                             ← Back to Dashboard
                         </a>
 
-                        <div class="d-flex gap-2">
-                            @if($booking->payment_status !== 'fully_paid')
+                        <div class="d-flex flex-wrap gap-2">
+                            @if($booking->can_reallocate_paid_amount)
+                                <form action="{{ route('booking.reallocate', $booking->booking_number) }}" method="POST" onsubmit="return confirm('Transfer your paid amount of ₹{{ number_format($booking->filled_amount, 2) }} into Product Credit to buy another item?');" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-warning fw-bold text-dark shadow-sm">
+                                        <iconify-icon icon="solar:cart-large-minimalistic-bold" class="me-1 align-middle fs-5"></iconify-icon>
+                                        Buy Another Item with Paid Amount (₹{{ number_format($booking->filled_amount, 2) }})
+                                    </button>
+                                </form>
+                            @endif
+
+                            @if($booking->booking_status === 'reallocated')
+                                <a href="{{ url('/products') }}" class="btn btn-primary fw-bold shadow-sm">
+                                    <iconify-icon icon="solar:shop-2-bold" class="me-1 align-middle fs-5"></iconify-icon>
+                                    Buy Another Item (Catalog)
+                                </a>
+                            @endif
+
+                            @if($booking->payment_status !== 'fully_paid' && $booking->booking_status !== 'reallocated')
                                 <button type="button" class="btn btn-success fw-bold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#payBalanceModal">
                                     <iconify-icon icon="solar:card-2-bold" class="me-1 align-middle fs-5"></iconify-icon>
                                     Pay 80% Balance (EMI / Full / Flexible)
                                 </button>
                             @endif
 
-                            @if($booking->user_id === Auth::guard('web')->id() && $booking->payment_status !== 'fully_paid')
-                                <button type="button" class="btn btn-warning fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
+                            @if($booking->user_id === Auth::guard('web')->id() && $booking->payment_status !== 'fully_paid' && $booking->booking_status !== 'reallocated')
+                                <button type="button" class="btn btn-outline-warning fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
                                     <iconify-icon icon="solar:transfer-horizontal-bold" class="me-1 align-middle"></iconify-icon>
                                     Transfer Receipt
                                 </button>

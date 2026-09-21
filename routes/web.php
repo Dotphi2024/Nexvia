@@ -63,6 +63,8 @@ Route::get('/checkout/{slug}', [\App\Http\Controllers\Frontend\BookingController
 Route::post('/checkout/{slug}', [\App\Http\Controllers\Frontend\BookingController::class, 'processCheckout'])->name('booking.process');
 Route::get('/booking/receipt/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'receipt'])->name('booking.receipt');
 Route::post('/booking/pay-balance/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'payBalance'])->name('booking.pay.balance');
+Route::post('/booking/reallocate/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'reallocateToAnotherItem'])->name('booking.reallocate');
+Route::post('/booking/select-dsp/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'selectDsp'])->name('booking.select.dsp');
 Route::get('/customer/dashboard', [\App\Http\Controllers\Frontend\CustomerDashboardController::class, 'index'])->name('customer.dashboard');
 Route::post('/customer/profile/update', [\App\Http\Controllers\Frontend\CustomerDashboardController::class, 'profileUpdate'])->name('customer.profile.update');
 

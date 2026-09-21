@@ -24,9 +24,10 @@ class DlsFarmCategoryAdminController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'        => 'required|string|max:255',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'description' => 'nullable|string',
+            'name'                  => 'required|string|max:255',
+            'commission_percentage' => 'nullable|numeric|min:0|max:100',
+            'image'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'description'           => 'nullable|string',
         ]);
 
         $imagePath = null;
@@ -43,7 +44,7 @@ class DlsFarmCategoryAdminController extends Controller
             'type'                   => self::TYPE,
             'referral_category_code' => $request->referral_category_code ? strtoupper($request->referral_category_code) : null,
             'referral_eligible'      => $request->has('referral_eligible'),
-            'commission_percentage'  => null,
+            'commission_percentage'  => $request->filled('commission_percentage') ? (float) $request->commission_percentage : 5.00,
             'image'                  => $imagePath,
             'description'            => $request->description,
             'is_active'              => true,
@@ -58,9 +59,10 @@ class DlsFarmCategoryAdminController extends Controller
         $category = Category::where('type', self::TYPE)->findOrFail($id);
 
         $request->validate([
-            'name'        => 'required|string|max:255',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'description' => 'nullable|string',
+            'name'                  => 'required|string|max:255',
+            'commission_percentage' => 'nullable|numeric|min:0|max:100',
+            'image'                 => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'description'           => 'nullable|string',
         ]);
 
         if ($request->hasFile('image')) {
@@ -73,7 +75,9 @@ class DlsFarmCategoryAdminController extends Controller
         $category->name = $request->name;
         $category->referral_category_code = $request->referral_category_code ? strtoupper($request->referral_category_code) : null;
         $category->referral_eligible = $request->has('referral_eligible');
-        $category->commission_percentage = null;
+        if ($request->filled('commission_percentage')) {
+            $category->commission_percentage = (float) $request->commission_percentage;
+        }
         $category->description = $request->description;
         $category->save();
 

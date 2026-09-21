@@ -9,6 +9,7 @@ use App\Models\WalletTransaction;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -300,4 +301,99 @@ class BookingController extends Controller
 
         return redirect()->route('booking.receipt', $booking->booking_number)->with('success', $msg);
     }
+
+    /**
+     * POST /booking/reallocate/{bookingNumber}
+     * If 60 days have passed and the remaining balance is unpaid, customer can reallocate
+     * their total paid amount (20% deposit + partial payments) to purchase another item.
+     */
+    public function reallocateToAnotherItem(Request $request, $bookingNumber)
+    {
+        $query = Booking::where('booking_number', $bookingNumber);
+        if (Auth::guard('web')->check()) {
+            $query->where('user_id', Auth::guard('web')->id());
+        }
+        $booking = $query->firstOrFail();
+
+        // Check if already fully paid or already reallocated
+        if ($booking->payment_status === 'fully_paid') {
+            return redirect()->route('booking.receipt', $booking->booking_number)
+                ->with('info', "Booking #{$booking->booking_number} is already fully paid and cannot be reallocated.");
+        }
+
+        if ($booking->booking_status === 'reallocated') {
+            return redirect()->route('products.index')
+                ->with('info', "The paid amount for Booking #{$booking->booking_number} has already been transferred to your product credit.");
+        }
+
+        // Check if 60 days have passed
+        $isExpired = ($booking->days_remaining <= 0) || Carbon::parse($booking->balance_due_date)->isPast();
+        if (!$isExpired) {
+            return back()->with('error', "Reallocation to another item is available after the 60-day balance settlement window expires ({$booking->days_remaining} days remaining).");
+        }
+
+        // Calculate total amount filled/paid so far
+        $totalPaid = max(0.00, round(((float)$booking->mrp) - ((float)$booking->balance_amount), 2));
+        if ($totalPaid <= 0) {
+            $totalPaid = (float) $booking->booking_amount;
+        }
+
+        return DB::transaction(function () use ($booking, $totalPaid) {
+            $user = $booking->user;
+
+            if ($user) {
+                // Credit to customer's Product Credit Wallet
+                $user->wallet_balance = ($user->wallet_balance ?? 0) + $totalPaid;
+                $user->save();
+
+                // Update SelfDealerWallet if applicable
+                $dealerWallet = \App\Models\SelfDealerWallet::firstOrCreate(['user_id' => $user->id]);
+                $dealerWallet->creditAvailable($totalPaid);
+
+                // Record transaction
+                \App\Models\WalletTransaction::create([
+                    'user_id'          => $user->id,
+                    'amount'           => $totalPaid,
+                    'type'             => 'credit',
+                    'source'           => 'booking_reallocation',
+                    'booking_id'       => $booking->id,
+                    'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from 60-day expired booking #{$booking->booking_number} to buy another item",
+                    'transaction_type' => 'reallocation',
+                    'status'           => 'available',
+                    'available_at'     => now(),
+                ]);
+            }
+
+            // Mark booking as reallocated
+            $booking->booking_status = 'reallocated';
+            $booking->save();
+
+            $msg = "Your paid amount of ₹" . number_format($totalPaid, 2) . " from Booking #{$booking->booking_number} has been transferred to your Product Credit! You can now select any item to purchase.";
+            return redirect()->route('products.index')->with('success', $msg);
+        });
+    }
+
+    /**
+     * Select DSP delivery partner for a booking via web
+     */
+    public function selectDsp(Request $request, $bookingNumber)
+    {
+        $booking = Booking::where('booking_number', $bookingNumber)->firstOrFail();
+        $dspId = $request->input('dsp_id');
+
+        if (empty($dspId)) {
+            return back()->with('error', 'Please select a valid Delivery & Service Partner.');
+        }
+
+        $dsp = \App\Models\DspApplication::findOrFail($dspId);
+        $booking->dsp_id = $dsp->id;
+        $booking->save();
+
+        if ($booking->delivery) {
+            $booking->delivery->update(['dsp_id' => $dsp->id]);
+        }
+
+        return back()->with('success', "Delivery Partner '{$dsp->business_name}' assigned to your booking successfully.");
+    }
 }
+
