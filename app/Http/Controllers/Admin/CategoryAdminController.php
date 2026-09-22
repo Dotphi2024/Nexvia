@@ -48,7 +48,7 @@ class CategoryAdminController extends Controller
             'slug'                   => Str::slug($request->name),
             'type'                   => $type,
             'referral_category_code' => $request->referral_category_code ? strtoupper($request->referral_category_code) : null,
-            'referral_eligible'      => $request->has('referral_eligible'),
+            'referral_eligible'      => $request->has('referral_eligible') ? (bool)$request->referral_eligible : true,
             'image'                  => $imagePath,
             'description'            => $request->description,
             'is_active'              => true,
@@ -80,8 +80,12 @@ class CategoryAdminController extends Controller
         if (empty($category->type)) {
             $category->type = Str::slug($request->name, '_');
         }
-        $category->referral_category_code = $request->referral_category_code ? strtoupper($request->referral_category_code) : null;
-        $category->referral_eligible = $request->has('referral_eligible');
+        if ($request->has('referral_category_code')) {
+            $category->referral_category_code = $request->referral_category_code ? strtoupper($request->referral_category_code) : null;
+        }
+        if ($request->has('referral_eligible')) {
+            $category->referral_eligible = (bool)$request->referral_eligible;
+        }
         $category->description = $request->description;
         $category->save();
 

@@ -34,27 +34,6 @@
                                     placeholder="e.g. Electric Scooters, Appliances, Solar Pumps">
                             </div>
 
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-7">
-                                    <label class="form-label fw-semibold text-dark">Referral Code (e.g. TV, AC, EV)</label>
-                                    <input type="text" name="referral_category_code" class="form-control text-uppercase"
-                                        placeholder="EV" maxlength="10">
-                                </div>
-                                <div class="col-md-5 d-flex align-items-end">
-                                    <div class="form-check mb-2">
-                                        <input type="checkbox" name="referral_eligible" value="1" class="form-check-input"
-                                            id="refEligible" checked>
-                                        <label class="form-check-label fw-semibold text-dark small"
-                                            for="refEligible">Referral Eligible</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3 p-2 bg-light rounded text-muted small">
-                                <i class="bx bx-trending-up text-primary me-1"></i>
-                                Referral incentives are applied via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stages</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20%). The exact same eligible stage percentage applied to the 20% booking deposit is also applied to the 80% balance upon completion.
-                            </div>
-
                             <div class="mb-3">
                                 <label class="form-label fw-semibold text-dark">Category Image</label>
                                 <input type="file" name="image" class="form-control" accept="image/*">
@@ -87,7 +66,6 @@
                                         <th>Image</th>
                                         <th>Category Name</th>
                                         <th>Products</th>
-                                        <th>Referral Rewards</th>
                                         <th class="text-end">Action</th>
                                     </tr>
                                 </thead>
@@ -115,22 +93,6 @@
                                                 <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
                                                     <i class="bx bx-box me-1"></i>{{ $category->products_count ?? $category->products->count() }} Products
                                                 </span>
-                                            </td>
-                                            <td>
-                                                @if($category->referral_eligible)
-                                                    <div>
-                                                        <span class="badge bg-success-subtle text-success fs-12 px-2 py-1">
-                                                            <i class="bx bx-trending-up me-1"></i>Incentive: 10% - 20%
-                                                        </span>
-                                                    </div>
-                                                    <div class="mt-1">
-                                                        <span class="badge bg-info-subtle text-info micro px-2 py-0.5">
-                                                            <i class="bx bx-check-shield me-1"></i>Applied to 20% & 80%
-                                                        </span>
-                                                    </div>
-                                                @else
-                                                    <span class="badge bg-secondary-subtle text-muted">Disabled</span>
-                                                @endif
                                             </td>
                                             <td class="text-end">
                                                 <div class="d-inline-flex gap-1">
@@ -187,27 +149,6 @@
                                 placeholder="Category Name">
                         </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-7">
-                                <label class="form-label fw-semibold text-dark">Referral Code (e.g. TV, AC, EV)</label>
-                                <input type="text" name="referral_category_code" id="editCategoryRefCode"
-                                    class="form-control text-uppercase" maxlength="10">
-                            </div>
-                            <div class="col-md-5 d-flex align-items-end">
-                                <div class="form-check mb-2">
-                                    <input type="checkbox" name="referral_eligible" value="1" class="form-check-input"
-                                        id="editRefEligible">
-                                    <label class="form-check-label fw-semibold text-dark small"
-                                        for="editRefEligible">Referral Eligible</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3 p-2 bg-light rounded text-muted small">
-                            <i class="bx bx-trending-up text-primary me-1"></i>
-                            Referral incentives are applied via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stages</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20%). The exact same eligible stage percentage applied to the 20% booking deposit is also applied to the 80% balance upon completion.
-                        </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Category Image</label>
                             <div class="d-flex align-items-center gap-2 mb-2">
@@ -247,8 +188,6 @@
 
                 const action = button.getAttribute('data-action');
                 const name = button.getAttribute('data-name') || '';
-                const refCode = button.getAttribute('data-referral-code') || '';
-                const refEligible = button.getAttribute('data-referral-eligible') === '1';
                 const description = button.getAttribute('data-description') || '';
                 const image = button.getAttribute('data-image') || '';
 
@@ -256,8 +195,6 @@
                 form.action = action;
 
                 document.getElementById('editCategoryName').value = name;
-                document.getElementById('editCategoryRefCode').value = refCode;
-                document.getElementById('editRefEligible').checked = refEligible;
                 document.getElementById('editCategoryDescription').value = description;
 
                 const preview = document.getElementById('editCurrentImagePreview');

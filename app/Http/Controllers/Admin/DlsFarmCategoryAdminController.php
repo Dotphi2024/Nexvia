@@ -42,7 +42,7 @@ class DlsFarmCategoryAdminController extends Controller
             'slug'                   => Str::slug($request->name) . '-' . rand(100, 999),
             'type'                   => self::TYPE,
             'referral_category_code' => $request->referral_category_code ? strtoupper($request->referral_category_code) : null,
-            'referral_eligible'      => $request->has('referral_eligible'),
+            'referral_eligible'      => $request->has('referral_eligible') ? (bool)$request->referral_eligible : true,
             'image'                  => $imagePath,
             'description'            => $request->description,
             'is_active'              => true,
@@ -70,8 +70,12 @@ class DlsFarmCategoryAdminController extends Controller
         }
 
         $category->name = $request->name;
-        $category->referral_category_code = $request->referral_category_code ? strtoupper($request->referral_category_code) : null;
-        $category->referral_eligible = $request->has('referral_eligible');
+        if ($request->has('referral_category_code')) {
+            $category->referral_category_code = $request->referral_category_code ? strtoupper($request->referral_category_code) : null;
+        }
+        if ($request->has('referral_eligible')) {
+            $category->referral_eligible = (bool)$request->referral_eligible;
+        }
         $category->description = $request->description;
         $category->save();
 

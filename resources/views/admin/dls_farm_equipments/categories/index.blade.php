@@ -53,27 +53,6 @@
                                 placeholder="e.g. Solar Water Pumps, Tillers">
                         </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-7">
-                                <label class="form-label fw-semibold text-dark">Referral Code (e.g. TILLER, PUMP)</label>
-                                <input type="text" name="referral_category_code" class="form-control text-uppercase"
-                                    placeholder="FARM" maxlength="10">
-                            </div>
-                            <div class="col-md-5 d-flex align-items-end">
-                                <div class="form-check mb-2">
-                                    <input type="checkbox" name="referral_eligible" value="1" class="form-check-input"
-                                        id="refEligible" checked>
-                                    <label class="form-check-label fw-semibold text-dark small"
-                                        for="refEligible">Referral Eligible</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3 p-2 bg-light rounded text-muted small">
-                            <i class="bx bx-trending-up text-primary me-1"></i>
-                            Referral incentives are applied directly via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stage Config</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20% in increasing order).
-                        </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark">Category Image</label>
                             <input type="file" name="image" class="form-control" accept="image/*">
@@ -109,7 +88,6 @@
                                     <th>Image</th>
                                     <th>Category Details</th>
                                     <th>Products</th>
-                                    <th>Referral Rewards</th>
                                     <th class="text-end">Action</th>
                                 </tr>
                             </thead>
@@ -138,15 +116,6 @@
                                                 {{ $category->products_count ?? $category->products()->count() }} items
                                             </span>
                                         </td>
-                                        <td>
-                                            @if($category->referral_eligible)
-                                                <span class="badge bg-success-subtle text-success fs-12 px-2 py-1">
-                                                    <i class="bx bx-trending-up me-1"></i>Tier Stages (10% - 20%)
-                                                </span>
-                                            @else
-                                                <span class="badge bg-secondary-subtle text-muted">Disabled</span>
-                                            @endif
-                                        </td>
                                         <td class="text-end">
                                             <div class="d-inline-flex gap-1">
                                                 <button type="button" class="btn btn-sm btn-outline-primary"
@@ -174,7 +143,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">No farm equipment categories added yet.</td>
+                                        <td colspan="5" class="text-center py-4 text-muted">No farm equipment categories added yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -203,25 +172,6 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold text-dark">Category Name *</label>
                         <input type="text" name="name" id="editCategoryName" class="form-control" required>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-7">
-                            <label class="form-label fw-semibold text-dark">Referral Code</label>
-                            <input type="text" name="referral_category_code" id="editCategoryRefCode"
-                                class="form-control text-uppercase" maxlength="10">
-                        </div>
-                        <div class="col-md-5 d-flex align-items-end">
-                            <div class="form-check mb-2">
-                                <input type="checkbox" name="referral_eligible" value="1" class="form-check-input" id="editRefEligible">
-                                <label class="form-check-label fw-semibold text-dark small" for="editRefEligible">Referral Eligible</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3 p-2 bg-light rounded text-muted small">
-                        <i class="bx bx-trending-up text-primary me-1"></i>
-                        Referral incentives are applied directly via <a href="{{ route('admin.referral.config.settings') }}" class="fw-semibold text-primary text-decoration-none">Referral Stage Config</a> (10% &rarr; 12% &rarr; 15% &rarr; 18% &rarr; 20% in increasing order).
                     </div>
 
                     <div class="mb-3">
@@ -258,8 +208,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const button = event.relatedTarget;
         const action = button.getAttribute('data-action');
         const name = button.getAttribute('data-name');
-        const refCode = button.getAttribute('data-referral-code') || '';
-        const refEligible = button.getAttribute('data-referral-eligible') === '1';
         const description = button.getAttribute('data-description') || '';
         const image = button.getAttribute('data-image');
 
@@ -267,8 +215,6 @@ document.addEventListener('DOMContentLoaded', function () {
         form.action = action;
 
         document.getElementById('editCategoryName').value = name;
-        document.getElementById('editCategoryRefCode').value = refCode;
-        document.getElementById('editRefEligible').checked = refEligible;
         document.getElementById('editCategoryDescription').value = description;
 
         const imgPreview = document.getElementById('editCurrentImagePreview');
