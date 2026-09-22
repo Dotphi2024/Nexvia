@@ -1,5 +1,5 @@
 .env
-.env.backup
+.env.backup 
 .env.production
 public/logo/
 public/uploads/
