@@ -2,22 +2,40 @@
 // Secret security key
 $secret = 'MySecretKey123!';
 
-// Validate secret key from URL query string
-if (!isset($_GET['key']) || $_GET['key'] !== $secret) {
-    http_response_code(403);
-    die('Unauthorized access');
+// Validate secret key from URL query string (when invoked via HTTP)
+$isCli = (php_sapi_name() === 'cli');
+if (!$isCli) {
+    if (!isset($_GET['key']) || $_GET['key'] !== $secret) {
+        http_response_code(403);
+        die('Unauthorized access');
+    }
+
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if ($method !== 'POST' && $method !== 'GET') {
+        http_response_code(405);
+        die('Method Not Allowed');
+    }
+} else {
+    $method = 'CLI';
 }
 
-// Ensure the request method is POST or GET
-$method = $_SERVER['REQUEST_METHOD'];
-if ($method !== 'POST' && $method !== 'GET') {
-    http_response_code(405);
-    die('Method Not Allowed');
-}
+// Determine project base directory
+$projectDir = is_dir('/home/nexviabackend') ? '/home/nexviabackend' : __DIR__;
+
+// Prevent "fatal: detected dubious ownership" in git
+@exec('git config --global --add safe.directory ' . escapeshellarg($projectDir));
+@exec('git config --global --add safe.directory "*"');
+
+// Detect PHP binary
+$phpBin = defined('PHP_BINARY') && is_executable(PHP_BINARY) ? PHP_BINARY : 'php';
 
 // Execute deployment commands
-$command = 'cd /home/nexviabackend && git pull origin main 2>&1 && php artisan migrate --force 2>&1 && php artisan config:clear 2>&1 && php artisan cache:clear 2>&1';
+$command = "cd " . escapeshellarg($projectDir) . " && git pull origin main 2>&1 && {$phpBin} artisan migrate --force 2>&1 && {$phpBin} artisan config:clear 2>&1 && {$phpBin} artisan cache:clear 2>&1";
 $output = shell_exec($command);
 
-http_response_code(200);
-echo "<pre>Deployment Triggered ($method):\n$output</pre>";
+if (!$isCli) {
+    http_response_code(200);
+    echo "<pre>Deployment Triggered ($method):\n$output</pre>";
+} else {
+    echo "Deployment Triggered ($method):\n$output\n";
+}

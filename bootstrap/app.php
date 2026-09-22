@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->validateCsrfTokens(except: [
             'admin/login',
+            'deploy.php',
+            'deploy',
         ]);
 
         // Register route middleware aliases here

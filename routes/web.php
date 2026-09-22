@@ -68,6 +68,39 @@ Route::post('/booking/select-dsp/{bookingNumber}', [\App\Http\Controllers\Fronte
 Route::get('/customer/dashboard', [\App\Http\Controllers\Frontend\CustomerDashboardController::class, 'index'])->name('customer.dashboard');
 Route::post('/customer/profile/update', [\App\Http\Controllers\Frontend\CustomerDashboardController::class, 'profileUpdate'])->name('customer.profile.update');
 
+// Automated Deployment Webhook Route (matches https://backend.nexviadls.com/deploy.php?key=...)
+Route::match(['get', 'post'], '/deploy.php', function (\Illuminate\Http\Request $request) {
+    $secret = 'MySecretKey123!';
+    if ($request->query('key') !== $secret && $request->input('key') !== $secret) {
+        return response('Unauthorized access', 403);
+    }
+    $projectDir = is_dir('/home/nexviabackend') ? '/home/nexviabackend' : base_path();
+    @exec('git config --global --add safe.directory ' . escapeshellarg($projectDir));
+    @exec('git config --global --add safe.directory "*"');
+    $phpBin = defined('PHP_BINARY') && is_executable(PHP_BINARY) ? PHP_BINARY : 'php';
+    $command = "cd " . escapeshellarg($projectDir) . " && git pull origin main 2>&1 && {$phpBin} artisan migrate --force 2>&1 && {$phpBin} artisan config:clear 2>&1 && {$phpBin} artisan cache:clear 2>&1";
+    $output = shell_exec($command);
+    $method = $request->method();
+    return response("<pre>Deployment Triggered ($method):\n$output</pre>", 200)
+        ->header('Content-Type', 'text/html');
+});
+
+Route::match(['get', 'post'], '/deploy', function (\Illuminate\Http\Request $request) {
+    $secret = 'MySecretKey123!';
+    if ($request->query('key') !== $secret && $request->input('key') !== $secret) {
+        return response('Unauthorized access', 403);
+    }
+    $projectDir = is_dir('/home/nexviabackend') ? '/home/nexviabackend' : base_path();
+    @exec('git config --global --add safe.directory ' . escapeshellarg($projectDir));
+    @exec('git config --global --add safe.directory "*"');
+    $phpBin = defined('PHP_BINARY') && is_executable(PHP_BINARY) ? PHP_BINARY : 'php';
+    $command = "cd " . escapeshellarg($projectDir) . " && git pull origin main 2>&1 && {$phpBin} artisan migrate --force 2>&1 && {$phpBin} artisan config:clear 2>&1 && {$phpBin} artisan cache:clear 2>&1";
+    $output = shell_exec($command);
+    $method = $request->method();
+    return response("<pre>Deployment Triggered ($method):\n$output</pre>", 200)
+        ->header('Content-Type', 'text/html');
+});
+
 // Direct product slug/id lookup fallback (e.g. /nexvia-55-inch-ultra-hd-4k-smart-led-tv)
 Route::get('/{slugOrId}', function ($slugOrId) {
     if (!in_array($slugOrId, ['admin', 'api', 'login', 'register', 'dashboard', 'search', 'products', 'trending', 'pages', 'dsp'])) {
