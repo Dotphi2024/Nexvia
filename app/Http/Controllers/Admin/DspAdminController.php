@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\DspApprovedMail;
 use App\Models\DspApplication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class DspAdminController extends Controller
@@ -156,18 +160,57 @@ class DspAdminController extends Controller
             'status'                 => 'required|in:pending,under_review,approved,rejected',
             'admin_notes'            => 'nullable|string',
             'deposit_payment_status' => 'nullable|in:pending,paid,verified',
+            'email'                  => 'nullable|email|max:255',
+            'password'               => 'nullable|string|min:6',
         ]);
 
+        $previousStatus = $application->status;
         $application->status = $request->status;
         $application->admin_notes = $request->admin_notes;
         if ($request->filled('deposit_payment_status')) {
             $application->deposit_payment_status = $request->deposit_payment_status;
         }
+        if ($request->filled('email')) {
+            $application->email = trim($request->email);
+        }
         $application->reviewed_by = Auth::guard('admin')->id();
         $application->reviewed_at = now();
-        $application->save();
 
-        return back()->with('success', "Application status updated to " . strtoupper(str_replace('_', ' ', $application->status)) . "!");
+        $emailNotice = '';
+
+        if ($request->status === 'approved') {
+            // Determine or generate password
+            if ($request->filled('password')) {
+                $plainPassword = $request->password;
+                $application->password = Hash::make($plainPassword);
+            } elseif (empty($application->password)) {
+                $plainPassword = 'Dsp@' . rand(100000, 999999);
+                $application->password = Hash::make($plainPassword);
+            } else {
+                // If already had a password and no new password passed, generate a new temporary password so it can be emailed
+                $plainPassword = 'Dsp@' . rand(100000, 999999);
+                $application->password = Hash::make($plainPassword);
+            }
+
+            $application->save();
+
+            // Send approval email with login details
+            if (!empty($application->email)) {
+                try {
+                    Mail::to($application->email)->send(new DspApprovedMail($application, $plainPassword));
+                    $emailNotice = " Login credentials (Password: {$plainPassword}) were sent to {$application->email} from development@dotphi.com.";
+                } catch (\Throwable $e) {
+                    Log::error("Failed sending DSP approval email to {$application->email}: " . $e->getMessage());
+                    $emailNotice = " (Note: Could not send email: " . $e->getMessage() . ". Generated password: {$plainPassword})";
+                }
+            } else {
+                $emailNotice = " (Note: No email on file. Portal password is: {$plainPassword})";
+            }
+        } else {
+            $application->save();
+        }
+
+        return back()->with('success', "Application status updated to " . strtoupper(str_replace('_', ' ', $application->status)) . "!" . $emailNotice);
     }
 
     public function destroy($id)
@@ -185,11 +228,28 @@ class DspAdminController extends Controller
 
         $request->validate([
             'password' => 'required|string|min:6',
+            'email'    => 'nullable|email|max:255',
         ]);
 
-        $application->password = \Illuminate\Support\Facades\Hash::make($request->password);
+        if ($request->filled('email')) {
+            $application->email = trim($request->email);
+        }
+
+        $plainPassword = $request->password;
+        $application->password = Hash::make($plainPassword);
         $application->save();
 
-        return back()->with('success', "Portal login password set successfully for {$application->applicant_name} (Mobile: {$application->mobile})!");
+        $emailNotice = '';
+        if (!empty($application->email)) {
+            try {
+                Mail::to($application->email)->send(new DspApprovedMail($application, $plainPassword));
+                $emailNotice = " and login details emailed to {$application->email} from development@dotphi.com";
+            } catch (\Throwable $e) {
+                Log::error("Failed sending DSP password update email to {$application->email}: " . $e->getMessage());
+                $emailNotice = " (Email dispatch error: " . $e->getMessage() . ")";
+            }
+        }
+
+        return back()->with('success', "Portal login password updated successfully for {$application->applicant_name} (Mobile: {$application->mobile}){$emailNotice}!");
     }
 }

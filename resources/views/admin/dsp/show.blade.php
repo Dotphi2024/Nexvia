@@ -81,6 +81,11 @@
                             The partner can log into the dedicated DSP Portal at <code>/dsp/login</code> using their mobile number (<strong>{{ $application->mobile }}</strong>) and this password.
                         </p>
                         <div class="mb-3">
+                            <label class="form-label fw-semibold text-dark small">Partner Email (for Credential Dispatch)</label>
+                            <input type="email" name="email" class="form-control" value="{{ $application->email }}" placeholder="e.g. partner@example.com">
+                            <span class="micro text-muted">Login credentials will be automatically emailed from <code>development@dotphi.com</code>.</span>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label fw-semibold text-dark small">New Password *</label>
                             <input type="text" name="password" class="form-control" placeholder="Enter minimum 6 character password" required minlength="6">
                             <span class="micro text-muted">e.g. dsp@123 or a secure custom password</span>
@@ -88,7 +93,7 @@
                     </div>
                     <div class="modal-footer bg-light">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm fw-semibold">Save Password</button>
+                        <button type="submit" class="btn btn-primary btn-sm fw-semibold">Save & Email Credentials</button>
                     </div>
                 </form>
             </div>
@@ -574,6 +579,18 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Partner Email (for Notification & Login Details)</label>
+                        <input type="email" name="email" class="form-control" value="{{ $application->email }}" placeholder="Enter partner email (e.g. partner@example.com)">
+                        <span class="micro text-muted">Upon approval, login credentials and instructions are emailed from <code>development@dotphi.com</code> to this address.</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Portal Password <span class="fw-normal text-muted">(Optional for Approval)</span></label>
+                        <input type="text" name="password" class="form-control" placeholder="Leave empty to auto-generate secure password">
+                        <span class="micro text-muted">If left blank and approved, the system generates a secure temporary password and emails it immediately.</span>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label fw-semibold text-dark">Admin Remarks / Notes</label>
                         <textarea name="admin_notes" class="form-control" rows="3" 
                                   placeholder="Enter verification notes, territory allotment conditions, or reason for status...">{{ $application->admin_notes }}</textarea>
@@ -581,7 +598,7 @@
                 </div>
                 <div class="modal-footer bg-light border-top py-2">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3">Save Status & Notes</button>
+                    <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3">Save Status & Send Credentials</button>
                 </div>
             </form>
         </div>
