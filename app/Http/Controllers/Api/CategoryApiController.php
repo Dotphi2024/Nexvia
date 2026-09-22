@@ -75,6 +75,18 @@ class CategoryApiController extends Controller
                 $q->where('status', 'active');
             }])->where('is_active', true);
 
+            // Optional type filter (e.g. dls_farm_equipment / dls_agro vs standard)
+            if ($type = ($request->query('type') ?? $request->input('type'))) {
+                $type = strtolower(trim((string)$type));
+                if (in_array($type, ['dls_farm_equipment', 'dls_agro', 'agro', 'farm', 'dls'])) {
+                    $query->where('type', 'dls_farm_equipment');
+                } elseif (in_array($type, ['standard', 'regular', 'general', 'main'])) {
+                    $query->where('type', '!=', 'dls_farm_equipment');
+                } else {
+                    $query->where('type', $type);
+                }
+            }
+
             // Optional search filter
             if ($search = $request->input('search')) {
                 $search = trim($search);

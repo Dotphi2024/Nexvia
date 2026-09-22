@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\CheckoutApiController;
 use App\Http\Controllers\Api\PaymentApiController;
 use App\Http\Controllers\Api\PageApiController;
 use App\Http\Controllers\Api\DspApiController;
+use App\Http\Controllers\Api\DlsAgroApiController;
 
 Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
@@ -45,6 +46,17 @@ Route::post('/products',             [ProductApiController::class, 'index']);
 Route::get('/products/{idOrSlug}',   [ProductApiController::class, 'show']);
 Route::post('/products/{idOrSlug}',  [ProductApiController::class, 'show']);
 Route::get('/products/detail/{idOrSlug}', [ProductApiController::class, 'show']);
+
+// DLS Agro & Farm Equipment APIs
+Route::match(['get', 'post'], '/dls-agro/categories',         [DlsAgroApiController::class, 'categories']);
+Route::match(['get', 'post'], '/dls-agro/products',           [DlsAgroApiController::class, 'products']);
+Route::match(['get', 'post'], '/dls-agro/products/featured',  [DlsAgroApiController::class, 'featured']);
+Route::match(['get', 'post'], '/dls-agro/products/{idOrSlug}',[DlsAgroApiController::class, 'show']);
+
+Route::match(['get', 'post'], '/dls-farm/categories',         [DlsAgroApiController::class, 'categories']);
+Route::match(['get', 'post'], '/dls-farm/products',           [DlsAgroApiController::class, 'products']);
+Route::match(['get', 'post'], '/dls-farm/products/featured',  [DlsAgroApiController::class, 'featured']);
+Route::match(['get', 'post'], '/dls-farm/products/{idOrSlug}',[DlsAgroApiController::class, 'show']);
 
 // Order Delivery Tracking Public API
 Route::get('/deliveries/{trackingNumber}', [OrderDeliveryApiController::class, 'trackDelivery']);

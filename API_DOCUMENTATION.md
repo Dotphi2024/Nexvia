@@ -22,6 +22,7 @@
 11. [Warranties, Service Tickets & Installations](#11-warranties-service-tickets--installations)
 12. [CMS Dynamic Pages, Policies & Points](#12-cms-dynamic-pages-policies--points)
 13. [Authorised Delivery & Service Partner (DSP) Ecosystem](#13-authorised-delivery--service-partner-dsp-ecosystem)
+14. [DLS Agro & Farm Equipment APIs](#14-dls-agro--farm-equipment-apis)
 
 ---
 
@@ -1853,6 +1854,284 @@ Authorised Delivery & Service Partners (DSP) are NEXVIA's local territory hubs r
 
 ---
 
+## 14. DLS Agro & Farm Equipment APIs
+
+Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar Water Pumps, Heavy Duty Power Tillers, Cultivators, High-Precision Agri Drones).
+
+> **Interchangeable URL Prefixes**: Both `/api/dls-agro/*` and `/api/dls-farm/*` prefixes are supported interchangeably.  
+> **Global Type Filtering**: The standard catalog APIs `/api/products` and `/api/categories` also support `?type=dls_farm_equipment` (or `?type=agro`) to filter specifically for DLS Agro items.
+
+---
+
+### 14.1 List DLS Agro Categories
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/categories` (or `/api/dls-farm/categories`)
+* **Auth**: Public
+
+#### Query / Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `search` | String | No | Search keyword matching category name, slug, or referral code. |
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro categories retrieved successfully.",
+  "count": 3,
+  "data": [
+    {
+      "id": 10,
+      "name": "Solar Water Pumps",
+      "slug": "solar-water-pumps",
+      "type": "dls_farm_equipment",
+      "referral_category_code": "SOLPUMP",
+      "referral_eligible": true,
+      "commission_percentage": 10.00,
+      "description": "High efficiency AC/DC submersible solar agricultural pumps with MPPT controller",
+      "image": "http://127.0.0.1:8000/storage/categories/solar-pump.jpg",
+      "image_url": "http://127.0.0.1:8000/storage/categories/solar-pump.jpg",
+      "sort_order": 1,
+      "products_count": 5
+    },
+    {
+      "id": 11,
+      "name": "Power Tillers & Cultivators",
+      "slug": "power-tillers-cultivators",
+      "type": "dls_farm_equipment",
+      "referral_category_code": "TILLER",
+      "referral_eligible": true,
+      "commission_percentage": 12.00,
+      "description": "Heavy duty diesel and electric power tillers for dryland and wetland farming",
+      "image": "http://127.0.0.1:8000/storage/categories/tiller.jpg",
+      "image_url": "http://127.0.0.1:8000/storage/categories/tiller.jpg",
+      "sort_order": 2,
+      "products_count": 4
+    },
+    {
+      "id": 12,
+      "name": "Sprayers & Agricultural Drones",
+      "slug": "sprayers-agri-drones",
+      "type": "dls_farm_equipment",
+      "referral_category_code": "DRONE",
+      "referral_eligible": true,
+      "commission_percentage": 15.00,
+      "description": "Battery-operated high precision crop sprayers and automated agricultural payload drones",
+      "image": "http://127.0.0.1:8000/storage/categories/drone.jpg",
+      "image_url": "http://127.0.0.1:8000/storage/categories/drone.jpg",
+      "sort_order": 3,
+      "products_count": 3
+    }
+  ]
+}
+```
+
+---
+
+### 14.2 List DLS Agro Products
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/products` (or `/api/dls-farm/products`)
+* **Auth**: Public
+
+#### Query / Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `category_id` / `category` | Integer / String | No | Filter by category ID or category slug (e.g. `solar-water-pumps`). |
+| `search` | String | No | Search keyword in product name, SKU, model code, or offer text. |
+| `sortBy` | String | No | Sort option: `price_low`, `price_high`, `featured`, `trending`, or default (latest). |
+| `page` | Integer | No | Page number (default: `1`). |
+| `limit` / `per_page` | Integer | No | Items per page (default: `10`, max: `100`). |
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro products retrieved successfully.",
+  "pagination": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 10,
+    "total": 2,
+    "has_more": false
+  },
+  "data": [
+    {
+      "id": 20,
+      "name": "DLS 5HP Solar Submersible Water Pump",
+      "slug": "dls-5hp-solar-submersible-pump",
+      "model_code": "DLS-SOL-5000",
+      "sku": "SKU-FARM-PUMP-01",
+      "product_type": "dls_farm_equipment",
+      "category": {
+        "id": 10,
+        "name": "Solar Water Pumps",
+        "slug": "solar-water-pumps",
+        "type": "dls_farm_equipment",
+        "referral_category_code": "SOLPUMP"
+      },
+      "mrp": 85000.00,
+      "booking_percentage": 20.00,
+      "booking_amount": 17000.00,
+      "balance_amount": 68000.00,
+      "stock": 12,
+      "main_image": "http://127.0.0.1:8000/storage/products/solar-pump.jpg",
+      "imageUrl": "http://127.0.0.1:8000/storage/products/solar-pump.jpg",
+      "images": ["http://127.0.0.1:8000/storage/products/solar-pump.jpg"],
+      "gallery": ["http://127.0.0.1:8000/storage/products/solar-pump.jpg"],
+      "video_url": "https://www.youtube.com/watch?v=example",
+      "offer_text": "Govt Subsidy Assistance Available",
+      "warranty_info": "5 Years Manufacturer Warranty on Pump & Controller",
+      "installation_info": "Free On-site Farm Installation & Borehole Testing",
+      "is_featured": true,
+      "status": "active",
+      "eligible_referral_value": 85000.00,
+      "referral_eligible": true,
+      "self_dealer_eligible": true,
+      "created_at": "2026-09-22T08:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 14.3 Featured DLS Agro Products
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/products/featured` (or `/api/dls-farm/products/featured`)
+* **Auth**: Public
+
+#### Query Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `limit` | Integer | No | Maximum number of products to return (default: `10`, max: `50`). |
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Featured DLS Agro products retrieved successfully.",
+  "count": 2,
+  "data": [
+    {
+      "id": 20,
+      "name": "DLS 5HP Solar Submersible Water Pump",
+      "slug": "dls-5hp-solar-submersible-pump",
+      "model_code": "DLS-SOL-5000",
+      "sku": "SKU-FARM-PUMP-01",
+      "product_type": "dls_farm_equipment",
+      "mrp": 85000.00,
+      "booking_amount": 17000.00,
+      "balance_amount": 68000.00,
+      "is_featured": true
+    }
+  ]
+}
+```
+
+---
+
+### 14.4 DLS Agro Product Details
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/products/{idOrSlug}` (or `/api/dls-farm/products/{idOrSlug}`)
+* **Auth**: Public
+
+#### Path Parameter
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `idOrSlug` | Integer / String | Product numeric ID (e.g. `20`) or URL slug (e.g. `dls-5hp-solar-submersible-pump`). |
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro product details retrieved successfully.",
+  "data": {
+    "id": 20,
+    "name": "DLS 5HP Solar Submersible Water Pump",
+    "slug": "dls-5hp-solar-submersible-pump",
+    "model_code": "DLS-SOL-5000",
+    "sku": "SKU-FARM-PUMP-01",
+    "product_type": "dls_farm_equipment",
+    "category": {
+      "id": 10,
+      "name": "Solar Water Pumps",
+      "slug": "solar-water-pumps",
+      "type": "dls_farm_equipment",
+      "referral_category_code": "SOLPUMP"
+    },
+    "mrp": 85000.00,
+    "booking_percentage": 20.00,
+    "booking_amount": 17000.00,
+    "balance_amount": 68000.00,
+    "balance_due_days": 60,
+    "pricing": {
+      "mrp": 85000.00,
+      "booking_percentage": 20.00,
+      "booking_amount": 17000.00,
+      "balance_amount": 68000.00,
+      "balance_due_days": 60,
+      "currency": "INR",
+      "currency_symbol": "₹",
+      "pricing_summary": "Pay ₹17,000.00 (20%) now, balance ₹68,000.00 within 60 days."
+    },
+    "referral_eligible": true,
+    "self_dealer_eligible": true,
+    "eligible_referral_value": 85000.00,
+    "stock": 12,
+    "in_stock": true,
+    "stock_status": "In Stock",
+    "main_image": "http://127.0.0.1:8000/storage/products/solar-pump.jpg",
+    "imageUrl": "http://127.0.0.1:8000/storage/products/solar-pump.jpg",
+    "gallery": [
+      "http://127.0.0.1:8000/storage/products/solar-pump-1.jpg",
+      "http://127.0.0.1:8000/storage/products/solar-pump-2.jpg"
+    ],
+    "images": [
+      "http://127.0.0.1:8000/storage/products/solar-pump-1.jpg",
+      "http://127.0.0.1:8000/storage/products/solar-pump-2.jpg"
+    ],
+    "video_url": "https://www.youtube.com/watch?v=example",
+    "offer_text": "Govt Subsidy Assistance Available",
+    "key_features": [
+      "5HP 3-Phase Submersible DC Motor",
+      "MPPT Smart Solar Inverter / Controller Included",
+      "Stainless Steel 304 High-Durability Impeller",
+      "Auto Dry-Run & Reverse Polarity Protection"
+    ],
+    "specifications": [
+      { "name": "Power Rating", "value": "5 HP (3.7 kW)" },
+      { "name": "Discharge Capacity", "value": "25,000 Liters/Hour" },
+      { "name": "Max Head Depth", "value": "120 meters" },
+      { "name": "Solar Array Required", "value": "4800W - 6000W DC" }
+    ],
+    "specs": {
+      "Power Rating": "5 HP (3.7 kW)",
+      "Discharge Capacity": "25,000 Liters/Hour",
+      "Max Head Depth": "120 meters",
+      "Solar Array Required": "4800W - 6000W DC"
+    },
+    "warranty_info": "5 Years Manufacturer Warranty on Pump & Controller",
+    "installation_info": "Free On-site Farm Installation & Borehole Testing",
+    "delivery_info": "Delivered by Local Authorised Delivery & Service Partner (DSP)",
+    "is_featured": true,
+    "status": "active",
+    "created_at": "2026-09-22T08:00:00Z"
+  }
+}
+```
+
+---
+
+### 14.5 Querying Standard Catalog with `?type=` Filter
+You can also filter the primary `/api/products` and `/api/categories` endpoints using the `type` query parameter:
+
+* `GET /api/products?type=dls_farm_equipment` (or `?type=agro`): Returns **only** DLS Agro / Farm Equipment products.
+* `GET /api/products?type=standard` (or `?type=regular`): Returns **only** non-agro / standard electronics and appliances.
+* `GET /api/categories?type=dls_farm_equipment`: Returns **only** DLS Agro categories.
+* `GET /api/categories?type=standard`: Returns **only** standard electronics / appliance categories.
+
+---
+
 ## Summary of Error Status Codes
 
 | Code | Status | Meaning |
@@ -1863,3 +2142,4 @@ Authorised Delivery & Service Partners (DSP) are NEXVIA's local territory hubs r
 | `404` | **Not Found** | Requested resource (Product, Booking, User) does not exist. |
 | `422` | **Unprocessable Entity** | Validation failed (e.g. missing fields, invalid referral code, insufficient points). |
 | `500` | **Internal Server Error** | Server-side issue. |
+

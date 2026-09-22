@@ -51,6 +51,28 @@ class ProductApiController extends Controller
 
             $query = Product::with('category')->where('status', 'active');
 
+            // 0. Filter by Type (e.g. dls_farm_equipment / dls_agro vs standard)
+            $typeInput = $request->query('type')
+                ?? $request->input('type')
+                ?? ($bodyJson['type'] ?? null);
+
+            if (!empty($typeInput)) {
+                $typeInput = strtolower(trim((string)$typeInput));
+                if (in_array($typeInput, ['dls_farm_equipment', 'dls_agro', 'agro', 'farm', 'dls'])) {
+                    $query->whereHas('category', function ($q) {
+                        $q->where('type', 'dls_farm_equipment');
+                    });
+                } elseif (in_array($typeInput, ['standard', 'regular', 'general', 'main'])) {
+                    $query->whereHas('category', function ($q) {
+                        $q->where('type', '!=', 'dls_farm_equipment');
+                    });
+                } else {
+                    $query->whereHas('category', function ($q) use ($typeInput) {
+                        $q->where('type', $typeInput);
+                    });
+                }
+            }
+
             // 1. Filter by Category (accepts category_id or category slug)
             if (!empty($categoryInput)) {
                 $categoryInput = trim($categoryInput);
