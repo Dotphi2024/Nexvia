@@ -8,12 +8,8 @@ if (!isset($_GET['key']) || $_GET['key'] !== $secret) {
     die('Unauthorized access');
 }
 
-// Ensure the request method is POST or GET
+// Allow all HTTP methods (POST, GET, etc.) without throwing 405
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-if ($method !== 'POST' && $method !== 'GET') {
-    http_response_code(405);
-    die('Method Not Allowed');
-}
 
 // Determine project base directory
 $projectDir = is_dir('/home/nexviabackend') ? '/home/nexviabackend' : dirname(__DIR__);

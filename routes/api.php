@@ -23,6 +23,44 @@ Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
 });
 
+// Automated Deployment Webhook API Endpoint
+Route::match(['get', 'post'], '/deploy', function (\Illuminate\Http\Request $request) {
+    $secret = 'MySecretKey123!';
+    if ($request->query('key') !== $secret && $request->input('key') !== $secret) {
+        return response()->json(['status' => false, 'message' => 'Unauthorized access'], 403);
+    }
+    $projectDir = is_dir('/home/nexviabackend') ? '/home/nexviabackend' : base_path();
+    @exec('git config --global --add safe.directory ' . escapeshellarg($projectDir));
+    @exec('git config --global --add safe.directory "*"');
+    $phpBin = defined('PHP_BINARY') && is_executable(PHP_BINARY) ? PHP_BINARY : 'php';
+    $command = "cd " . escapeshellarg($projectDir) . " && git pull origin main 2>&1 && {$phpBin} artisan migrate --force 2>&1 && {$phpBin} artisan config:clear 2>&1 && {$phpBin} artisan cache:clear 2>&1";
+    $output = shell_exec($command);
+    return response()->json([
+        'status'  => true,
+        'method'  => $request->method(),
+        'output'  => $output,
+        'time'    => date('Y-m-d H:i:s'),
+    ], 200);
+});
+Route::match(['get', 'post'], '/deploy.php', function (\Illuminate\Http\Request $request) {
+    $secret = 'MySecretKey123!';
+    if ($request->query('key') !== $secret && $request->input('key') !== $secret) {
+        return response()->json(['status' => false, 'message' => 'Unauthorized access'], 403);
+    }
+    $projectDir = is_dir('/home/nexviabackend') ? '/home/nexviabackend' : base_path();
+    @exec('git config --global --add safe.directory ' . escapeshellarg($projectDir));
+    @exec('git config --global --add safe.directory "*"');
+    $phpBin = defined('PHP_BINARY') && is_executable(PHP_BINARY) ? PHP_BINARY : 'php';
+    $command = "cd " . escapeshellarg($projectDir) . " && git pull origin main 2>&1 && {$phpBin} artisan migrate --force 2>&1 && {$phpBin} artisan config:clear 2>&1 && {$phpBin} artisan cache:clear 2>&1";
+    $output = shell_exec($command);
+    return response()->json([
+        'status'  => true,
+        'method'  => $request->method(),
+        'output'  => $output,
+        'time'    => date('Y-m-d H:i:s'),
+    ], 200);
+});
+
 // Privacy Policy & CMS Dynamic Pages Public APIs
 Route::match(['get', 'post'], '/privacy-policy',        [PageApiController::class, 'privacyPolicy']);
 Route::match(['get', 'post'], '/terms-and-conditions',  [PageApiController::class, 'termsAndConditions']);

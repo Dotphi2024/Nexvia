@@ -11,10 +11,6 @@ if (!$isCli) {
     }
 
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-    if ($method !== 'POST' && $method !== 'GET') {
-        http_response_code(405);
-        die('Method Not Allowed');
-    }
 } else {
     $method = 'CLI';
 }
