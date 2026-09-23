@@ -80,12 +80,8 @@
                                                     onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
                                             </td>
                                             <td>
-                                                <div class="d-flex align-items-center gap-1">
+                                                <div>
                                                     <strong class="text-dark fs-14">{{ $category->name }}</strong>
-                                                    @if($category->referral_category_code)
-                                                        <span
-                                                            class="badge bg-dark-subtle text-dark font-monospace">{{ $category->referral_category_code }}</span>
-                                                    @endif
                                                 </div>
                                                 <span class="text-muted micro">{{ $category->slug }}</span>
                                             </td>
@@ -99,8 +95,6 @@
                                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                                         data-bs-toggle="modal" data-bs-target="#editCategoryModal"
                                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}"
-                                                        data-referral-code="{{ $category->referral_category_code }}"
-                                                        data-referral-eligible="{{ $category->referral_eligible ? '1' : '0' }}"
                                                         data-description="{{ $category->description }}"
                                                         data-image="{{ \App\Helpers\ImageHelper::resolve($category->image) }}"
                                                         data-action="{{ route('admin.categories.update', $category->id) }}">
