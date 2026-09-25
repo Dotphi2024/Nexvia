@@ -130,15 +130,12 @@
                         </div>
 
                         <div class="card border border-warning-subtle bg-warning-subtle p-3 rounded-3 mb-4">
-                            <div class="form-check form-switch mb-1">
-                                <input type="checkbox" name="is_featured" value="1" class="form-check-input" id="featCheck" {{ $product->is_featured ? 'checked' : '' }}>
-                                <label class="form-check-label fw-bold text-dark fs-14" for="featCheck">
-                                    🔥 Mark as Trending & Lightning Deal (Feature on App Home)
-                                </label>
+                            <div class="form-check form-switch mb-0">
+                                 <input type="checkbox" name="is_featured" value="1" class="form-check-input" id="featCheck" {{ $product->is_featured ? 'checked' : '' }}>
+                                 <label class="form-check-label fw-bold text-dark fs-14" for="featCheck">
+                                     🔥 Mark as Trending & Lightning Deal (Feature on App Home)
+                                 </label>
                             </div>
-                            <span class="text-muted small">
-                                Enabling this places this product in the <strong>🔥 Trending Products & Lightning Deals</strong> section on customer homepage and serves it at top priority via <code>GET /api/products/trending</code>.
-                            </span>
                         </div>
 
                         <button type="submit" class="btn btn-primary fw-semibold px-4">Update Product</button>

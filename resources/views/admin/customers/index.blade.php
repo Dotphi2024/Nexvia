@@ -140,7 +140,6 @@
                                             <a href="{{ route('admin.customers.show', $customer->id) }}" class="fw-bold text-dark text-decoration-none">
                                                 {{ $customer->name }}
                                             </a>
-                                            <span class="d-block text-muted micro">ID: #{{ $customer->id }}</span>
                                         </div>
                                     </div>
                                 </td>

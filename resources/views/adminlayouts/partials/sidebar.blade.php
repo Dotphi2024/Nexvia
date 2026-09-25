@@ -104,15 +104,6 @@
                </li>
 
                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.transfers.*') ? 'active' : '' }}" href="{{ route('admin.transfers.audit') }}">
-                         <span class="nav-icon">
-                              <iconify-icon icon="solar:transfer-horizontal-outline"></iconify-icon>
-                         </span>
-                         <span class="nav-text">Transfers</span>
-                    </a>
-               </li>
-
-               <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.booking.engine.*') ? 'active' : '' }}" href="{{ route('admin.booking.engine.settings') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:settings-outline"></iconify-icon>
@@ -138,15 +129,6 @@
                               <iconify-icon icon="solar:wallet-money-outline"></iconify-icon>
                          </span>
                          <span class="nav-text">Transactions</span>
-                    </a>
-               </li>
-
-               <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.self_dealers.fraud_flags') ? 'active' : '' }}" href="{{ route('admin.self_dealers.fraud_flags') }}">
-                         <span class="nav-icon">
-                              <iconify-icon icon="solar:danger-triangle-outline"></iconify-icon>
-                         </span>
-                         <span class="nav-text">Fraud Flags</span>
                     </a>
                </li>
 
