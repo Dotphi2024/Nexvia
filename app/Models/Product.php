@@ -12,6 +12,7 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'name',
+        'overview',
         'model_code',
         'sku',
         'slug',
@@ -85,5 +86,35 @@ class Product extends Model
             return (float) $value;
         }
         return max(0.00, round(((float) $this->mrp) - (float) $this->booking_amount, 2));
+    }
+
+    /**
+     * Alias for key_features as features
+     */
+    public function getFeaturesAttribute()
+    {
+        return $this->key_features ?: [];
+    }
+
+    /**
+     * Formatted technical specifications as list of { name, value }
+     */
+    public function getTechnicalSpecificationsAttribute(): array
+    {
+        $specs = $this->specs ?: [];
+        if (is_string($specs)) {
+            $specs = json_decode($specs, true) ?? [];
+        }
+
+        $list = [];
+        if (is_array($specs)) {
+            foreach ($specs as $name => $value) {
+                $list[] = [
+                    'name'  => (string) $name,
+                    'value' => is_array($value) ? implode(', ', $value) : (string) $value,
+                ];
+            }
+        }
+        return $list;
     }
 }

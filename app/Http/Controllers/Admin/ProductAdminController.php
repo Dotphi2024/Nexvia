@@ -101,9 +101,14 @@ class ProductAdminController extends Controller
         $referralEligible = $request->has('referral_eligible');
         $selfDealerEligible = $request->has('self_dealer_eligible');
 
+        $overview = $request->overview ?: $request->description;
+        $keyFeatures = $this->parseFeatures($request);
+        $specs = $this->parseSpecifications($request);
+
         Product::create([
             'category_id' => $request->category_id,
             'name' => $request->name,
+            'overview' => $overview,
             'model_code' => $request->model_code,
             'sku' => $request->sku,
             'slug' => Str::slug($request->name) . '-' . rand(100, 999),
@@ -119,13 +124,16 @@ class ProductAdminController extends Controller
             'offer_text' => $request->offer_text,
             'main_image' => $mainImagePath,
             'gallery' => $galleryPaths,
+            'key_features' => $keyFeatures,
+            'specs' => $specs,
             'warranty_info' => $request->warranty_info ?? '1 Year Brand Warranty',
             'installation_info' => $request->installation_info ?? 'Free Installation Available',
+            'delivery_info' => $request->delivery_info ?? 'Dispatched within 3-5 business days',
             'is_featured' => $request->has('is_featured'),
             'status' => $request->status ?? 'active',
         ]);
 
-        return redirect()->route('admin.products.index')->with('success', 'Product created successfully!');
+        return redirect()->route('admin.products.index')->with('success', 'Product created successfully with technical specifications and features!');
     }
 
     public function edit($id)
@@ -161,9 +169,30 @@ class ProductAdminController extends Controller
             $mainImagePath = 'uploads/products/' . $fileName;
         }
 
+        $galleryPaths = $product->gallery ?: [];
+        if ($request->hasFile('gallery')) {
+            foreach ($request->file('gallery') as $gFile) {
+                $gFileName = 'product_g_' . time() . '_' . Str::random(6) . '.' . $gFile->getClientOriginalExtension();
+                $gFile->move(public_path('uploads/products'), $gFileName);
+                $galleryPaths[] = 'uploads/products/' . $gFileName;
+            }
+        }
+
+        $overview = $request->filled('overview') ? $request->overview : ($request->filled('description') ? $request->description : $product->overview);
+        $keyFeatures = $this->parseFeatures($request);
+        if (empty($keyFeatures) && !$request->has('features') && !$request->has('key_features')) {
+            $keyFeatures = $product->key_features ?: [];
+        }
+
+        $specs = $this->parseSpecifications($request);
+        if (empty($specs) && !$request->has('spec_names') && !$request->has('specs')) {
+            $specs = $product->specs ?: [];
+        }
+
         $product->update([
             'category_id' => $request->category_id,
             'name' => $request->name,
+            'overview' => $overview,
             'model_code' => $request->model_code,
             'sku' => $request->sku,
             'mrp' => $mrp,
@@ -177,12 +206,63 @@ class ProductAdminController extends Controller
             'video_url' => $request->video_url,
             'offer_text' => $request->offer_text,
             'main_image' => $mainImagePath,
+            'gallery' => $galleryPaths,
+            'key_features' => $keyFeatures,
+            'specs' => $specs,
             'warranty_info' => $request->warranty_info,
+            'installation_info' => $request->installation_info ?? $product->installation_info,
+            'delivery_info' => $request->delivery_info ?? $product->delivery_info,
             'is_featured' => $request->has('is_featured'),
             'status' => $request->status ?? 'active',
         ]);
 
-        return redirect()->route('admin.products.index')->with('success', 'Product updated successfully!');
+        return redirect()->route('admin.products.index')->with('success', 'Product updated successfully with technical specifications and features!');
+    }
+
+    /**
+     * Parse features list from request
+     */
+    protected function parseFeatures(Request $request): array
+    {
+        $features = [];
+        if ($request->has('features') && is_array($request->features)) {
+            $features = $request->features;
+        } elseif ($request->has('key_features') && is_array($request->key_features)) {
+            $features = $request->key_features;
+        } elseif ($request->filled('features_text')) {
+            $features = explode("\n", $request->features_text);
+        }
+
+        return array_values(array_filter(array_map('trim', (array)$features)));
+    }
+
+    /**
+     * Parse technical specifications from request
+     */
+    protected function parseSpecifications(Request $request): array
+    {
+        $specs = [];
+        if ($request->has('spec_names') && $request->has('spec_values')) {
+            $names = (array) $request->spec_names;
+            $values = (array) $request->spec_values;
+            foreach ($names as $idx => $name) {
+                $name = trim((string)$name);
+                $val = trim((string)($values[$idx] ?? ''));
+                if ($name !== '' && $val !== '') {
+                    $specs[$name] = $val;
+                }
+            }
+        } elseif ($request->has('specs') && is_array($request->specs)) {
+            $specs = $request->specs;
+        } elseif ($request->has('technical_specifications') && is_array($request->technical_specifications)) {
+            foreach ($request->technical_specifications as $item) {
+                if (is_array($item) && isset($item['name'], $item['value'])) {
+                    $specs[trim($item['name'])] = trim($item['value']);
+                }
+            }
+        }
+
+        return $specs;
     }
 
     public function toggleStatus($id)

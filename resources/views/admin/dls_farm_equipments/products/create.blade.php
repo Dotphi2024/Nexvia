@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold text-dark mb-1">Add Farm Equipment Product</h4>
-            <p class="text-muted small mb-0">List new equipment with 20% booking model, specs, and gallery</p>
+            <p class="text-muted small mb-0">List new equipment with technical specifications, overview, features, 20% booking model, and gallery</p>
         </div>
         <a href="{{ route('admin.dls_farm_equipments.products.index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bx bx-arrow-back me-1"></i> Back to Products
@@ -44,7 +44,7 @@
         <div class="col-lg-9">
             <div class="card border border-light-subtle shadow-sm">
                 <div class="card-header bg-white py-3 border-bottom">
-                    <h6 class="fw-bold text-dark mb-0">Equipment Specifications & Pricing</h6>
+                    <h6 class="fw-bold text-dark mb-0">Equipment Details, Technical Specifications & Pricing</h6>
                 </div>
                 <div class="card-body p-4">
                     <form action="{{ route('admin.dls_farm_equipments.products.store') }}" method="POST" enctype="multipart/form-data">
@@ -84,10 +84,110 @@
                             </div>
                         </div>
 
+                        <!-- PRODUCT OVERVIEW -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark d-flex align-items-center gap-1">
+                                <iconify-icon icon="solar:document-text-bold" class="text-primary fs-5"></iconify-icon>
+                                Product Overview & Agricultural Use
+                            </label>
+                            <textarea name="overview" class="form-control" rows="4" 
+                                      placeholder="Provide an overview of the agricultural equipment: crop utility, discharge volume, water efficiency, power requirement, borehole compatibility, and farmer benefits...">{{ old('overview') }}</textarea>
+                            <span class="micro text-muted">Displayed prominently in product details on mobile app and catalog.</span>
+                        </div>
+
+                        <!-- KEY FEATURES & HIGHLIGHTS -->
+                        <div class="card border border-light-subtle shadow-sm mb-4">
+                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <iconify-icon icon="solar:star-bold" class="text-warning fs-5"></iconify-icon>
+                                        Key Features & Highlights
+                                    </h6>
+                                    <span class="micro text-muted">Bullet points showcasing key advantages, safety, subsidy support, and smart controllers</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success fw-semibold" id="addFeatureBtn">
+                                    + Add Feature
+                                </button>
+                            </div>
+                            <div class="card-body p-3">
+                                <div id="featuresContainer">
+                                    @php
+                                        $initFarmFeatures = old('features', [
+                                            '5HP 3-Phase Submersible DC Motor with Copper Winding',
+                                            'MPPT Smart Solar Inverter / Controller Included with IP65 Enclosure',
+                                            'Stainless Steel 304 High-Durability Impeller for Sandy Water',
+                                            'Auto Dry-Run & Reverse Polarity Electronic Protection',
+                                        ]);
+                                    @endphp
+                                    @foreach($initFarmFeatures as $feat)
+                                        <div class="input-group mb-2 feature-row">
+                                            <span class="input-group-text bg-light text-muted">
+                                                <iconify-icon icon="solar:check-circle-bold" class="text-success"></iconify-icon>
+                                            </span>
+                                            <input type="text" name="features[]" class="form-control" 
+                                                   placeholder="Feature bullet point (e.g. 5HP MPPT Smart Solar Inverter)" 
+                                                   value="{{ $feat }}">
+                                            <button type="button" class="btn btn-outline-danger remove-feature-btn" title="Remove Feature">
+                                                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TECHNICAL SPECIFICATIONS -->
+                        <div class="card border border-light-subtle shadow-sm mb-4">
+                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <iconify-icon icon="solar:tuning-square-2-bold" class="text-primary fs-5"></iconify-icon>
+                                        Technical Specifications
+                                    </h6>
+                                    <span class="micro text-muted">Engineered agricultural parameters (e.g. Power Rating, Discharge Capacity, Max Head Depth, Solar Array, Working Depth)</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="addSpecBtn">
+                                    + Add Specification
+                                </button>
+                            </div>
+                            <div class="card-body p-3">
+                                <div id="specsContainer">
+                                    @php
+                                        $initFarmSpecs = old('specs', [
+                                            'Power Rating'          => '5 HP (3.7 kW)',
+                                            'Discharge Capacity'    => '25,000 Liters/Hour',
+                                            'Max Head Depth'        => '120 meters',
+                                            'Solar Array Required'  => '4800W - 6000W DC',
+                                            'Operating Voltage'     => '180V - 450V DC',
+                                            'Outlet Diameter'       => '2.5 Inches (65 mm)',
+                                            'Borehole Minimum Size' => '4 Inches (100 mm)',
+                                        ]);
+                                    @endphp
+                                    @foreach($initFarmSpecs as $sName => $sVal)
+                                        <div class="row g-2 mb-2 spec-row align-items-center">
+                                            <div class="col-md-5">
+                                                <input type="text" name="spec_names[]" class="form-control" 
+                                                       placeholder="Parameter Name (e.g. Power Rating)" value="{{ $sName }}">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="text" name="spec_values[]" class="form-control" 
+                                                       placeholder="Value (e.g. 5 HP (3.7 kW))" value="{{ $sVal }}">
+                                            </div>
+                                            <div class="col-md-1 text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-spec-btn w-100" title="Remove Spec">
+                                                    <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Image Uploads -->
-                        <div class="row g-3 mb-3 p-3 bg-light rounded border border-light-subtle">
+                        <div class="row g-3 mb-4 p-3 bg-light rounded border border-light-subtle">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark">Main Product Image</label>
+                                <label class="form-label fw-semibold text-dark">Main Product Image *</label>
                                 <input type="file" name="main_image" class="form-control" accept="image/*">
                                 <span class="micro text-muted">Upload JPG, PNG or WEBP (Max 4MB)</span>
                             </div>
@@ -121,26 +221,24 @@
 
                         <!-- Stock & Promotional Offer -->
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Stock Units *</label>
                                 <input type="number" name="stock" class="form-control" value="{{ old('stock', 15) }}" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Demonstration Video URL</label>
+                                <input type="url" name="video_url" class="form-control" 
+                                       placeholder="https://youtube.com/watch?v=..." value="{{ old('video_url') }}">
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Promotional / Offer Text</label>
                                 <input type="text" name="offer_text" class="form-control" 
-                                       placeholder="e.g. Subsidy Available / Free Demo" value="{{ old('offer_text') }}">
+                                       placeholder="e.g. Govt Subsidy Assistance Available" value="{{ old('offer_text') }}">
                             </div>
                         </div>
 
-                        <!-- Video URL -->
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark">Demonstration Video URL</label>
-                            <input type="url" name="video_url" class="form-control" 
-                                   placeholder="https://youtube.com/watch?v=..." value="{{ old('video_url') }}">
-                        </div>
-
                         <!-- Self Dealer & Referral Settings -->
-                        <div class="card bg-light border-0 mb-3 p-3">
+                        <div class="card bg-light border-0 mb-4 p-3">
                             <h6 class="fw-bold text-dark mb-2">Referral & Self Dealer Eligibility</h6>
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -166,17 +264,22 @@
                             </div>
                         </div>
 
-                        <!-- Warranty & Installation Info -->
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                        <!-- Warranty, Installation & Delivery Info -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Warranty Information</label>
                                 <input type="text" name="warranty_info" class="form-control" 
-                                       value="{{ old('warranty_info', '2 Years Comprehensive Manufacturer Warranty') }}">
+                                       value="{{ old('warranty_info', '5 Years Manufacturer Warranty on Pump & Controller') }}">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Installation & Demo Info</label>
                                 <input type="text" name="installation_info" class="form-control" 
-                                       value="{{ old('installation_info', 'Free On-site Farm Demo & Installation') }}">
+                                       value="{{ old('installation_info', 'Free On-site Farm Demo, Assembly & Testing') }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Delivery Handling Info</label>
+                                <input type="text" name="delivery_info" class="form-control" 
+                                       value="{{ old('delivery_info', 'Delivered by Local Authorised Delivery & Service Partner (DSP)') }}">
                             </div>
                         </div>
 
@@ -194,7 +297,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary fw-semibold px-4">
-                            <i class="bx bx-save me-1"></i> Save Product & Upload Images
+                            <i class="bx bx-save me-1"></i> Save Equipment & Specifications
                         </button>
                         <a href="{{ route('admin.dls_farm_equipments.products.index') }}" class="btn btn-outline-secondary">
                             Cancel
@@ -208,6 +311,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // 20% calculation
     const mrpInput = document.getElementById('mrpInput');
     const calculatedBooking = document.getElementById('calculatedBooking');
 
@@ -221,6 +325,74 @@ document.addEventListener('DOMContentLoaded', function () {
         mrpInput.addEventListener('input', calculate);
         calculate();
     }
+
+    // Dynamic Features
+    const featuresContainer = document.getElementById('featuresContainer');
+    const addFeatureBtn = document.getElementById('addFeatureBtn');
+
+    if (addFeatureBtn) {
+        addFeatureBtn.addEventListener('click', function () {
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2 feature-row';
+            div.innerHTML = `
+                <span class="input-group-text bg-light text-muted">
+                    <iconify-icon icon="solar:check-circle-bold" class="text-success"></iconify-icon>
+                </span>
+                <input type="text" name="features[]" class="form-control" placeholder="Feature bullet point (e.g. MPPT Controller with Auto Dry-Run Protection)">
+                <button type="button" class="btn btn-outline-danger remove-feature-btn" title="Remove Feature">
+                    <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                </button>
+            `;
+            featuresContainer.appendChild(div);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-feature-btn')) {
+            const row = e.target.closest('.feature-row');
+            if (document.querySelectorAll('.feature-row').length > 1) {
+                row.remove();
+            } else {
+                row.querySelector('input').value = '';
+            }
+        }
+    });
+
+    // Dynamic Specifications
+    const specsContainer = document.getElementById('specsContainer');
+    const addSpecBtn = document.getElementById('addSpecBtn');
+
+    if (addSpecBtn) {
+        addSpecBtn.addEventListener('click', function () {
+            const div = document.createElement('div');
+            div.className = 'row g-2 mb-2 spec-row align-items-center';
+            div.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" name="spec_names[]" class="form-control" placeholder="Parameter (e.g. Max Head Depth)">
+                </div>
+                <div class="col-md-6">
+                    <input type="text" name="spec_values[]" class="form-control" placeholder="Value (e.g. 120 meters)">
+                </div>
+                <div class="col-md-1 text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-spec-btn w-100" title="Remove Spec">
+                        <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                    </button>
+                </div>
+            `;
+            specsContainer.appendChild(div);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-spec-btn')) {
+            const row = e.target.closest('.spec-row');
+            if (document.querySelectorAll('.spec-row').length > 1) {
+                row.remove();
+            } else {
+                row.querySelectorAll('input').forEach(i => i.value = '');
+            }
+        }
+    });
 });
 </script>
 @endsection

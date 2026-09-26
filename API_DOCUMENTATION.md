@@ -325,24 +325,104 @@
 
 ### 3.2 Product Detail
 * **Method**: `GET`
-* **URL**: `/api/products/{idOrSlug}`
+* **URL**: `/api/products/{idOrSlug}` (or `/api/customer/products/{idOrSlug}`)
 * **Auth**: Public
 
 #### Response (`200 OK`)
 ```json
 {
   "status": true,
+  "message": "Product full details & specifications retrieved successfully.",
   "data": {
     "id": 1,
     "name": "NEXVIA 55-inch Ultra HD 4K Smart LED TV",
-    "mrp": 50000.0,
-    "booking_down_payment": 10000.0,
-    "balance_amount": 40000.0,
-    "referral_benefit": {
-      "is_eligible": true,
-      "activation_credit_percentage": 20.0,
-      "estimated_activation_points": 10000.0
-    }
+    "slug": "nexvia-55-inch-ultra-hd-4k-smart-led-tv",
+    "model_code": "NEX-TV55-4K",
+    "sku": "SKU-TV-001",
+    "overview": "Experience true immersion with NEXVIA 55-inch 4K Ultra HD Smart LED Display. Powered by Quantum Color Engine, Dolby Atmos Audio, and seamless dual-band Wi-Fi.",
+    "description": "Experience true immersion with NEXVIA 55-inch 4K Ultra HD Smart LED Display. Powered by Quantum Color Engine, Dolby Atmos Audio, and seamless dual-band Wi-Fi.",
+    "category": {
+      "id": 1,
+      "name": "Smart LED TV",
+      "slug": "smart-led-tv",
+      "referral_category_code": "TV"
+    },
+    "mrp": 50000.00,
+    "booking_percentage": 20.00,
+    "booking_amount": 10000.00,
+    "balance_amount": 40000.00,
+    "balance_due_days": 60,
+    "pricing": {
+      "mrp": 50000.00,
+      "booking_percentage": 20.00,
+      "booking_amount": 10000.00,
+      "balance_amount": 40000.00,
+      "balance_due_days": 60,
+      "currency": "INR",
+      "currency_symbol": "₹",
+      "pricing_summary": "Pay ₹10,000.00 (20%) now, pay balance ₹40,000.00 within 60 days."
+    },
+    "referral_eligible": true,
+    "self_dealer_eligible": true,
+    "eligible_referral_value": 50000.00,
+    "self_dealer_benefit": {
+      "activates_self_dealer": true,
+      "activation_points_pct": 20.00,
+      "activation_points_value": 10000.00,
+      "banner_title": "SELF DEALER BENEFIT",
+      "banner_text": "Book this product and become an eligible Self Dealer. Earn ₹10,000.00 (20%) in activation points!"
+    },
+    "stock": 25,
+    "in_stock": true,
+    "stock_status": "In Stock",
+    "main_image": "http://127.0.0.1:8000/uploads/products/tv.jpg",
+    "imageUrl": "http://127.0.0.1:8000/uploads/products/tv.jpg",
+    "gallery": [
+      "http://127.0.0.1:8000/uploads/products/tv_angle1.jpg",
+      "http://127.0.0.1:8000/uploads/products/tv_angle2.jpg"
+    ],
+    "video_url": "https://www.youtube.com/watch?v=example",
+    "features": [
+      "55-inch 4K Ultra HD IPS Panel (3840 x 2160)",
+      "Dolby Vision HDR & Atmos 30W Soundbar Speakers",
+      "Google TV with Voice Assistant & Hands-free Mic",
+      "HDMI 2.1 eARC & Dual Band 2.4/5GHz Wi-Fi"
+    ],
+    "key_features": [
+      "55-inch 4K Ultra HD IPS Panel (3840 x 2160)",
+      "Dolby Vision HDR & Atmos 30W Soundbar Speakers",
+      "Google TV with Voice Assistant & Hands-free Mic",
+      "HDMI 2.1 eARC & Dual Band 2.4/5GHz Wi-Fi"
+    ],
+    "specs": {
+      "Screen Size": "55 Inches",
+      "Resolution": "4K Ultra HD (3840 x 2160)",
+      "Refresh Rate": "60 Hz (120 Hz Motion Rate)",
+      "Operating System": "Google TV Android 12",
+      "Audio Output": "30W Dolby Atmos",
+      "Connectivity": "3 HDMI 2.1, 2 USB, Bluetooth 5.2"
+    },
+    "specifications": [
+      { "name": "Screen Size", "value": "55 Inches" },
+      { "name": "Resolution", "value": "4K Ultra HD (3840 x 2160)" },
+      { "name": "Refresh Rate", "value": "60 Hz (120 Hz Motion Rate)" },
+      { "name": "Operating System", "value": "Google TV Android 12" },
+      { "name": "Audio Output", "value": "30W Dolby Atmos" },
+      { "name": "Connectivity", "value": "3 HDMI 2.1, 2 USB, Bluetooth 5.2" }
+    ],
+    "technical_specifications": [
+      { "name": "Screen Size", "value": "55 Inches" },
+      { "name": "Resolution", "value": "4K Ultra HD (3840 x 2160)" },
+      { "name": "Refresh Rate", "value": "60 Hz (120 Hz Motion Rate)" },
+      { "name": "Operating System", "value": "Google TV Android 12" },
+      { "name": "Audio Output", "value": "30W Dolby Atmos" },
+      { "name": "Connectivity", "value": "3 HDMI 2.1, 2 USB, Bluetooth 5.2" }
+    ],
+    "warranty_info": "3 Years Comprehensive Panel Warranty",
+    "installation_info": "Free Wall Mount & Table-top Installation within 48 Hours",
+    "delivery_info": "Delivered and Inspected by Local DSP",
+    "is_featured": true,
+    "status": "active"
   }
 }
 ```
@@ -2223,6 +2303,8 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
     "model_code": "DLS-SOL-5000",
     "sku": "SKU-FARM-PUMP-01",
     "product_type": "dls_farm_equipment",
+    "overview": "High-efficiency deep well solar submersible water pump engineered for agricultural boreholes, drip irrigation, and micro-sprinklers. Equipped with MPPT auto dry-run tracking to operate directly from solar panels without battery maintenance.",
+    "description": "High-efficiency deep well solar submersible water pump engineered for agricultural boreholes, drip irrigation, and micro-sprinklers. Equipped with MPPT auto dry-run tracking to operate directly from solar panels without battery maintenance.",
     "category": {
       "id": 10,
       "name": "Solar Water Pumps",
@@ -2263,11 +2345,23 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
     ],
     "video_url": "https://www.youtube.com/watch?v=example",
     "offer_text": "Govt Subsidy Assistance Available",
+    "features": [
+      "5HP 3-Phase Submersible DC Motor",
+      "MPPT Smart Solar Inverter / Controller Included",
+      "Stainless Steel 304 High-Durability Impeller",
+      "Auto Dry-Run & Reverse Polarity Protection"
+    ],
     "key_features": [
       "5HP 3-Phase Submersible DC Motor",
       "MPPT Smart Solar Inverter / Controller Included",
       "Stainless Steel 304 High-Durability Impeller",
       "Auto Dry-Run & Reverse Polarity Protection"
+    ],
+    "technical_specifications": [
+      { "name": "Power Rating", "value": "5 HP (3.7 kW)" },
+      { "name": "Discharge Capacity", "value": "25,000 Liters/Hour" },
+      { "name": "Max Head Depth", "value": "120 meters" },
+      { "name": "Solar Array Required", "value": "4800W - 6000W DC" }
     ],
     "specifications": [
       { "name": "Power Rating", "value": "5 HP (3.7 kW)" },

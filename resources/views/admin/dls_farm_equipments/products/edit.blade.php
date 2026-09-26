@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold text-dark mb-1">Edit Farm Equipment Product</h4>
-            <p class="text-muted small mb-0">Update pricing, SKU, specs, status, and media</p>
+            <p class="text-muted small mb-0">Update technical specifications, overview, key features, pricing, stock, and media</p>
         </div>
         <a href="{{ route('admin.dls_farm_equipments.products.index') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bx bx-arrow-back me-1"></i> Back to Products
@@ -64,6 +64,110 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold text-dark">SKU Code</label>
                                 <input type="text" name="sku" class="form-control" value="{{ old('sku', $product->sku) }}">
+                            </div>
+                        </div>
+
+                        <!-- PRODUCT OVERVIEW -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark d-flex align-items-center gap-1">
+                                <iconify-icon icon="solar:document-text-bold" class="text-primary fs-5"></iconify-icon>
+                                Product Overview & Agricultural Use
+                            </label>
+                            <textarea name="overview" class="form-control" rows="4" 
+                                      placeholder="Provide an overview of the agricultural equipment: crop utility, discharge volume, water efficiency, power requirement, borehole compatibility, and farmer benefits...">{{ old('overview', $product->overview ?? $product->description) }}</textarea>
+                            <span class="micro text-muted">Displayed prominently in product details on mobile app and catalog.</span>
+                        </div>
+
+                        <!-- KEY FEATURES & HIGHLIGHTS -->
+                        <div class="card border border-light-subtle shadow-sm mb-4">
+                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <iconify-icon icon="solar:star-bold" class="text-warning fs-5"></iconify-icon>
+                                        Key Features & Highlights
+                                    </h6>
+                                    <span class="micro text-muted">Bullet points showcasing key advantages, safety, subsidy support, and smart controllers</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success fw-semibold" id="addFeatureBtn">
+                                    + Add Feature
+                                </button>
+                            </div>
+                            <div class="card-body p-3">
+                                <div id="featuresContainer">
+                                    @php
+                                        $currentFeatures = old('features');
+                                        if ($currentFeatures === null) {
+                                            $currentFeatures = is_array($product->key_features) ? $product->key_features : [];
+                                        }
+                                        if (empty($currentFeatures)) {
+                                            $currentFeatures = [''];
+                                        }
+                                    @endphp
+                                    @foreach($currentFeatures as $feat)
+                                        <div class="input-group mb-2 feature-row">
+                                            <span class="input-group-text bg-light text-muted">
+                                                <iconify-icon icon="solar:check-circle-bold" class="text-success"></iconify-icon>
+                                            </span>
+                                            <input type="text" name="features[]" class="form-control" 
+                                                   placeholder="Feature bullet point (e.g. 5HP MPPT Smart Solar Inverter)" 
+                                                   value="{{ $feat }}">
+                                            <button type="button" class="btn btn-outline-danger remove-feature-btn" title="Remove Feature">
+                                                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TECHNICAL SPECIFICATIONS -->
+                        <div class="card border border-light-subtle shadow-sm mb-4">
+                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <iconify-icon icon="solar:tuning-square-2-bold" class="text-primary fs-5"></iconify-icon>
+                                        Technical Specifications
+                                    </h6>
+                                    <span class="micro text-muted">Engineered agricultural parameters (e.g. Power Rating, Discharge Capacity, Max Head Depth, Solar Array, Working Depth)</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="addSpecBtn">
+                                    + Add Specification
+                                </button>
+                            </div>
+                            <div class="card-body p-3">
+                                <div id="specsContainer">
+                                    @php
+                                        $currentSpecs = old('spec_names');
+                                        $specsList = [];
+                                        if ($currentSpecs !== null) {
+                                            $oldVals = old('spec_values', []);
+                                            foreach ($currentSpecs as $idx => $n) {
+                                                $specsList[$n] = $oldVals[$idx] ?? '';
+                                            }
+                                        } elseif (!empty($product->specs) && is_array($product->specs)) {
+                                            $specsList = $product->specs;
+                                        } else {
+                                            $specsList = ['' => ''];
+                                        }
+                                    @endphp
+                                    @foreach($specsList as $sName => $sVal)
+                                        <div class="row g-2 mb-2 spec-row align-items-center">
+                                            <div class="col-md-5">
+                                                <input type="text" name="spec_names[]" class="form-control" 
+                                                       placeholder="Parameter Name (e.g. Power Rating)" value="{{ $sName }}">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="text" name="spec_values[]" class="form-control" 
+                                                       placeholder="Value (e.g. 5 HP (3.7 kW))" value="{{ $sVal }}">
+                                            </div>
+                                            <div class="col-md-1 text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-spec-btn w-100" title="Remove Spec">
+                                                    <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
 
@@ -160,7 +264,7 @@
                                         <input type="checkbox" name="referral_eligible" value="1" class="form-check-input" id="refEligible" 
                                                {{ $product->referral_eligible ? 'checked' : '' }}>
                                         <label class="form-check-label fw-semibold text-dark small" for="refEligible">
-                                            Referral Eligible (Enables points on customer referral)
+                                             Referral Eligible (Enables points on customer referral)
                                         </label>
                                     </div>
                                     <div class="form-check">
@@ -174,17 +278,22 @@
                             </div>
                         </div>
 
-                        <!-- Warranty & Installation Info -->
+                        <!-- Warranty, Installation & Delivery Info -->
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Warranty Information</label>
                                 <input type="text" name="warranty_info" class="form-control" 
                                        value="{{ old('warranty_info', $product->warranty_info) }}">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Installation & Demo Info</label>
                                 <input type="text" name="installation_info" class="form-control" 
                                        value="{{ old('installation_info', $product->installation_info) }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Delivery Handling Info</label>
+                                <input type="text" name="delivery_info" class="form-control" 
+                                       value="{{ old('delivery_info', $product->delivery_info) }}">
                             </div>
                         </div>
 
@@ -203,7 +312,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary fw-semibold px-4">
-                            <i class="bx bx-save me-1"></i> Update Product
+                            <i class="bx bx-save me-1"></i> Update Product & Specifications
                         </button>
                         <a href="{{ route('admin.dls_farm_equipments.products.index') }}" class="btn btn-outline-secondary">
                             Cancel
@@ -217,6 +326,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // 20% Calculation
     const mrpInput = document.getElementById('mrpInput');
     const calculatedBooking = document.getElementById('calculatedBooking');
 
@@ -229,6 +339,74 @@ document.addEventListener('DOMContentLoaded', function () {
     if (mrpInput) {
         mrpInput.addEventListener('input', calculate);
     }
+
+    // Dynamic Features
+    const featuresContainer = document.getElementById('featuresContainer');
+    const addFeatureBtn = document.getElementById('addFeatureBtn');
+
+    if (addFeatureBtn) {
+        addFeatureBtn.addEventListener('click', function () {
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2 feature-row';
+            div.innerHTML = `
+                <span class="input-group-text bg-light text-muted">
+                    <iconify-icon icon="solar:check-circle-bold" class="text-success"></iconify-icon>
+                </span>
+                <input type="text" name="features[]" class="form-control" placeholder="Feature bullet point (e.g. MPPT Controller with Auto Dry-Run Protection)">
+                <button type="button" class="btn btn-outline-danger remove-feature-btn" title="Remove Feature">
+                    <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                </button>
+            `;
+            featuresContainer.appendChild(div);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-feature-btn')) {
+            const row = e.target.closest('.feature-row');
+            if (document.querySelectorAll('.feature-row').length > 1) {
+                row.remove();
+            } else {
+                row.querySelector('input').value = '';
+            }
+        }
+    });
+
+    // Dynamic Specifications
+    const specsContainer = document.getElementById('specsContainer');
+    const addSpecBtn = document.getElementById('addSpecBtn');
+
+    if (addSpecBtn) {
+        addSpecBtn.addEventListener('click', function () {
+            const div = document.createElement('div');
+            div.className = 'row g-2 mb-2 spec-row align-items-center';
+            div.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" name="spec_names[]" class="form-control" placeholder="Parameter (e.g. Max Head Depth)">
+                </div>
+                <div class="col-md-6">
+                    <input type="text" name="spec_values[]" class="form-control" placeholder="Value (e.g. 120 meters)">
+                </div>
+                <div class="col-md-1 text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-spec-btn w-100" title="Remove Spec">
+                        <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                    </button>
+                </div>
+            `;
+            specsContainer.appendChild(div);
+        });
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-spec-btn')) {
+            const row = e.target.closest('.spec-row');
+            if (document.querySelectorAll('.spec-row').length > 1) {
+                row.remove();
+            } else {
+                row.querySelectorAll('input').forEach(i => i.value = '');
+            }
+        }
+    });
 });
 </script>
 @endsection
