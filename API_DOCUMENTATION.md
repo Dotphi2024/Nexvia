@@ -29,7 +29,43 @@
 
 ## 1. Authentication & Profile
 
-### 1.1 Register Customer
+### 1.1 Send Registration / Login OTP
+* **Method**: `POST`
+* **URL**: `/api/auth/send-otp` (or `/api/customer/send-otp`)
+* **Auth**: Public
+
+#### Request Body (For Registration):
+```json
+{
+  "phone": "9876543210",
+  "email": "rahul@example.com",
+  "name": "Rahul Sharma",
+  "type": "register"
+}
+```
+
+#### Request Body (For Login):
+```json
+{
+  "phone": "9876543210"
+}
+```
+*(Or with email: `{"email": "rahul@example.com"}`)*
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "OTP sent successfully to your mobile and email.",
+  "phone": "9876543210",
+  "email": "rahul@example.com",
+  "otp_debug": "123456"
+}
+```
+
+---
+
+### 1.2 Register Customer (Requires OTP)
 * **Method**: `POST`
 * **URL**: `/api/auth/register` (or `/api/customer/register`)
 * **Auth**: Public
@@ -41,21 +77,25 @@
   "phone": "9876543210",
   "email": "rahul@example.com",
   "password": "Password@123",
-  "referral_code": "NEXAB12CD"
+  "otp": "123456",
+  "referral_code": "NEXAB12CD",
+  "pincode": "411001",
+  "city": "Pune",
+  "state": "Maharashtra"
 }
 ```
 
-#### Response (`200 OK`)
+#### Response (`201 Created`)
 ```json
 {
   "status": true,
-  "message": "Customer registered successfully.",
+  "message": "Registration successful.",
+  "token": "a1b2c3d4e5f6...",
   "data": {
     "id": 42,
     "name": "Rahul Sharma",
     "phone": "9876543210",
     "email": "rahul@example.com",
-    "api_token": "a1b2c3d4e5f6...",
     "referral_code": "NEX-987654",
     "referral_url": "http://127.0.0.1:8000/ref/NEX-987654",
     "is_self_dealer": false,
@@ -67,66 +107,83 @@
 
 ---
 
-### 1.2 Customer Login
-* **Method**: `POST`
-* **URL**: `/api/auth/login` (or `/api/customer/login`)
-* **Auth**: Public
+### 1.3 Pure OTP Login (2-Step or Single-Step)
 
-#### Request Body
+#### Step 1: Request OTP
+* **Method**: `POST`
+* **URL**: `/api/customer/login` (or `/api/auth/send-otp`)
+* **Request Body**:
 ```json
 {
-  "phone": "9876543210",
-  "password": "Password@123"
+  "phone": "9876543210"
 }
 ```
-
-#### Response (`200 OK`)
+* **Response (`200 OK`)**:
 ```json
 {
   "status": true,
-  "message": "Login successful.",
+  "otp_sent": true,
+  "message": "OTP sent to your registered mobile and email. Please enter the OTP to complete login.",
+  "phone": "9876543210",
+  "email": "rahul@example.com"
+}
+```
+
+#### Step 2: Submit OTP to Complete Login
+* **Method**: `POST`
+* **URL**: `/api/customer/login` (or `/api/auth/verify-otp`)
+* **Request Body**:
+```json
+{
+  "phone": "9876543210",
+  "otp": "123456"
+}
+```
+* **Response (`200 OK`)**:
+```json
+{
+  "status": true,
+  "message": "Login successful",
+  "token": "a1b2c3d4e5f6...",
   "data": {
-    "token": "a1b2c3d4e5f6...",
-    "user": {
-      "id": 42,
-      "name": "Rahul Sharma",
-      "phone": "9876543210",
-      "email": "rahul@example.com",
-      "is_self_dealer": true,
-      "self_dealer_status": "active",
-      "referral_code": "NEX-987654",
-      "wallet_balance": 15000.00
-    }
+    "id": 42,
+    "name": "Rahul Sharma",
+    "phone": "9876543210",
+    "email": "rahul@example.com",
+    "referral_code": "NEX-987654",
+    "wallet_balance": 0.00,
+    "status": "active"
   }
 }
 ```
 
 ---
 
-### 1.3 Send OTP
+### 1.4 Resend OTP
 * **Method**: `POST`
-* **URL**: `/api/auth/send-otp` (or `/api/customer/send-otp`)
-* **Auth**: Public
-
-#### Request Body
+* **URL**: `/api/auth/resend-otp` (or `/api/customer/resend-otp`)
+* **Request Body**:
 ```json
 {
-  "phone": "9876543210"
+  "phone": "9876543210",
+  "type": "register"
 }
 ```
+*(For login resend, omit `type` or pass `"type": "login"`)*
 
 #### Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "OTP sent successfully to 9876543210.",
+  "message": "OTP resent to your WhatsApp and email.",
+  "phone": "9876543210",
   "otp_debug": "123456"
 }
 ```
 
 ---
 
-### 1.4 Verify OTP
+### 1.5 Verify OTP (Standalone Alternative)
 * **Method**: `POST`
 * **URL**: `/api/auth/verify-otp` (or `/api/customer/verify-otp`)
 * **Auth**: Public
@@ -138,22 +195,29 @@
   "otp": "123456"
 }
 ```
+*(Or with email: `{"email": "rahul@example.com", "otp": "123456"}`)*
 
 #### Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Phone verified successfully.",
+  "message": "OTP verified. Login successful!",
+  "token": "a1b2c3d4e5f6...",
   "data": {
-    "token": "a1b2c3d4e5f6...",
-    "user_id": 42
+    "id": 42,
+    "name": "Rahul Sharma",
+    "phone": "9876543210",
+    "email": "rahul@example.com",
+    "referral_code": "NEX-987654",
+    "wallet_balance": 0.00,
+    "status": "active"
   }
 }
 ```
 
 ---
 
-### 1.5 Get Customer Profile
+### 1.6 Get Customer Profile
 * **Method**: `GET`
 * **URL**: `/api/user/profile` (or `/api/customer/profile`)
 * **Auth**: Required (`customer.auth`)
@@ -177,7 +241,7 @@
 
 ---
 
-### 1.6 Update Profile
+### 1.7 Update Profile
 * **Method**: `PUT` or `POST`
 * **URL**: `/api/user/profile` (or `/api/customer/update-profile`)
 * **Auth**: Required (`customer.auth`)
@@ -205,7 +269,7 @@
 
 ---
 
-### 1.7 Customer Logout
+### 1.8 Customer Logout
 * **Method**: `POST`
 * **URL**: `/api/auth/logout` (or `/api/customer/logout`, `/api/logout`)
 * **Auth**: Required (`customer.auth` or `Authorization: Bearer <api_token>`)

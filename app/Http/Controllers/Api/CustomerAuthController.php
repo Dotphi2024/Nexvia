@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CustomerAuthController extends Controller
@@ -38,6 +39,7 @@ class CustomerAuthController extends Controller
             'phone'          => 'required|digits:10|unique:users,phone',
             'email'          => 'nullable|email|max:255|unique:users,email',
             'password'       => 'nullable|string',
+            'otp'            => 'required|digits:6',
             'fcm_token'      => 'nullable|string',
             'referral_code'  => 'nullable|string',
             'referred_by'    => 'nullable|string',
@@ -47,6 +49,8 @@ class CustomerAuthController extends Controller
             'terms_accepted' => 'nullable|boolean',
             'terms_version'  => 'nullable|string|max:20',
         ], [
+            'otp.required'   => 'Verification OTP is required to register.',
+            'otp.digits'     => 'OTP must be exactly 6 digits.',
             'name.required'  => 'Full name (fullName) is required.',
             'phone.required' => 'Phone number is required.',
             'phone.digits'   => 'Phone number must be exactly 10 digits.',
@@ -57,8 +61,32 @@ class CustomerAuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Validation error',
+                'message' => $validator->errors()->first(),
                 'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        // Verify registration OTP
+        $phone = trim($request->phone);
+        $cachedData = Cache::get('reg_otp_' . $phone);
+        $submittedOtp = trim((string)$request->otp);
+
+        $validOtp = false;
+        if ($cachedData) {
+            $expectedOtp = is_array($cachedData) ? ($cachedData['otp'] ?? null) : $cachedData;
+            if ($expectedOtp && (string)$expectedOtp === $submittedOtp) {
+                $validOtp = true;
+                Cache::forget('reg_otp_' . $phone);
+            }
+        }
+        if (!$validOtp && config('app.debug') && $submittedOtp === '123456') {
+            $validOtp = true; // allow debug testing
+        }
+
+        if (!$validOtp) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invalid or expired OTP. Please click Resend OTP and try again.',
             ], 422);
         }
 
@@ -243,6 +271,50 @@ class CustomerAuthController extends Controller
                 $customer->save();
             }
 
+            // OTP Verification for Login
+            $submittedOtp = trim((string)($request->input('otp') ?? $request->input('otpCode') ?? ($trimmedJson['otp'] ?? ($trimmedJson['otpCode'] ?? ''))));
+
+            if (empty($submittedOtp)) {
+                // Generate and send OTP to registered mobile and email
+                $newOtp = $customer->generateOtp();
+                $this->sendOtpWhatsApp($customer->phone, $newOtp, $customer->name);
+                if (!empty($customer->email)) {
+                    try {
+                        $appName = config('mail.from.name', 'NEXVIA');
+                        Mail::raw("Hello {$customer->name},\n\nYour {$appName} login OTP is: {$newOtp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($customer, $appName) {
+                            $m->to($customer->email)
+                              ->subject("Your {$appName} Login OTP: {$customer->phone}");
+                        });
+                    } catch (\Throwable $e) {
+                        \Log::warning("Customer OTP email failed: " . $e->getMessage());
+                    }
+                }
+
+                return response()->json([
+                    'status'    => true,
+                    'otp_sent'  => true,
+                    'message'   => 'OTP sent to your registered mobile and email. Please enter the OTP to complete login.',
+                    'phone'     => $customer->phone,
+                    'email'     => $customer->email,
+                    'otp_debug' => config('app.debug') ? $newOtp : null,
+                ], 200);
+            }
+
+            // Verify submitted OTP
+            $validOtp = $customer->isOtpValid($submittedOtp);
+            if (!$validOtp && config('app.debug') && $submittedOtp === '123456') {
+                $validOtp = true;
+            }
+
+            if (!$validOtp) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Invalid or expired OTP. Please try again.',
+                ], 422);
+            }
+
+            $customer->markPhoneVerified();
+
             // Generate authentication token and return customer data directly
             $token = $customer->generateApiToken();
 
@@ -283,29 +355,86 @@ class CustomerAuthController extends Controller
 
     /**
      * POST /api/auth/send-otp
-     * Accepts: phone
+     * Accepts: phone, email (optional), type ('login' or 'register')
      */
     public function sendOtp(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'phone' => 'required|digits:10',
-        ]);
+        $type = strtolower(trim((string)$request->input('type', $request->input('purpose', 'login'))));
 
-        if ($validator->fails()) {
+        if ($type === 'register' || $type === 'registration') {
+            $validator = Validator::make($request->all(), [
+                'phone' => 'required|digits:10|unique:users,phone',
+                'email' => 'nullable|email|max:255|unique:users,email',
+            ], [
+                'phone.required' => 'Phone number is required.',
+                'phone.digits'   => 'Phone number must be exactly 10 digits.',
+                'phone.unique'   => 'This phone number is already registered. Please login instead.',
+                'email.unique'   => 'This email is already registered. Please login instead.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => $validator->errors()->first(),
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
+            $phone = trim($request->phone);
+            $email = $request->email ? strtolower(trim($request->email)) : null;
+            $name  = trim($request->input('name', $request->input('fullName', 'Valued Customer')));
+
+            $otp = (string) random_int(100000, 999999);
+            Cache::put('reg_otp_' . $phone, [
+                'otp'   => $otp,
+                'email' => $email,
+                'phone' => $phone,
+            ], now()->addMinutes(10));
+
+            $this->sendOtpWhatsApp($phone, $otp, $name);
+
+            if (!empty($email)) {
+                try {
+                    $appName = config('mail.from.name', 'NEXVIA');
+                    Mail::raw("Hello {$name},\n\nYour {$appName} registration OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($email, $appName) {
+                        $m->to($email)->subject("Your {$appName} Registration OTP");
+                    });
+                } catch (\Throwable $e) {
+                    \Log::warning("Registration OTP email failed: " . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'status'    => true,
+                'message'   => 'Registration OTP sent successfully to your mobile and email.',
+                'phone'     => $phone,
+                'email'     => $email,
+                'otp_debug' => config('app.debug') ? $otp : null,
+                'data'      => [
+                    'phone' => $phone,
+                    'otp'   => config('app.debug') ? $otp : null,
+                ],
+            ], 200);
+        }
+
+        // Login flow
+        $loginInput = trim($request->input('phone', $request->input('email', $request->input('login', ''))));
+        if (empty($loginInput)) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors(),
+                'message' => 'Phone number or email is required.',
             ], 422);
         }
 
         try {
-            $customer = Customer::where('phone', $request->phone)->first();
+            $customer = Customer::where('phone', $loginInput)
+                ->orWhere('email', strtolower($loginInput))
+                ->first();
 
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'No account found with this phone number.',
+                    'message' => 'No account found with this phone number or email. Please register first.',
                 ], 404);
             }
 
@@ -325,9 +454,9 @@ class CustomerAuthController extends Controller
 
             return response()->json([
                 'status'    => true,
-                'message'   => 'OTP sent successfully.',
+                'message'   => 'OTP sent successfully to your mobile and email.',
                 'phone'     => $customer->phone,
-                'otp'       => config('app.debug') ? $otp : null,
+                'email'     => $customer->email,
                 'otp_debug' => config('app.debug') ? $otp : null,
                 'data'      => [
                     'phone' => $customer->phone,
@@ -346,7 +475,7 @@ class CustomerAuthController extends Controller
 
     /**
      * POST /api/auth/verify-otp
-     * Accepts: phone, otpCode (or otp)
+     * Accepts: phone (or email), otpCode (or otp)
      */
     public function verifyOtp(Request $request)
     {
@@ -354,30 +483,44 @@ class CustomerAuthController extends Controller
         $request->merge(['otp' => $otp]);
 
         $validator = Validator::make($request->all(), [
-            'phone' => 'required|digits:10',
             'otp'   => 'required|digits:6',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Validation error',
+                'message' => '6-digit OTP code is required.',
                 'errors'  => $validator->errors(),
             ], 422);
         }
 
+        $loginInput = trim($request->input('phone') ?? $request->input('email') ?? $request->input('login') ?? '');
+        if (empty($loginInput)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Phone number or email is required.',
+            ], 422);
+        }
+
         try {
-            $customer = Customer::where('phone', $request->phone)->first();
+            $customer = Customer::where('phone', $loginInput)
+                ->orWhere('email', strtolower($loginInput))
+                ->first();
 
             if (!$customer) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'No account found with this phone number.',
+                    'message' => 'No account found with this phone number or email.',
                 ], 404);
             }
 
-            // Guard: OTP must be valid and not expired
-            if (!$customer->isOtpValid($request->otp)) {
+            $submittedOtp = trim((string)$request->otp);
+            $validOtp = $customer->isOtpValid($submittedOtp);
+            if (!$validOtp && config('app.debug') && $submittedOtp === '123456') {
+                $validOtp = true;
+            }
+
+            if (!$validOtp) {
                 return response()->json([
                     'status'  => false,
                     'message' => 'Invalid or expired OTP. Please request a new one.',
@@ -534,7 +677,47 @@ class CustomerAuthController extends Controller
         }
 
         try {
-            $customer = Customer::where('phone', $request->phone)->first();
+            $type = strtolower(trim((string)$request->input('type', $request->input('purpose', 'login'))));
+            $phone = trim($request->phone);
+
+            if ($type === 'register' || $type === 'registration') {
+                $cached = Cache::get('reg_otp_' . $phone);
+                $email = is_array($cached) ? ($cached['email'] ?? null) : null;
+                $name  = is_array($cached) ? ($cached['name'] ?? 'Valued Customer') : 'Valued Customer';
+
+                $otp = (string) random_int(100000, 999999);
+                Cache::put('reg_otp_' . $phone, [
+                    'otp'   => $otp,
+                    'email' => $email,
+                    'phone' => $phone,
+                ], now()->addMinutes(10));
+
+                $this->sendOtpWhatsApp($phone, $otp, $name);
+                if (!empty($email)) {
+                    try {
+                        $appName = config('mail.from.name', 'NEXVIA');
+                        Mail::raw("Hello {$name},\n\nYour resent {$appName} registration OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($email, $appName) {
+                            $m->to($email)->subject("Resent {$appName} Registration OTP");
+                        });
+                    } catch (\Throwable $e) {
+                        \Log::warning("Customer resend registration OTP email failed: " . $e->getMessage());
+                    }
+                }
+
+                return response()->json([
+                    'status'    => true,
+                    'message'   => 'Registration OTP resent successfully.',
+                    'phone'     => $phone,
+                    'email'     => $email,
+                    'otp_debug' => config('app.debug') ? $otp : null,
+                    'data'      => [
+                        'phone' => $phone,
+                        'otp'   => config('app.debug') ? $otp : null,
+                    ],
+                ]);
+            }
+
+            $customer = Customer::where('phone', $phone)->first();
 
             if (!$customer) {
                 return response()->json([
