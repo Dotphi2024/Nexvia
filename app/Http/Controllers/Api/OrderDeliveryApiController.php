@@ -12,6 +12,7 @@ use App\Models\Installation;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class OrderDeliveryApiController extends Controller
@@ -170,6 +171,21 @@ class OrderDeliveryApiController extends Controller
                 'tracking_number' => $trackingNumber,
                 'stage'           => 'order_confirmed',
             ]);
+
+            // Send order confirmation email via SMTP
+            $targetEmail = $user->email ?? null;
+            if (!empty($targetEmail)) {
+                try {
+                    $appName = config('mail.from.name', 'NEXVIA');
+                    $amtPaid = number_format(($order->payment_type === 'full_payment' ? $order->total_amount : $order->booking_amount), 2);
+                    Mail::raw("Dear {$order->customer_name},\n\nThank you for your order with {$appName}!\n\nOrder Number: {$order->order_number}\nTracking Number: {$delivery->tracking_number}\nAmount Paid: ₹{$amtPaid}\nShipping Address: {$order->shipping_address}, {$order->city}, {$order->state} - {$order->pincode}\n\nYou can track your delivery anytime using tracking number: {$delivery->tracking_number}.\n\nBest regards,\n{$appName} Team", function ($m) use ($targetEmail, $order, $appName) {
+                        $m->to($targetEmail)
+                          ->subject("{$appName} Order Confirmation - {$order->order_number}");
+                    });
+                } catch (\Throwable $e) {
+                    \Log::warning("Order confirmation email failed: " . $e->getMessage());
+                }
+            }
 
             return response()->json([
                 'status'  => true,

@@ -314,10 +314,10 @@
             <!-- Footer -->
             <div class="footer">
                 <p style="margin: 0 0 6px 0;">
-                    This official notification was sent by <strong>NEXVIA Operations</strong> via <strong>development@dotphi.com</strong>.
+                    This official notification was sent by <strong>NEXVIA Operations</strong> via <strong>{{ config('mail.from.address', 'nexviadls@gmail.com') }}</strong>.
                 </p>
                 <p style="margin: 0 0 6px 0;">
-                    Need help getting started? Reach out to our partner desk at <a href="mailto:development@dotphi.com">development@dotphi.com</a>.
+                    Need help getting started? Reach out to our partner desk at <a href="mailto:{{ config('mail.from.address', 'nexviadls@gmail.com') }}">{{ config('mail.from.address', 'nexviadls@gmail.com') }}</a>.
                 </p>
                 <p style="margin: 0; color: #94a3b8; font-size: 11px;">
                     &copy; {{ date('Y') }} NEXVIA™. All rights reserved.

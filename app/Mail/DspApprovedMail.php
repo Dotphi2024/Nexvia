@@ -33,10 +33,13 @@ class DspApprovedMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        $fromAddress = config('mail.from.address', env('MAIL_FROM_ADDRESS', 'nexviadls@gmail.com'));
+        $fromName = config('mail.from.name', env('MAIL_FROM_NAME', 'NEXVIA™ DSP Network'));
+
         return new Envelope(
-            from: new Address('development@dotphi.com', 'NEXVIA™ DSP Network'),
+            from: new Address($fromAddress, $fromName),
             replyTo: [
-                new Address('development@dotphi.com', 'NEXVIA™ Partner Support')
+                new Address($fromAddress, 'NEXVIA™ Partner Support')
             ],
             subject: 'Approved: Your NEXVIA™ DSP Partner Login & Portal Access Details (' . $this->dsp->application_number . ')',
         );

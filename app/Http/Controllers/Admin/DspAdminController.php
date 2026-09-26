@@ -196,9 +196,10 @@ class DspAdminController extends Controller
 
             // Send approval email with login details
             if (!empty($application->email)) {
+                $fromEmail = config('mail.from.address', 'nexviadls@gmail.com');
                 try {
                     Mail::to($application->email)->send(new DspApprovedMail($application, $plainPassword));
-                    $emailNotice = " Login credentials (Password: {$plainPassword}) were sent to {$application->email} from development@dotphi.com.";
+                    $emailNotice = " Login credentials (Password: {$plainPassword}) were sent to {$application->email} from {$fromEmail}.";
                 } catch (\Throwable $e) {
                     Log::error("Failed sending DSP approval email to {$application->email}: " . $e->getMessage());
                     $emailNotice = " (Note: Could not send email: " . $e->getMessage() . ". Generated password: {$plainPassword})";
@@ -241,9 +242,10 @@ class DspAdminController extends Controller
 
         $emailNotice = '';
         if (!empty($application->email)) {
+            $fromEmail = config('mail.from.address', 'nexviadls@gmail.com');
             try {
                 Mail::to($application->email)->send(new DspApprovedMail($application, $plainPassword));
-                $emailNotice = " and login details emailed to {$application->email} from development@dotphi.com";
+                $emailNotice = " and login details emailed to {$application->email} from {$fromEmail}";
             } catch (\Throwable $e) {
                 Log::error("Failed sending DSP password update email to {$application->email}: " . $e->getMessage());
                 $emailNotice = " (Email dispatch error: " . $e->getMessage() . ")";

@@ -168,10 +168,51 @@ class PageApiController extends Controller
     }
 
     /**
-     * GET /api/contact-us
+     * GET or POST /api/contact-us
      */
     public function contactUs(Request $request)
     {
+        if ($request->isMethod('post') && ($request->filled('message') || $request->filled('email') || $request->filled('name'))) {
+            $name    = trim($request->input('name', 'NEXVIA Visitor'));
+            $email   = trim($request->input('email', ''));
+            $phone   = trim($request->input('phone', 'N/A'));
+            $subject = trim($request->input('subject', 'General Inquiry'));
+            $message = trim($request->input('message', ''));
+
+            $adminEmail = config('mail.from.address', 'nexviadls@gmail.com');
+            $appName    = config('mail.from.name', 'NEXVIA');
+
+            // Send notification to admin
+            try {
+                \Illuminate\Support\Facades\Mail::raw("New Contact Us Inquiry Received!\n\nName: {$name}\nEmail: {$email}\nPhone: {$phone}\nSubject: {$subject}\n\nMessage:\n{$message}\n\nSubmitted at: " . now()->toDateTimeString(), function ($m) use ($adminEmail, $name, $subject, $email) {
+                    $m->to($adminEmail)
+                      ->subject("Contact Us Inquiry: {$subject} - {$name}");
+                    if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $m->replyTo($email, $name);
+                    }
+                });
+            } catch (\Throwable $e) {
+                \Log::warning("Contact Us admin email failed: " . $e->getMessage());
+            }
+
+            // Send auto-acknowledgement to sender if email provided
+            if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    \Illuminate\Support\Facades\Mail::raw("Dear {$name},\n\nThank you for contacting {$appName}!\n\nWe have received your message regarding \"{$subject}\" and our team will get back to you shortly.\n\nYour message:\n{$message}\n\nBest regards,\n{$appName} Support Team", function ($m) use ($email, $appName, $subject) {
+                        $m->to($email)
+                          ->subject("Thank you for contacting {$appName} - {$subject}");
+                    });
+                } catch (\Throwable $e) {
+                    \Log::warning("Contact Us auto-reply email failed: " . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Your message has been sent successfully. We will get back to you shortly!',
+            ], 200);
+        }
+
         return $this->show($request, 'contact-us');
     }
 }

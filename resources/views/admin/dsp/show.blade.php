@@ -83,7 +83,7 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark small">Partner Email (for Credential Dispatch)</label>
                             <input type="email" name="email" class="form-control" value="{{ $application->email }}" placeholder="e.g. partner@example.com">
-                            <span class="micro text-muted">Login credentials will be automatically emailed from <code>development@dotphi.com</code>.</span>
+                            <span class="micro text-muted">Login credentials will be automatically emailed from <code>{{ config('mail.from.address', 'nexviadls@gmail.com') }}</code>.</span>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark small">New Password *</label>
@@ -581,7 +581,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold text-dark">Partner Email (for Notification & Login Details)</label>
                         <input type="email" name="email" class="form-control" value="{{ $application->email }}" placeholder="Enter partner email (e.g. partner@example.com)">
-                        <span class="micro text-muted">Upon approval, login credentials and instructions are emailed from <code>development@dotphi.com</code> to this address.</span>
+                        <span class="micro text-muted">Upon approval, login credentials and instructions are emailed from <code>{{ config('mail.from.address', 'nexviadls@gmail.com') }}</code> to this address.</span>
                     </div>
 
                     <div class="mb-3">

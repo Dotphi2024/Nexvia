@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DspApplication;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class DspPublicController extends Controller
@@ -102,6 +103,31 @@ class DspPublicController extends Controller
             'signature_file'                   => $sigPath,
             'status'                           => 'pending',
         ]);
+
+        // Send acknowledgement email to applicant & notification to admin via SMTP
+        if (!empty($application->email)) {
+            try {
+                $appName = config('mail.from.name', 'NEXVIA');
+                Mail::raw("Dear {$application->applicant_name},\n\nThank you for submitting your application to become an Authorised Delivery & Service Partner (DSP) with {$appName}.\n\nApplication Number: {$application->application_number}\nBusiness Name: {$application->business_name}\nTerritory: {$application->preferred_territory_area} ({$application->district}, {$application->state})\n\nOur team is reviewing your application and documentation. You will receive updates shortly.\n\nBest regards,\n{$appName} Partner Operations", function ($m) use ($application, $appName) {
+                    $m->to($application->email)
+                      ->subject("{$appName} DSP Application Received - {$application->application_number}");
+                });
+            } catch (\Throwable $e) {
+                \Log::warning("DSP applicant email failed: " . $e->getMessage());
+            }
+        }
+
+        // Notify company admin inbox
+        try {
+            $adminEmail = config('mail.from.address', 'nexviadls@gmail.com');
+            $appName = config('mail.from.name', 'NEXVIA');
+            Mail::raw("New DSP Application Received!\n\nApplication Number: {$application->application_number}\nApplicant: {$application->applicant_name}\nBusiness: {$application->business_name}\nMobile: {$application->mobile}\nEmail: " . ($application->email ?: 'N/A') . "\nDistrict: {$application->district}, {$application->state}\nTerritory: {$application->preferred_territory_area}\n\nPlease review this application in the admin portal.", function ($m) use ($adminEmail, $application, $appName) {
+                $m->to($adminEmail)
+                  ->subject("New DSP Partner Application - {$application->application_number} ({$application->applicant_name})");
+            });
+        } catch (\Throwable $e) {
+            \Log::warning("Admin DSP notification email failed: " . $e->getMessage());
+        }
 
         return redirect()->route('dsp.success', ['application' => $application->application_number]);
     }
