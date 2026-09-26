@@ -56,6 +56,10 @@ Route::prefix('dsp')->middleware('auth:dsp')->group(function () {
     Route::post('/wallet/redeem', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'requestPayout'])->name('dsp.wallet.redeem');
     Route::get('/profile', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'profile'])->name('dsp.profile');
     Route::post('/profile/update', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'updateProfile'])->name('dsp.profile.update');
+    // DSP Service & Problem Requests
+    Route::get('/service-requests', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'serviceRequests'])->name('dsp.service_requests.index');
+    Route::get('/service-requests/{id}', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'serviceRequestDetail'])->name('dsp.service_requests.show');
+    Route::post('/service-requests/{id}/status', [\App\Http\Controllers\Dsp\DspDashboardController::class, 'updateServiceRequestStatus'])->name('dsp.service_requests.status');
 });
 
 // Booking Checkout & Receipt Web Routes

@@ -8,6 +8,7 @@ use App\Models\Delivery;
 use App\Models\Booking;
 use App\Models\DspWalletTransaction;
 use App\Models\DspPayoutRequest;
+use App\Models\ServiceRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -53,6 +54,13 @@ class DspDashboardController extends Controller
 
         $recentTransactions = $dsp->walletTransactions()->take(5)->get();
 
+        // Service & problem requests assigned to this DSP
+        $serviceRequestsQuery = ServiceRequest::where('dsp_id', $dsp->id);
+        $totalServiceRequests = (clone $serviceRequestsQuery)->count();
+        $pendingAttentionServiceRequests = (clone $serviceRequestsQuery)->where('is_attended', false)->where('status', '!=', 'resolved')->count();
+        $attendedServiceRequests = (clone $serviceRequestsQuery)->where('is_attended', true)->count();
+        $recentServiceRequests = (clone $serviceRequestsQuery)->latest()->take(5)->get();
+
         return view('dsp.portal.dashboard', compact(
             'dsp',
             'totalDeliveries',
@@ -60,7 +68,11 @@ class DspDashboardController extends Controller
             'outForDeliveryCount',
             'deliveredCount',
             'recentDeliveries',
-            'recentTransactions'
+            'recentTransactions',
+            'totalServiceRequests',
+            'pendingAttentionServiceRequests',
+            'attendedServiceRequests',
+            'recentServiceRequests'
         ));
     }
 
@@ -336,5 +348,130 @@ class DspDashboardController extends Controller
         $dsp->save();
 
         return back()->with('success', 'Profile and payout bank settings updated successfully.');
+    }
+
+    /**
+     * List all service / problem tickets allocated to this DSP
+     */
+    public function serviceRequests(Request $request)
+    {
+        $dsp = $this->getDsp();
+
+        $query = ServiceRequest::where('dsp_id', $dsp->id)->with(['user', 'booking.product']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('is_attended')) {
+            $isAttended = filter_var($request->is_attended, FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_attended', $isAttended);
+        }
+
+        if ($request->filled('search')) {
+            $s = trim($request->search);
+            $query->where(function ($q) use ($s) {
+                $q->where('ticket_number', 'like', "%{$s}%")
+                  ->orWhere('subject', 'like', "%{$s}%")
+                  ->orWhere('customer_name', 'like', "%{$s}%")
+                  ->orWhere('customer_phone', 'like', "%{$s}%")
+                  ->orWhere('city', 'like', "%{$s}%")
+                  ->orWhere('pincode', 'like', "%{$s}%");
+            });
+        }
+
+        $tickets = $query->orderBy('id', 'desc')->paginate(15)->withQueryString();
+
+        $stats = [
+            'total'             => ServiceRequest::where('dsp_id', $dsp->id)->count(),
+            'attended'          => ServiceRequest::where('dsp_id', $dsp->id)->where('is_attended', true)->count(),
+            'pending_attention' => ServiceRequest::where('dsp_id', $dsp->id)->where('is_attended', false)->where('status', '!=', 'resolved')->count(),
+            'resolved'          => ServiceRequest::where('dsp_id', $dsp->id)->where('status', 'resolved')->count(),
+        ];
+
+        $requests = $tickets;
+
+        return view('dsp.portal.service_requests.index', compact('dsp', 'tickets', 'requests', 'stats'));
+    }
+
+    /**
+     * Single service ticket view for DSP
+     */
+    public function serviceRequestDetail($id)
+    {
+        $dsp = $this->getDsp();
+        $ticket = ServiceRequest::where('dsp_id', $dsp->id)
+            ->with(['user', 'booking.product'])
+            ->findOrFail($id);
+
+        $serviceRequest = $ticket;
+
+        return view('dsp.portal.service_requests.show', compact('dsp', 'ticket', 'serviceRequest'));
+    }
+
+    /**
+     * DSP updates attendance or resolution status
+     */
+    public function updateServiceRequestStatus(Request $request, $id)
+    {
+        $dsp = $this->getDsp();
+        $ticket = ServiceRequest::where('dsp_id', $dsp->id)->findOrFail($id);
+
+        $request->validate([
+            'status'            => 'required|string|in:open,attended,in_progress,resolved,cancelled',
+            'is_attended'       => 'nullable|boolean',
+            'attended_by_name'  => 'nullable|string|max:255',
+            'attended_by_phone' => 'nullable|string|max:20',
+            'dsp_notes'         => 'nullable|string|max:2000',
+            'resolution_notes'  => 'nullable|string|max:2000',
+            'resolution_proof'  => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
+        ]);
+
+        $newStatus = $request->status;
+        $ticket->status = $newStatus;
+
+        if ($request->has('is_attended')) {
+            $ticket->is_attended = (bool) $request->is_attended;
+            if ($ticket->is_attended && !$ticket->attended_at) {
+                $ticket->attended_at = now();
+            }
+        } elseif (in_array($newStatus, ['attended', 'in_progress', 'resolved'])) {
+            $ticket->is_attended = true;
+            if (!$ticket->attended_at) {
+                $ticket->attended_at = now();
+            }
+        }
+
+        if ($request->filled('attended_by_name')) {
+            $ticket->attended_by_name = $request->attended_by_name;
+        }
+        if ($request->filled('attended_by_phone')) {
+            $ticket->attended_by_phone = $request->attended_by_phone;
+        }
+        if ($request->filled('dsp_notes')) {
+            $ticket->dsp_notes = $request->dsp_notes;
+        }
+
+        if ($newStatus === 'resolved') {
+            $ticket->resolved_at = now();
+            if ($request->filled('resolution_notes')) {
+                $ticket->resolution_notes = $request->resolution_notes;
+            }
+
+            if ($request->hasFile('resolution_proof')) {
+                $destination = public_path('uploads/service_attachments');
+                if (!file_exists($destination)) {
+                    mkdir($destination, 0755, true);
+                }
+                $f = $request->file('resolution_proof');
+                $name = 'res_proof_' . $ticket->ticket_number . '_' . time() . '.' . $f->getClientOriginalExtension();
+                $f->move($destination, $name);
+                $ticket->resolution_proof = 'uploads/service_attachments/' . $name;
+            }
+        }
+
+        $ticket->save();
+
+        return back()->with('success', "Service ticket #{$ticket->ticket_number} status updated successfully.");
     }
 }

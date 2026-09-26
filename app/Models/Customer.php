@@ -143,6 +143,11 @@ class Customer extends Authenticatable
         return $this->hasMany(UserAddress::class, 'user_id');
     }
 
+    public function serviceRequests()
+    {
+        return $this->hasMany(ServiceRequest::class, 'user_id');
+    }
+
     public function selfDealerWallet()
     {
         return $this->hasOne(SelfDealerWallet::class, 'user_id');

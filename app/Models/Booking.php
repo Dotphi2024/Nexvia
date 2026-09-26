@@ -12,6 +12,11 @@ class Booking extends Model
 
     protected $fillable = [
         'booking_number',
+        'is_offline',
+        'purchase_channel',
+        'offline_payment_method',
+        'offline_payment_ref',
+        'offline_notes',
         'user_id',
         'dsp_id',
         'product_id',
@@ -48,6 +53,7 @@ class Booking extends Model
     ];
 
     protected $casts = [
+        'is_offline' => 'boolean',
         'booking_date' => 'date',
         'balance_due_date' => 'date',
         'cancelled_at' => 'datetime',

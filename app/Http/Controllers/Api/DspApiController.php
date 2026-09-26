@@ -10,6 +10,7 @@ use App\Models\Customer;
 use App\Models\UserAddress;
 use App\Models\DspWalletTransaction;
 use App\Models\DspPayoutRequest;
+use App\Models\ServiceRequest;
 use App\Services\DspMatchingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -1023,6 +1024,212 @@ class DspApiController extends Controller
             'business_name'      => $app->business_name,
             'status'             => $app->status,
             'applied_at'         => $app->created_at->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * GET /api/dsp/service-requests
+     * List all service / problem requests allocated to this DSP with attendance & resolution tracking.
+     */
+    public function serviceRequests(Request $request)
+    {
+        $dsp = $this->resolveDsp($request);
+        if (!$dsp) {
+            return response()->json(['status' => false, 'message' => 'Unauthenticated DSP Partner.'], 401);
+        }
+
+        $query = ServiceRequest::where('dsp_id', $dsp->id)->with(['user', 'booking.product']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('is_attended')) {
+            $isAttended = filter_var($request->is_attended, FILTER_VALIDATE_BOOLEAN);
+            $query->where('is_attended', $isAttended);
+        }
+
+        if ($request->filled('search')) {
+            $s = trim($request->search);
+            $query->where(function ($q) use ($s) {
+                $q->where('ticket_number', 'like', "%{$s}%")
+                  ->orWhere('subject', 'like', "%{$s}%")
+                  ->orWhere('customer_name', 'like', "%{$s}%")
+                  ->orWhere('customer_phone', 'like', "%{$s}%")
+                  ->orWhere('city', 'like', "%{$s}%")
+                  ->orWhere('pincode', 'like', "%{$s}%");
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 20);
+        $tickets = $query->orderBy('id', 'desc')->paginate($perPage);
+
+        $stats = [
+            'total_assigned'    => ServiceRequest::where('dsp_id', $dsp->id)->count(),
+            'attended_count'    => ServiceRequest::where('dsp_id', $dsp->id)->where('is_attended', true)->count(),
+            'pending_attention' => ServiceRequest::where('dsp_id', $dsp->id)->where('is_attended', false)->where('status', '!=', 'resolved')->count(),
+            'resolved_count'    => ServiceRequest::where('dsp_id', $dsp->id)->where('status', 'resolved')->count(),
+        ];
+
+        return response()->json([
+            'status' => true,
+            'stats'  => $stats,
+            'data'   => $tickets->items(),
+            'meta'   => [
+                'current_page' => $tickets->currentPage(),
+                'last_page'    => $tickets->lastPage(),
+                'total'        => $tickets->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/dsp/service-requests/{id}
+     * Get details of a single service ticket assigned to this DSP.
+     */
+    public function serviceRequestDetail(Request $request, $id)
+    {
+        $dsp = $this->resolveDsp($request);
+        if (!$dsp) {
+            return response()->json(['status' => false, 'message' => 'Unauthenticated DSP Partner.'], 401);
+        }
+
+        $ticket = ServiceRequest::where('dsp_id', $dsp->id)
+            ->with(['user', 'booking.product'])
+            ->where(function ($q) use ($id) {
+                if (is_numeric($id)) {
+                    $q->where('id', $id);
+                } else {
+                    $q->where('ticket_number', $id);
+                }
+            })
+            ->first();
+
+        if (!$ticket) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Service request not found or not allocated to your DSP account.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data'   => $ticket,
+        ]);
+    }
+
+    /**
+     * POST /api/dsp/service-requests/{id}/status
+     * DSP updates problem attendance and resolution status.
+     */
+    public function updateServiceRequestStatus(Request $request, $id)
+    {
+        $dsp = $this->resolveDsp($request);
+        if (!$dsp) {
+            return response()->json(['status' => false, 'message' => 'Unauthenticated DSP Partner.'], 401);
+        }
+
+        $ticket = ServiceRequest::where('dsp_id', $dsp->id)
+            ->where(function ($q) use ($id) {
+                if (is_numeric($id)) {
+                    $q->where('id', $id);
+                } else {
+                    $q->where('ticket_number', $id);
+                }
+            })
+            ->first();
+
+        if (!$ticket) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Service request not found or not allocated to your account.',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status'            => 'nullable|string|in:open,attended,in_progress,resolved,cancelled',
+            'is_attended'       => 'nullable|boolean',
+            'attended_by_name'  => 'nullable|string|max:255',
+            'attended_by_phone' => 'nullable|string|max:20',
+            'dsp_notes'         => 'nullable|string|max:2000',
+            'resolution_notes'  => 'nullable|string|max:2000',
+            'resolution_proof'  => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Validation error',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $newStatus = $request->input('status', $ticket->status);
+        $ticket->status = $newStatus;
+
+        // If explicitly set, or status indicates attention
+        if ($request->has('is_attended')) {
+            $ticket->is_attended = filter_var($request->is_attended, FILTER_VALIDATE_BOOLEAN);
+            if ($ticket->is_attended && !$ticket->attended_at) {
+                $ticket->attended_at = now();
+            }
+        } elseif (in_array($newStatus, ['attended', 'in_progress', 'resolved'])) {
+            $ticket->is_attended = true;
+            if (!$ticket->attended_at) {
+                $ticket->attended_at = now();
+            }
+        }
+
+        if ($request->filled('attended_by_name')) {
+            $ticket->attended_by_name = $request->attended_by_name;
+        }
+        if ($request->filled('attended_by_phone')) {
+            $ticket->attended_by_phone = $request->attended_by_phone;
+        }
+        if ($request->filled('dsp_notes')) {
+            $ticket->dsp_notes = $request->dsp_notes;
+        }
+
+        // If marked resolved
+        if ($newStatus === 'resolved') {
+            $ticket->resolved_at = now();
+            if ($request->filled('resolution_notes')) {
+                $ticket->resolution_notes = $request->resolution_notes;
+            }
+
+            if ($request->hasFile('resolution_proof')) {
+                $destination = public_path('uploads/service_attachments');
+                if (!file_exists($destination)) {
+                    mkdir($destination, 0755, true);
+                }
+                $f = $request->file('resolution_proof');
+                $name = 'res_proof_' . $ticket->ticket_number . '_' . time() . '.' . $f->getClientOriginalExtension();
+                $f->move($destination, $name);
+                $ticket->resolution_proof = 'uploads/service_attachments/' . $name;
+            }
+        }
+
+        $ticket->save();
+
+        return response()->json([
+            'status'  => true,
+            'success' => true,
+            'message' => "Service ticket #{$ticket->ticket_number} updated successfully.",
+            'data'    => [
+                'id'            => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'status'        => $ticket->status,
+                'attendance'    => [
+                    'is_attended'       => (bool)$ticket->is_attended,
+                    'attended_at'       => $ticket->attended_at?->toIso8601String(),
+                    'attended_by_name'  => $ticket->attended_by_name,
+                    'attended_by_phone' => $ticket->attended_by_phone,
+                ],
+                'dsp_notes'        => $ticket->dsp_notes,
+                'resolved_at'      => $ticket->resolved_at?->toIso8601String(),
+                'resolution_notes' => $ticket->resolution_notes,
+                'resolution_proof' => $ticket->resolution_proof,
+            ],
         ]);
     }
 }

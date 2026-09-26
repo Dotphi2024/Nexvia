@@ -95,11 +95,20 @@
                <li class="menu-title">Bookings</li>
 
                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.bookings.*') ? 'active' : '' }}" href="{{ route('admin.bookings.index') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.bookings.index') ? 'active' : '' }}" href="{{ route('admin.bookings.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:ticket-outline"></iconify-icon>
                          </span>
-                         <span class="nav-text">Bookings</span>
+                         <span class="nav-text">All Bookings</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.bookings.create') ? 'active' : '' }}" href="{{ route('admin.bookings.create') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:cart-plus-bold"></iconify-icon>
+                         </span>
+                         <span class="nav-text">+ New Offline Sale</span>
                     </a>
                </li>
 

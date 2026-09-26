@@ -245,4 +245,9 @@ class DspApplication extends Model implements AuthenticatableContract
             default        => ['class' => 'bg-info text-dark', 'text' => 'Pending'],
         };
     }
+
+    public function serviceRequests()
+    {
+        return $this->hasMany(ServiceRequest::class, 'dsp_id');
+    }
 }

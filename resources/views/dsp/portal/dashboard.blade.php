@@ -162,6 +162,91 @@
                 </div>
             @endif
         </div>
+
+        <!-- Service & Problem Requests in Territory -->
+        <div class="card-dsp p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">
+                        <iconify-icon icon="solar:wrench-bold" class="text-primary align-middle me-1"></iconify-icon>
+                        Assigned Service & Problem Requests
+                    </h5>
+                    <p class="micro text-muted mb-0">Customer warranty claims and service tickets in your territory</p>
+                </div>
+                <a href="{{ route('dsp.service_requests.index') }}" class="btn btn-outline-primary btn-sm fw-bold">View All ({{ $totalServiceRequests }})</a>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-sm-4">
+                    <div class="bg-light p-2 rounded-3 text-center border">
+                        <span class="micro text-muted d-block">Pending Attention</span>
+                        <strong class="fs-6 text-danger">{{ $pendingAttentionServiceRequests }}</strong>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="bg-light p-2 rounded-3 text-center border">
+                        <span class="micro text-muted d-block">Attended</span>
+                        <strong class="fs-6 text-success">{{ $attendedServiceRequests }}</strong>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="bg-light p-2 rounded-3 text-center border">
+                        <span class="micro text-muted d-block">Total Assigned</span>
+                        <strong class="fs-6 text-dark">{{ $totalServiceRequests }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            @if($recentServiceRequests->count() > 0)
+                <div class="table-responsive">
+                    <table class="table table-dsp align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Ticket</th>
+                                <th>Customer & PIN</th>
+                                <th>Attendance</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($recentServiceRequests as $sr)
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary-subtle text-primary font-monospace fw-bold">#{{ $sr->ticket_number }}</span>
+                                        <div class="micro text-muted">{{ Str::limit($sr->subject, 25) }}</div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-dark d-block fs-13">{{ $sr->customer_name ?: ($sr->user->name ?? 'Customer') }}</strong>
+                                        <span class="micro text-muted">PIN: {{ $sr->pincode ?: 'N/A' }}</span>
+                                    </td>
+                                    <td>
+                                        @if($sr->is_attended)
+                                            <span class="badge bg-success-subtle text-success micro fw-bold">ATTENDED</span>
+                                        @else
+                                            <span class="badge bg-danger-subtle text-danger micro fw-bold">PENDING</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border micro">{{ ucfirst($sr->status) }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ route('dsp.service_requests.show', $sr->id) }}" class="btn btn-sm btn-light border fw-semibold">
+                                            Attend
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-4 text-muted">
+                    <iconify-icon icon="solar:shield-check-bold" class="fs-2 text-success opacity-75 mb-1"></iconify-icon>
+                    <p class="micro mb-0">No open service requests in your territory right now.</p>
+                </div>
+            @endif
+        </div>
     </div>
 
     <!-- 5% Earnings & Wallet Card -->

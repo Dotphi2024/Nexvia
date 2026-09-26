@@ -23,6 +23,7 @@
 12. [CMS Dynamic Pages, Policies & Points](#12-cms-dynamic-pages-policies--points)
 13. [Authorised Delivery & Service Partner (DSP) Ecosystem](#13-authorised-delivery--service-partner-dsp-ecosystem)
 14. [DLS Agro & Farm Equipment APIs](#14-dls-agro--farm-equipment-apis)
+15. [DSP Service & Problem Requests Management (Attendance, Location Routing & Resolution)](#15-dsp-service--problem-requests-management-attendance-location-routing--resolution)
 
 ---
 
@@ -1839,7 +1840,177 @@ Authorised Delivery & Service Partners (DSP) are NEXVIA's local territory hubs r
 
 ---
 
-### 13.13 DSP Logout
+### 13.13 List Assigned Service & Problem Requests
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/service-requests`
+* **Auth**: Required (`dsp.auth` — `Bearer <dsp_api_token>` or `token`)
+* **Query Parameters**:
+  * `attended`: `all`, `yes` (attended by partner/tech), `no` (pending partner attention)
+  * `status`: `all`, `open`, `attended`, `in_progress`, `resolved`, `cancelled`
+  * `search`: Search by ticket number, customer name, mobile, address, or PIN
+  * `per_page`: Number of records per page (default: `20`)
+  * `page`: Page number
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "stats": {
+    "total_assigned": 5,
+    "attended_count": 3,
+    "pending_attention": 2,
+    "resolved_count": 1
+  },
+  "data": [
+    {
+      "id": 15,
+      "ticket_number": "TKT-2026-70747",
+      "customer_name": "Rohan Sharma",
+      "customer_phone": "9822113355",
+      "address": "Plot 42, Anand Nagar, Gangapur Road",
+      "pincode": "422001",
+      "city": "Nashik",
+      "state": "Maharashtra",
+      "subject": "Vehicle display not turning on",
+      "service_type": "breakdown",
+      "priority": "high",
+      "status": "open",
+      "attendance": {
+        "is_attended": false,
+        "attended_at": null,
+        "attended_by_name": null,
+        "attended_by_phone": null
+      },
+      "dsp_notes": null,
+      "created_at": "2026-09-26T05:20:00+00:00"
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "per_page": 20,
+    "current_page": 1,
+    "last_page": 1
+  }
+}
+```
+
+---
+
+### 13.14 View Service Request Details
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/service-requests/{id}`
+* **Auth**: Required (`dsp.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "data": {
+    "id": 15,
+    "ticket_number": "TKT-2026-70747",
+    "customer": {
+      "name": "Rohan Sharma",
+      "phone": "9822113355",
+      "address": "Plot 42, Anand Nagar, Gangapur Road",
+      "pincode": "422001",
+      "city": "Nashik",
+      "state": "Maharashtra",
+      "maps_url": "https://maps.google.com/?q=Plot+42%2C+Anand+Nagar%2C+Gangapur+Road%2C+Nashik+-+422001"
+    },
+    "issue": {
+      "subject": "Vehicle display not turning on",
+      "service_type": "breakdown",
+      "priority": "high",
+      "details": "Turned key on this morning, display is completely blank. Checked ignition switch.",
+      "attachments": [
+        "http://127.0.0.1:8000/uploads/service_attachments/photo_1727328000_abc123.jpg"
+      ]
+    },
+    "booking": {
+      "id": 42,
+      "booking_number": "BK-20260920-1122",
+      "product_name": "NEXVIA Storm E-Scooter (Midnight Black)"
+    },
+    "status": "open",
+    "attendance": {
+      "is_attended": false,
+      "attended_at": null,
+      "attended_by_name": null,
+      "attended_by_phone": null
+    },
+    "dsp_notes": null,
+    "resolution": {
+      "resolved_at": null,
+      "resolution_notes": null,
+      "resolution_proof_url": null
+    },
+    "created_at": "2026-09-26T05:20:00+00:00"
+  }
+}
+```
+
+---
+
+### 13.15 Update Attendance, Technician & Status
+* **Method**: `POST`
+* **URL**: `/api/dsp/service-requests/{id}/status`
+* **Auth**: Required (`dsp.auth`)
+
+> **Attendance & Resolution Tracking**:
+> When a DSP or technician visits or contacts the customer, send `is_attended: 1` or change status to `attended` / `in_progress`.
+> When closing the ticket, set `status: "resolved"` and optionally upload `resolution_proof` (image or signed service job card).
+
+#### Request Body (Multipart / JSON)
+```json
+{
+  "is_attended": 1,
+  "status": "in_progress",
+  "attended_by_name": "Vijay Patil (Senior Tech)",
+  "attended_by_phone": "9823000000",
+  "dsp_notes": "Technician arrived on site. Identified minor wiring harness disconnect.",
+  "resolution_notes": "Wiring harness reconnected and secured with heat shrink tubing.",
+  "resolution_proof": "(binary image file, optional)"
+}
+```
+
+#### Fields Description:
+* `is_attended` *(boolean, optional)*: `1` or `true` marks ticket attended by DSP partner.
+* `status` *(string, optional)*: `open`, `attended`, `in_progress`, `resolved`, `cancelled`.
+* `attended_by_name` *(string, optional)*: Name of attending technician/service engineer.
+* `attended_by_phone` *(string, optional)*: Contact mobile of attending technician.
+* `dsp_notes` *(string, optional)*: Territory progress notes or diagnosis observations.
+* `resolution_notes` *(string, optional)*: Description of service fix or part replacement when closing ticket.
+* `resolution_proof` *(file, optional)*: Photo of completed work or signed customer job sheet.
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "message": "Service ticket #TKT-2026-70747 updated successfully.",
+  "data": {
+    "id": 15,
+    "ticket_number": "TKT-2026-70747",
+    "status": "in_progress",
+    "attendance": {
+      "is_attended": true,
+      "attended_at": "2026-09-26T05:23:30+00:00",
+      "attended_by_name": "Vijay Patil (Senior Tech)",
+      "attended_by_phone": "9823000000"
+    },
+    "dsp_notes": "Technician arrived on site. Identified minor wiring harness disconnect.",
+    "resolved_at": null,
+    "resolution_notes": null,
+    "resolution_proof": null
+  }
+}
+```
+
+---
+
+### 13.16 DSP Logout
 * **Method**: `POST`
 * **URL**: `/api/dsp/logout`
 * **Auth**: Required (`dsp.auth`)
@@ -2129,6 +2300,366 @@ You can also filter the primary `/api/products` and `/api/categories` endpoints 
 * `GET /api/products?type=standard` (or `?type=regular`): Returns **only** non-agro / standard electronics and appliances.
 * `GET /api/categories?type=dls_farm_equipment`: Returns **only** DLS Agro categories.
 * `GET /api/categories?type=standard`: Returns **only** standard electronics / appliance categories.
+
+---
+
+## 15. DSP Service & Problem Requests Management (Attendance, Location Routing & Resolution)
+
+NEXVIA connects customer service and problem requests directly to regional Authorised Delivery & Service Partners (DSPs) based on customer territory and PIN code. DSPs handle doorstep deliveries, product servicing, warranty troubleshooting, and certified repair attendance.
+
+This section covers:
+- **Location-Based DSP Routing**: Customer complaints, breakdowns, or service tickets are automatically routed to the local DSP servicing that PIN code.
+- **Attendance Tracking**: DSPs maintain whether a technician has contacted or physically attended the request (`is_attended: true` with timestamp, technician name & phone).
+- **Resolution Proof**: DSPs upload resolution remarks and image proof (work photos, signed customer job sheet) when closing tickets.
+- **Unified Visibility**: Admins, DSPs, and Customers can track live attendance and progress at every stage.
+
+---
+
+### 15.1 Customer Submit Service / Problem Request (With DSP Auto-Allocation)
+* **Method**: `POST`
+* **URL**: `/api/customer/service-requests` (or `/api/customer/service-tickets`)
+* **Auth**: Required (`customer.auth` — `Bearer <api_token>` header or `token` parameter)
+
+#### Location-Based Routing Logic:
+1. The API inspects the provided `pincode`, `city`, and `state` (or retrieves them automatically from the associated `booking_id` or customer profile).
+2. It queries all approved Delivery & Service Partners (DSPs) to find the best match for that PIN code or district.
+3. If matched, the request is instantly allocated to that DSP with `is_attended: false` and `status: open`.
+4. If no local partner directly services the PIN code, the ticket is registered for Admin dispatch and regional hub assignment.
+
+#### Request Body (Multipart / JSON)
+```json
+{
+  "subject": "Vehicle display not turning on",
+  "service_type": "breakdown",
+  "priority": "high",
+  "details": "Turned key on this morning, display is completely blank. Checked ignition switch.",
+  "booking_id": 42,
+  "customer_name": "Rohan Sharma",
+  "customer_phone": "9822113355",
+  "address": "Plot 42, Anand Nagar, Gangapur Road",
+  "city": "Nashik",
+  "state": "Maharashtra",
+  "pincode": "422001",
+  "photo": "(binary image file, optional)",
+  "video": "(binary video file, optional)",
+  "invoice": "(binary document file, optional)"
+}
+```
+
+#### Fields Description:
+* `subject` *(string, required)*: Brief summary of the complaint or service request.
+* `service_type` *(string, required)*: Type of service requested (`breakdown`, `problem`, `repair`, `warranty`, `maintenance`, `installation`, `replacement`, `technical_support`, `complaint`, `other`).
+* `priority` *(string, optional)*: Priority level (`low`, `medium`, `high`, `urgent`). Default: `medium`.
+* `details` or `description` *(string, required)*: Detailed description of the problem or breakdown.
+* `pincode` *(string, optional)*: 6-digit Indian PIN code. Used for automatic DSP territory matching. If omitted, uses default address from customer profile.
+* `city`, `state`, `address` *(string, optional)*: Doorstep service location.
+* `booking_id` *(integer, optional)*: Associated vehicle/product booking ID.
+* `photo`, `video`, `invoice` *(files, optional)*: Issue photos, videos, or invoices.
+
+#### Response (`201 Created`)
+```json
+{
+  "status": true,
+  "success": true,
+  "message": "Service request submitted successfully. Allocated to Authorised DSP 'Patil Motors & Electronic Services' for PIN 422001.",
+  "data": {
+    "id": 15,
+    "ticket_number": "TKT-2026-70747",
+    "subject": "Vehicle display not turning on",
+    "service_type": "breakdown",
+    "priority": "high",
+    "status": "open",
+    "is_attended": false,
+    "location": {
+      "address": "Plot 42, Anand Nagar, Gangapur Road",
+      "pincode": "422001",
+      "city": "Nashik",
+      "state": "Maharashtra"
+    },
+    "allocated_dsp": {
+      "id": 1,
+      "business_name": "Patil Motors & Electronic Services",
+      "contact_name": "Suresh Patil",
+      "mobile": "9821098765",
+      "district": "Nashik",
+      "state": "Maharashtra"
+    },
+    "created_at": "2026-09-26 10:50:00"
+  }
+}
+```
+
+---
+
+### 15.2 Customer List Service Requests & Attendance Status
+* **Method**: `GET`
+* **URL**: `/api/customer/service-requests` (or `/api/customer/service-tickets`)
+* **Auth**: Required (`customer.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "data": [
+    {
+      "id": 15,
+      "ticket_number": "TKT-2026-70747",
+      "subject": "Vehicle display not turning on",
+      "service_type": "breakdown",
+      "priority": "high",
+      "status": "in_progress",
+      "is_attended": true,
+      "attended_at": "2026-09-26T05:23:30+00:00",
+      "technician_name": "Vijay Patil (Senior Tech)",
+      "technician_phone": "9823000000",
+      "allocated_dsp": {
+        "id": 1,
+        "business_name": "Patil Motors & Electronic Services",
+        "contact_name": "Suresh Patil",
+        "mobile": "9821098765"
+      },
+      "resolved_at": null,
+      "created_at": "2026-09-26T05:20:00+00:00"
+    }
+  ]
+}
+```
+
+---
+
+### 15.3 Customer View Single Service Request Detail
+* **Method**: `GET`
+* **URL**: `/api/customer/service-requests/{id}` (or `/api/customer/service-tickets/{id}`)
+* **Auth**: Required (`customer.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "data": {
+    "id": 15,
+    "ticket_number": "TKT-2026-70747",
+    "subject": "Vehicle display not turning on",
+    "service_type": "breakdown",
+    "priority": "high",
+    "status": "resolved",
+    "details": "Turned key on this morning, display is completely blank.",
+    "is_attended": true,
+    "attended_at": "2026-09-26T05:23:30+00:00",
+    "attended_by_name": "Vijay Patil (Senior Tech)",
+    "attended_by_phone": "9823000000",
+    "dsp_notes": "Technician arrived on site. Identified minor wiring harness disconnect.",
+    "resolved_at": "2026-09-26T06:15:00+00:00",
+    "resolution_notes": "Wiring harness reconnected and secured with heat shrink tubing.",
+    "resolution_proof_url": "http://127.0.0.1:8000/uploads/service_attachments/res_proof_15.jpg",
+    "allocated_dsp": {
+      "id": 1,
+      "business_name": "Patil Motors & Electronic Services",
+      "contact_name": "Suresh Patil",
+      "mobile": "9821098765",
+      "district": "Nashik"
+    }
+  }
+}
+```
+
+---
+
+### 15.4 Customer Lookup Local DSP for Pincode
+* **Method**: `GET`
+* **URL**: `/api/customer/dsp/lookup?pincode=422001`
+* **Auth**: Public or Customer (`customer.auth` optional)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "pincode": "422001",
+  "dsp_available": true,
+  "dsp": {
+    "id": 1,
+    "business_name": "Patil Motors & Electronic Services",
+    "contact_name": "Suresh Patil",
+    "mobile": "9821098765",
+    "district": "Nashik",
+    "state": "Maharashtra",
+    "serviced_pincodes": ["422001", "422002", "422003"]
+  }
+}
+```
+
+---
+
+### 15.5 DSP Partner List Assigned Requests & Live Summary Stats
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/service-requests`
+* **Auth**: Required (`dsp.auth` — `Bearer <dsp_api_token>` header or `token` parameter)
+* **Query Parameters**:
+  * `attended`: `all`, `yes` (attended by partner/tech), `no` (pending partner attention)
+  * `status`: `all`, `open`, `attended`, `in_progress`, `resolved`, `cancelled`
+  * `search`: Search by ticket number, customer name, mobile, address, or PIN
+  * `per_page`: Number of records per page (default: `20`)
+  * `page`: Page number
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "stats": {
+    "total_assigned": 5,
+    "attended_count": 3,
+    "pending_attention": 2,
+    "resolved_count": 1
+  },
+  "data": [
+    {
+      "id": 15,
+      "ticket_number": "TKT-2026-70747",
+      "customer_name": "Rohan Sharma",
+      "customer_phone": "9822113355",
+      "address": "Plot 42, Anand Nagar, Gangapur Road",
+      "pincode": "422001",
+      "city": "Nashik",
+      "state": "Maharashtra",
+      "subject": "Vehicle display not turning on",
+      "service_type": "breakdown",
+      "priority": "high",
+      "status": "open",
+      "attendance": {
+        "is_attended": false,
+        "attended_at": null,
+        "attended_by_name": null,
+        "attended_by_phone": null
+      },
+      "dsp_notes": null,
+      "created_at": "2026-09-26T05:20:00+00:00"
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "per_page": 20,
+    "current_page": 1,
+    "last_page": 1
+  }
+}
+```
+
+---
+
+### 15.6 DSP Partner View Request Details & Customer Location
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dsp/service-requests/{id}`
+* **Auth**: Required (`dsp.auth`)
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "data": {
+    "id": 15,
+    "ticket_number": "TKT-2026-70747",
+    "customer": {
+      "name": "Rohan Sharma",
+      "phone": "9822113355",
+      "address": "Plot 42, Anand Nagar, Gangapur Road",
+      "pincode": "422001",
+      "city": "Nashik",
+      "state": "Maharashtra",
+      "maps_url": "https://maps.google.com/?q=Plot+42%2C+Anand+Nagar%2C+Gangapur+Road%2C+Nashik+-+422001"
+    },
+    "issue": {
+      "subject": "Vehicle display not turning on",
+      "service_type": "breakdown",
+      "priority": "high",
+      "details": "Turned key on this morning, display is completely blank. Checked ignition switch.",
+      "attachments": [
+        "http://127.0.0.1:8000/uploads/service_attachments/photo_1727328000_abc123.jpg"
+      ]
+    },
+    "booking": {
+      "id": 42,
+      "booking_number": "BK-20260920-1122",
+      "product_name": "NEXVIA Storm E-Scooter (Midnight Black)"
+    },
+    "status": "open",
+    "attendance": {
+      "is_attended": false,
+      "attended_at": null,
+      "attended_by_name": null,
+      "attended_by_phone": null
+    },
+    "dsp_notes": null,
+    "resolution": {
+      "resolved_at": null,
+      "resolution_notes": null,
+      "resolution_proof_url": null
+    },
+    "created_at": "2026-09-26T05:20:00+00:00"
+  }
+}
+```
+
+---
+
+### 15.7 DSP Partner Update Attendance, Technician & Status
+* **Method**: `POST`
+* **URL**: `/api/dsp/service-requests/{id}/status`
+* **Auth**: Required (`dsp.auth`)
+
+> **Attendance & Resolution Tracking**:
+> When a DSP or technician visits or contacts the customer, send `is_attended: 1` or change status to `attended` / `in_progress`.
+> When closing the ticket, set `status: "resolved"` and upload `resolution_proof` (image or signed service job card).
+
+#### Request Body (Multipart / JSON)
+```json
+{
+  "is_attended": 1,
+  "status": "in_progress",
+  "attended_by_name": "Vijay Patil (Senior Tech)",
+  "attended_by_phone": "9823000000",
+  "dsp_notes": "Technician arrived on site. Identified minor wiring harness disconnect.",
+  "resolution_notes": "Wiring harness reconnected and secured with heat shrink tubing.",
+  "resolution_proof": "(binary image file, optional)"
+}
+```
+
+#### Fields Description:
+* `is_attended` *(boolean, optional)*: `1` or `true` marks ticket attended by DSP partner.
+* `status` *(string, optional)*: `open`, `attended`, `in_progress`, `resolved`, `cancelled`.
+* `attended_by_name` *(string, optional)*: Name of attending technician/service engineer.
+* `attended_by_phone` *(string, optional)*: Contact mobile of attending technician.
+* `dsp_notes` *(string, optional)*: Territory progress notes or diagnosis observations.
+* `resolution_notes` *(string, optional)*: Description of service fix or part replacement when closing ticket.
+* `resolution_proof` *(file, optional)*: Photo of completed work or signed customer job sheet.
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "success": true,
+  "message": "Service ticket #TKT-2026-70747 updated successfully.",
+  "data": {
+    "id": 15,
+    "ticket_number": "TKT-2026-70747",
+    "status": "in_progress",
+    "attendance": {
+      "is_attended": true,
+      "attended_at": "2026-09-26T05:23:30+00:00",
+      "attended_by_name": "Vijay Patil (Senior Tech)",
+      "attended_by_phone": "9823000000"
+    },
+    "dsp_notes": "Technician arrived on site. Identified minor wiring harness disconnect.",
+    "resolved_at": null,
+    "resolution_notes": null,
+    "resolution_proof": null
+  }
+}
+```
 
 ---
 

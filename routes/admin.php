@@ -66,8 +66,11 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
 
     // Bookings & 60-Day Balance Management
     Route::get('/bookings', [BookingAdminController::class, 'index'])->name('admin.bookings.index');
+    Route::get('/bookings/create', [BookingAdminController::class, 'create'])->name('admin.bookings.create');
+    Route::post('/bookings', [BookingAdminController::class, 'store'])->name('admin.bookings.store');
     Route::get('/bookings/{id}', [BookingAdminController::class, 'show'])->name('admin.bookings.show');
     Route::post('/bookings/{id}/status', [BookingAdminController::class, 'updateStatus'])->name('admin.bookings.update.status');
+    Route::post('/bookings/{id}/record-balance', [BookingAdminController::class, 'recordBalancePayment'])->name('admin.bookings.record_balance');
     Route::get('/transfers-audit', [BookingAdminController::class, 'transfers'])->name('admin.transfers.audit');
     Route::post('/transfers/{id}/approve', [BookingAdminController::class, 'approveTransfer'])->name('admin.transfers.approve');
     Route::post('/transfers/{id}/reject', [BookingAdminController::class, 'rejectTransfer'])->name('admin.transfers.reject');
@@ -79,6 +82,7 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     // Service & Warranty Requests
     Route::get('/service-requests', [ServiceRequestController::class, 'index'])->name('admin.service.requests.index');
     Route::post('/service-requests/{id}/status', [ServiceRequestController::class, 'updateStatus'])->name('admin.service.requests.status');
+    Route::post('/service-requests/{id}/assign-dsp', [ServiceRequestController::class, 'assignDsp'])->name('admin.service.requests.assign_dsp');
 
     // Customer Account & Address Management
     Route::get('/customers', [\App\Http\Controllers\Admin\CustomerAdminController::class, 'index'])->name('admin.customers.index');

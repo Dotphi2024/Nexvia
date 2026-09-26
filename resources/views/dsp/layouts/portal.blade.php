@@ -152,6 +152,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link-dsp {{ request()->routeIs('dsp.service_requests*') ? 'active' : '' }}" href="{{ route('dsp.service_requests.index') }}">
+                            <iconify-icon icon="solar:wrench-bold"></iconify-icon> Service Requests
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link-dsp {{ request()->routeIs('dsp.wallet') ? 'active' : '' }}" href="{{ route('dsp.wallet') }}">
                             <iconify-icon icon="solar:wallet-money-bold"></iconify-icon> 5% Earnings & Cash Wallet
                         </a>
@@ -228,7 +233,7 @@
                 </div>
             @endif
 
-            @if($errors->any())
+            @if(isset($errors) && $errors->any())
                 <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm border-0 mb-4" role="alert">
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <iconify-icon icon="solar:danger-triangle-bold" class="fs-4 text-danger"></iconify-icon>

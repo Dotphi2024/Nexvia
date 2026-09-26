@@ -152,6 +152,9 @@
                                             <a href="{{ route('admin.bookings.show', $booking->id) }}" class="fw-bold text-primary text-decoration-none">
                                                 {{ $booking->booking_number }}
                                             </a>
+                                            @if($booking->is_offline)
+                                                <span class="badge bg-success-subtle text-success micro ms-1">Offline</span>
+                                            @endif
                                         </td>
                                         <td>{{ $booking->created_at ? $booking->created_at->format('d M Y') : '—' }}</td>
                                         <td>₹{{ number_format($booking->total_amount, 2) }}</td>

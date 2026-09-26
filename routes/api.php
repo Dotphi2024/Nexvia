@@ -119,6 +119,11 @@ Route::middleware(['dsp.auth'])->prefix('dsp')->group(function () {
     Route::match(['get', 'post'], '/wallet',    [DspApiController::class, 'wallet']);
     Route::post('/wallet/redeem',              [DspApiController::class, 'requestPayout']);
     Route::match(['get', 'post'], '/wallet/payout-requests', [DspApiController::class, 'payoutRequests']);
+
+    // DSP Service & Problem Requests Assigned to this Partner
+    Route::match(['get', 'post'], '/service-requests',        [DspApiController::class, 'serviceRequests']);
+    Route::match(['get', 'post'], '/service-requests/{id}',   [DspApiController::class, 'serviceRequestDetail']);
+    Route::post('/service-requests/{id}/status',             [DspApiController::class, 'updateServiceRequestStatus']);
 });
 
 // Home Section Banners Public API (Home Index Page Sliders & Promos)
@@ -223,10 +228,15 @@ Route::prefix('customer')->group(function () {
         Route::post('/orders/checkout',                   [OrderDeliveryApiController::class, 'checkout']);
         Route::get('/deliveries/{trackingNumber}',        [OrderDeliveryApiController::class, 'trackDelivery']);
 
-        // Automatic Warranty & Service Ticket Routes
+        // Automatic Warranty & Service Ticket Routes (With Location-Based DSP Allocation & Attended Tracking)
         Route::get('/warranties',                         [WarrantyAndServiceApiController::class, 'warranties']);
         Route::post('/service-tickets',                   [WarrantyAndServiceApiController::class, 'createServiceTicket']);
         Route::get('/service-tickets',                    [WarrantyAndServiceApiController::class, 'listServiceTickets']);
+        Route::get('/service-tickets/{id}',               [WarrantyAndServiceApiController::class, 'showServiceTicket']);
+        Route::post('/service-requests',                  [WarrantyAndServiceApiController::class, 'createServiceTicket']);
+        Route::get('/service-requests',                   [WarrantyAndServiceApiController::class, 'listServiceTickets']);
+        Route::get('/service-requests/{id}',              [WarrantyAndServiceApiController::class, 'showServiceTicket']);
+        Route::match(['get', 'post'], '/dsp/lookup',      [WarrantyAndServiceApiController::class, 'lookupLocalDsp']);
         Route::post('/installations/schedule',            [WarrantyAndServiceApiController::class, 'scheduleInstallation']);
 
         // Self Dealer Ecosystem Endpoints (/api/customer/self-dealer/*)
