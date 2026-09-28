@@ -286,6 +286,74 @@
     "phone": "9876543210"
   }
 }
+---
+
+### 1.9 Live Mail Diagnostics & Test Email
+Use this endpoint to verify live SMTP configuration, test socket network connectivity, detect hosting port blocks, and send a test email with full error diagnostics.
+
+* **Method**: `GET` or `POST`
+* **URL**: `/api/test-email`
+* **Auth**: Public
+* **Query / Body Parameters (All Optional)**:
+  - `to` (string, optional): Target email address to receive test email (defaults to `nexviadls@gmail.com`).
+  - `mailer` (string, optional): Override mailer for this request (`smtp`, `sendmail`, `log`).
+  - `port` (integer, optional): Override port (`587`, `465`, `25`).
+  - `encryption` (string, optional): Override encryption (`tls`, `ssl`, `null`).
+
+#### Example Request:
+```http
+GET /api/test-email?to=nexviadls@gmail.com
+```
+*(Or in browser: `https://your-domain.com/api/test-email`)*
+
+#### Success Response (`200 OK`):
+```json
+{
+  "status": true,
+  "message": "Test email sent successfully to nexviadls@gmail.com in 1850ms!",
+  "recipient": "nexviadls@gmail.com",
+  "duration_ms": 1850.2,
+  "config": {
+    "default_mailer": "smtp",
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_encryption": "tls",
+    "smtp_username": "nexviadls@gmail.com",
+    "password_set": true,
+    "from_address": "nexviadls@gmail.com",
+    "from_name": "NEXVIA",
+    "queue_connection": "sync"
+  },
+  "network_checks": {
+    "resolved_ip": "142.250.150.108",
+    "port_587": { "connected": true, "error": null },
+    "port_465_ssl": { "connected": true, "error": null },
+    "local_port_25_exim": { "connected": true, "error": null }
+  },
+  "advice": "Email was accepted by the transport driver. Check recipient inbox (and spam/promotions folder)."
+}
+```
+
+#### Failure Response with Diagnostics (`500 Internal Server Error`):
+```json
+{
+  "status": false,
+  "message": "Failed to send test email.",
+  "error": "Connection could not be established with host \"smtp.gmail.com:587\": stream_socket_client(): Unable to connect to smtp.gmail.com:587 (Network is unreachable).",
+  "error_type": "Symfony\\Component\\Mailer\\Exception\\TransportException",
+  "config": {
+    "default_mailer": "smtp",
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_encryption": "tls"
+  },
+  "network_checks": {
+    "port_587": { "connected": false, "error": "Network is unreachable (101)" },
+    "port_465_ssl": { "connected": false, "error": "Network is unreachable (101)" },
+    "local_port_25_exim": { "connected": true, "error": null }
+  },
+  "advice": "Hosting firewall blocks outbound SMTP connection on this port. Try switching to port 465 (SSL) or use sendmail driver."
+}
 ```
 
 ---

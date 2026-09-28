@@ -61,6 +61,152 @@ Route::match(['get', 'post'], '/deploy.php', function (\Illuminate\Http\Request 
     ], 200);
 });
 
+// Live Mail Diagnostics & Test Email API Endpoint
+Route::match(['get', 'post'], '/test-email', function (\Illuminate\Http\Request $request) {
+    $to = trim($request->input('to', $request->query('to', config('mail.from.address', 'nexviadls@gmail.com'))));
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        return response()->json([
+            'status'  => false,
+            'message' => "Invalid recipient email address: '{$to}'",
+        ], 422);
+    }
+
+    // Optional dynamic overrides for debugging on live
+    if ($request->filled('mailer')) {
+        config(['mail.default' => $request->input('mailer')]);
+    }
+    if ($request->filled('host')) {
+        config(['mail.mailers.smtp.host' => $request->input('host')]);
+    }
+    if ($request->filled('port')) {
+        config(['mail.mailers.smtp.port' => (int) $request->input('port')]);
+    }
+    if ($request->filled('encryption')) {
+        $enc = $request->input('encryption');
+        config(['mail.mailers.smtp.encryption' => ($enc === 'none' || $enc === 'null') ? null : $enc]);
+    }
+
+    $currentMailer = config('mail.default');
+    $smtpHost      = config('mail.mailers.smtp.host');
+    $smtpPort      = (int) config('mail.mailers.smtp.port');
+    $smtpEnc       = config('mail.mailers.smtp.encryption');
+    $smtpUser      = config('mail.mailers.smtp.username');
+    $hasPassword   = !empty(config('mail.mailers.smtp.password'));
+    $fromAddress   = config('mail.from.address');
+    $fromName      = config('mail.from.name');
+    $queueConn     = config('queue.default');
+
+    // Network connectivity diagnostics
+    $resolvedIp = null;
+    $socket587 = ['connected' => false, 'error' => null];
+    $socket465 = ['connected' => false, 'error' => null];
+    $socketLocal25 = ['connected' => false, 'error' => null];
+
+    if ($smtpHost) {
+        $resolvedIp = @gethostbyname($smtpHost);
+    }
+
+    // Test port 587
+    $fp = @fsockopen($smtpHost ?: 'smtp.gmail.com', 587, $e, $m, 3);
+    if ($fp) {
+        $socket587 = ['connected' => true, 'error' => null];
+        fclose($fp);
+    } else {
+        $socket587 = ['connected' => false, 'error' => "{$m} ({$e})"];
+    }
+
+    // Test port 465
+    $fp = @fsockopen('ssl://' . ($smtpHost ?: 'smtp.gmail.com'), 465, $e, $m, 3);
+    if ($fp) {
+        $socket465 = ['connected' => true, 'error' => null];
+        fclose($fp);
+    } else {
+        $socket465 = ['connected' => false, 'error' => "{$m} ({$e})"];
+    }
+
+    // Test local port 25
+    $fp = @fsockopen('127.0.0.1', 25, $e, $m, 2);
+    if ($fp) {
+        $socketLocal25 = ['connected' => true, 'error' => null];
+        fclose($fp);
+    } else {
+        $socketLocal25 = ['connected' => false, 'error' => "{$m} ({$e})"];
+    }
+
+    $t0 = microtime(true);
+
+    try {
+        $timestamp = now()->toDateTimeString();
+        \Illuminate\Support\Facades\Mail::raw("Hello!\n\nThis is a live test email sent from NEXVIA at {$timestamp}.\n\nDiagnostics Information:\nMailer: {$currentMailer}\nHost: {$smtpHost}:{$smtpPort} ({$smtpEnc})\nFrom: {$fromAddress} ({$fromName})\nQueue: {$queueConn}\n\nIf you received this email, mail dispatch on this server is working perfectly!", function ($m) use ($to, $fromAddress, $fromName, $timestamp) {
+            $m->to($to)
+              ->subject("NEXVIA Live Email Diagnostic Test - {$timestamp}");
+        });
+
+        $durationMs = round((microtime(true) - $t0) * 1000, 2);
+
+        return response()->json([
+            'status'      => true,
+            'message'     => "Test email sent successfully to {$to} in {$durationMs}ms!",
+            'recipient'   => $to,
+            'duration_ms' => $durationMs,
+            'config'      => [
+                'default_mailer'   => $currentMailer,
+                'smtp_host'        => $smtpHost,
+                'smtp_port'        => $smtpPort,
+                'smtp_encryption'  => $smtpEnc,
+                'smtp_username'    => $smtpUser,
+                'password_set'     => $hasPassword,
+                'from_address'     => $fromAddress,
+                'from_name'        => $fromName,
+                'queue_connection' => $queueConn,
+            ],
+            'network_checks' => [
+                'resolved_ip'        => $resolvedIp,
+                'port_587'           => $socket587,
+                'port_465_ssl'       => $socket465,
+                'local_port_25_exim' => $socketLocal25,
+            ],
+            'advice' => 'Email was accepted by the transport driver. Check recipient inbox (and spam/promotions folder).',
+        ], 200);
+
+    } catch (\Throwable $e) {
+        $durationMs = round((microtime(true) - $t0) * 1000, 2);
+
+        $advice = 'Inspect the error message below.';
+        if (str_contains($e->getMessage(), 'Network is unreachable') || str_contains($e->getMessage(), 'Connection refused')) {
+            $advice = 'Hosting firewall blocks outbound SMTP connection on this port. Try switching to port 465 (SSL) or use sendmail driver.';
+        } elseif (str_contains($e->getMessage(), '535') || str_contains($e->getMessage(), 'Authentication')) {
+            $advice = 'Authentication failed. Check your MAIL_USERNAME and App Password in .env.';
+        }
+
+        return response()->json([
+            'status'      => false,
+            'message'     => 'Failed to send test email.',
+            'error'       => $e->getMessage(),
+            'error_type'  => get_class($e),
+            'duration_ms' => $durationMs,
+            'config'      => [
+                'default_mailer'   => $currentMailer,
+                'smtp_host'        => $smtpHost,
+                'smtp_port'        => $smtpPort,
+                'smtp_encryption'  => $smtpEnc,
+                'smtp_username'    => $smtpUser,
+                'password_set'     => $hasPassword,
+                'from_address'     => $fromAddress,
+                'from_name'        => $fromName,
+                'queue_connection' => $queueConn,
+            ],
+            'network_checks' => [
+                'resolved_ip'        => $resolvedIp,
+                'port_587'           => $socket587,
+                'port_465_ssl'       => $socket465,
+                'local_port_25_exim' => $socketLocal25,
+            ],
+            'advice' => $advice,
+        ], 500);
+    }
+});
+
 // Privacy Policy & CMS Dynamic Pages Public APIs
 Route::match(['get', 'post'], '/privacy-policy',        [PageApiController::class, 'privacyPolicy']);
 Route::match(['get', 'post'], '/terms-and-conditions',  [PageApiController::class, 'termsAndConditions']);
