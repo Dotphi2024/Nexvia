@@ -137,9 +137,18 @@ Route::match(['get', 'post'], '/test-email', function (\Illuminate\Http\Request 
 
     try {
         $timestamp = now()->toDateTimeString();
-        \Illuminate\Support\Facades\Mail::raw("Hello!\n\nThis is a live test email sent from NEXVIA at {$timestamp}.\n\nDiagnostics Information:\nMailer: {$currentMailer}\nHost: {$smtpHost}:{$smtpPort} ({$smtpEnc})\nFrom: {$fromAddress} ({$fromName})\nQueue: {$queueConn}\n\nIf you received this email, mail dispatch on this server is working perfectly!", function ($m) use ($to, $fromAddress, $fromName, $timestamp) {
+        \Illuminate\Support\Facades\Mail::send('emails.test_diagnostic', [
+            'recipient'   => $to,
+            'mailer'      => $currentMailer,
+            'host'        => $smtpHost,
+            'port'        => $smtpPort,
+            'encryption'  => $smtpEnc,
+            'fromAddress' => $fromAddress,
+            'timestamp'   => $timestamp,
+        ], function ($m) use ($to, $fromAddress, $fromName, $timestamp) {
             $m->to($to)
-              ->subject("NEXVIA Live Email Diagnostic Test - {$timestamp}");
+              ->from($fromAddress, $fromName)
+              ->subject("NEXVIA Service Verification - {$timestamp}");
         });
 
         $durationMs = round((microtime(true) - $t0) * 1000, 2);

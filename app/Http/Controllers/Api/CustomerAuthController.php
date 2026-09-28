@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use App\Mail\OtpMail;
+use App\Mail\CustomerWelcomeMail;
 
 class CustomerAuthController extends Controller
 {
@@ -157,11 +159,7 @@ class CustomerAuthController extends Controller
             $this->sendWelcomeWhatsApp($customer->phone, $password, $customer->name);
             if (!empty($customer->email)) {
                 try {
-                    $appName = config('mail.from.name', 'NEXVIA');
-                    Mail::raw("Welcome to {$appName}, {$customer->name}!\n\nYour account has been created successfully.\n\nRegistered Phone: {$customer->phone}\nReferral Code: {$customer->referral_code}\n\nThank you for choosing {$appName}!", function ($m) use ($customer, $appName) {
-                        $m->to($customer->email)
-                          ->subject("Welcome to {$appName} - Registration Confirmed");
-                    });
+                    Mail::to($customer->email)->send(new CustomerWelcomeMail($customer));
                 } catch (\Throwable $e) {
                     \Log::warning("Customer welcome email failed: " . $e->getMessage());
                 }
@@ -280,11 +278,7 @@ class CustomerAuthController extends Controller
                 $this->sendOtpWhatsApp($customer->phone, $newOtp, $customer->name);
                 if (!empty($customer->email)) {
                     try {
-                        $appName = config('mail.from.name', 'NEXVIA');
-                        Mail::raw("Hello {$customer->name},\n\nYour {$appName} login OTP is: {$newOtp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($customer, $appName) {
-                            $m->to($customer->email)
-                              ->subject("Your {$appName} Login OTP: {$customer->phone}");
-                        });
+                        Mail::to($customer->email)->send(new OtpMail($customer->name, $newOtp, 'login'));
                     } catch (\Throwable $e) {
                         \Log::warning("Customer OTP email failed: " . $e->getMessage());
                     }
@@ -395,10 +389,7 @@ class CustomerAuthController extends Controller
 
             if (!empty($email)) {
                 try {
-                    $appName = config('mail.from.name', 'NEXVIA');
-                    Mail::raw("Hello {$name},\n\nYour {$appName} registration OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($email, $appName) {
-                        $m->to($email)->subject("Your {$appName} Registration OTP");
-                    });
+                    Mail::to($email)->send(new OtpMail($name, $otp, 'registration'));
                 } catch (\Throwable $e) {
                     \Log::warning("Registration OTP email failed: " . $e->getMessage());
                 }
@@ -442,11 +433,7 @@ class CustomerAuthController extends Controller
             $this->sendOtpWhatsApp($customer->phone, $otp, $customer->name);
             if (!empty($customer->email)) {
                 try {
-                    $appName = config('mail.from.name', 'NEXVIA');
-                    Mail::raw("Hello {$customer->name},\n\nYour {$appName} login OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($customer, $appName) {
-                        $m->to($customer->email)
-                          ->subject("Your {$appName} Login OTP: {$customer->phone}");
-                    });
+                    Mail::to($customer->email)->send(new OtpMail($customer->name, $otp, 'login'));
                 } catch (\Throwable $e) {
                     \Log::warning("Customer OTP email failed: " . $e->getMessage());
                 }
@@ -632,11 +619,7 @@ class CustomerAuthController extends Controller
             $this->sendOtpWhatsApp($customer->phone, $otp, $customer->name);
             if (!empty($customer->email)) {
                 try {
-                    $appName = config('mail.from.name', 'NEXVIA');
-                    Mail::raw("Hello {$customer->name},\n\nYour {$appName} password reset OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. If you did not request this, please ignore this email.\n\nBest regards,\n{$appName} Team", function ($m) use ($customer, $appName) {
-                        $m->to($customer->email)
-                          ->subject("Your {$appName} Password Reset OTP");
-                    });
+                    Mail::to($customer->email)->send(new OtpMail($customer->name, $otp, 'password_reset'));
                 } catch (\Throwable $e) {
                     \Log::warning("Customer password reset email failed: " . $e->getMessage());
                 }
@@ -695,10 +678,7 @@ class CustomerAuthController extends Controller
                 $this->sendOtpWhatsApp($phone, $otp, $name);
                 if (!empty($email)) {
                     try {
-                        $appName = config('mail.from.name', 'NEXVIA');
-                        Mail::raw("Hello {$name},\n\nYour resent {$appName} registration OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($email, $appName) {
-                            $m->to($email)->subject("Resent {$appName} Registration OTP");
-                        });
+                        Mail::to($email)->send(new OtpMail($name, $otp, 'registration'));
                     } catch (\Throwable $e) {
                         \Log::warning("Customer resend registration OTP email failed: " . $e->getMessage());
                     }
@@ -742,11 +722,7 @@ class CustomerAuthController extends Controller
             $sent = $this->sendOtpWhatsApp($customer->phone, $otp, $customer->name);
             if (!empty($customer->email)) {
                 try {
-                    $appName = config('mail.from.name', 'NEXVIA');
-                    Mail::raw("Hello {$customer->name},\n\nYour resent {$appName} OTP is: {$otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone.\n\nBest regards,\n{$appName} Team", function ($m) use ($customer, $appName) {
-                        $m->to($customer->email)
-                          ->subject("Resent {$appName} OTP");
-                    });
+                    Mail::to($customer->email)->send(new OtpMail($customer->name, $otp, 'login'));
                 } catch (\Throwable $e) {
                     \Log::warning("Customer resend OTP email failed: " . $e->getMessage());
                 }

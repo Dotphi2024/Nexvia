@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Mail\BookingConfirmedMail;
 
 class BookingApiController extends Controller
 {
@@ -479,14 +480,7 @@ class BookingApiController extends Controller
             $targetEmail = $booking->customer_email ?: ($user->email ?? null);
             if (!empty($targetEmail)) {
                 try {
-                    $appName = config('mail.from.name', 'NEXVIA');
-                    $amtPaid = number_format($booking->booking_amount, 2);
-                    $balAmt  = number_format($booking->balance_amount, 2);
-                    $dueDate = \Carbon\Carbon::parse($booking->balance_due_date)->format('d M, Y');
-                    Mail::raw("Dear {$booking->customer_name},\n\nThank you for choosing {$appName}! Your booking has been successfully placed.\n\nBooking ID: {$booking->booking_number}\nProduct: {$booking->product_name}\nQuantity: {$booking->quantity}\nAmount Paid: ₹{$amtPaid}\nBalance Remaining: ₹{$balAmt}\nBalance Due Date: {$dueDate}\nDelivery Address: {$booking->shipping_address}, {$booking->city}, {$booking->state} - {$booking->pincode}\n\nWe will keep you updated on your order progress!\n\nBest regards,\n{$appName} Team", function ($m) use ($targetEmail, $booking, $appName) {
-                        $m->to($targetEmail)
-                          ->subject("{$appName} Booking Confirmation - {$booking->booking_number}");
-                    });
+                    Mail::to($targetEmail)->send(new BookingConfirmedMail($booking));
                 } catch (\Throwable $e) {
                     \Log::warning("Booking confirmation email failed: " . $e->getMessage());
                 }
