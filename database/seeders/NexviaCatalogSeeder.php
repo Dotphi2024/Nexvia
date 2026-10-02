@@ -11,6 +11,8 @@ class NexviaCatalogSeeder extends Seeder
 {
     public function run(): void
     {
+        $defaultPlaceholder = 'images/no-image.png';
+
         $catalog = [
             [
                 'category' => [
@@ -22,7 +24,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => 10.00,
                     'icon' => 'solar:tv-bold-duotone',
                     'description' => 'Immersive 4K/QLED Smart TVs, high-fidelity soundbars, and high-power party karaoke speaker systems.',
-                    'image' => 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop&q=80',
+                    'image' => $defaultPlaceholder,
                     'sort_order' => 1,
                     'is_active' => true,
                 ],
@@ -34,12 +36,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 24999.00,
                         'overview' => 'Crystal-clear visuals with vibrant colors, Full HD bezel-less display, built-in Google Assistant, and immersive Dolby Audio.',
                         'offer_text' => 'Special Launch Offer: Flat 10% instant discount + Free Wall Mount',
-                        'main_image' => 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1461151304267-38535e780c79?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Full HD 1080p Frameless Infinity Display',
                             '20W Stereo Speakers with Dolby Audio',
@@ -68,12 +64,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 34999.00,
                         'overview' => 'Breathtaking 4K Ultra HD clarity with HDR10+, MEMC dynamic smoothing, and 30W stereo speakers with DTS Virtual:X.',
                         'offer_text' => 'Complimentary 1-Year OTT Subscription Bundle',
-                        'main_image' => 'https://images.unsplash.com/photo-1461151304267-38535e780c79?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1461151304267-38535e780c79?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '4K Ultra HD 3840x2160 Resolution',
                             'HDR10+ & HLG Dynamic Contrast Engine',
@@ -102,12 +92,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 42999.00,
                         'overview' => 'Cinema-grade 55-inch 4K Ultra HD smart TV with Dolby Vision, Dolby Atmos, and ultra-slim aerospace alloy bezel.',
                         'offer_text' => 'Includes Free Soundbar discount voucher worth ₹2000',
-                        'main_image' => 'https://images.unsplash.com/photo-1593784991095-a205069470b6?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1593784991095-a205069470b6?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '55-inch Ultra HD 4K IPS Grade-A+ Panel',
                             'Dolby Vision & Dolby Atmos 40W Output',
@@ -135,12 +119,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 69999.00,
                         'overview' => 'Flagship Quantum Dot QLED display with 1 billion colors, 120Hz VRR, Full Array Local Dimming, and 50W integrated subwoofer system.',
                         'offer_text' => 'Premium VIP Installation + 3-Year Extended Panel Protection',
-                        'main_image' => 'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1509281373149-e957c6296406?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1593784991095-a205069470b6?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Quantum Dot QLED Panel with 100% DCI-P3 Color Volume',
                             '120Hz Native Refresh Rate with VRR & ALLM',
@@ -169,11 +147,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 9999.00,
                         'overview' => '160W cinematic 2.1 channel soundbar paired with a wireless down-firing subwoofer, multi-EQ audio profiles, and Bluetooth 5.3.',
                         'offer_text' => 'Special Combo: Extra ₹1,000 off when booked with any NEXVIA TV',
-                        'main_image' => 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '160W Peak Output Power with Deep Thumping Bass',
                             'Wireless 6.5-Inch Active Subwoofer',
@@ -201,11 +174,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 14999.00,
                         'overview' => 'High-power 200W floor-standing tower speaker with dual 8-inch high-excursion woofers, dynamic RGB party lights, and wireless mic support.',
                         'offer_text' => 'Free Wireless Karaoke Microphone Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '200W RMS Massive High-Fidelity Output',
                             'Dual 8-inch Subwoofers + 4-inch Mid-Range + Silk Tweeters',
@@ -232,11 +200,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 12499.00,
                         'overview' => 'Portable party karaoke trolley speaker with dual UHF rechargeable wireless microphones, 100W output, and up to 8 hours battery backup.',
                         'offer_text' => 'Includes Dual Metal UHF Wireless Microphones + Remote',
-                        'main_image' => 'https://images.unsplash.com/photo-1520523839898-5071282543e2?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1520523839898-5071282543e2?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Dual UHF Digital Wireless Microphones with Anti-Interference',
                             '100W Peak Room-Filling Party Sound with Mega Bass Boost',
@@ -268,7 +231,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => 10.00,
                     'icon' => 'solar:wind-bold-duotone',
                     'description' => 'Energy-efficient Inverter Split & Window ACs, Desert Air Coolers, BLDC Ceiling Fans, and Ventilation Exhaust Fans.',
-                    'image' => 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
+                    'image' => $defaultPlaceholder,
                     'sort_order' => 2,
                     'is_active' => true,
                 ],
@@ -280,11 +243,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 29999.00,
                         'overview' => 'Energy-saving 3-star split air conditioner engineered for rooms up to 120 sq. ft. with 100% grooved copper condenser and PM 2.5 filter.',
                         'offer_text' => 'Free Standard Installation + 3m Copper Pipe Kit',
-                        'main_image' => 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1.0 Ton High-Efficiency Cooling Capacity',
                             '100% Pure Inner-Grooved Copper Condenser Tubes',
@@ -311,12 +269,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 38999.00,
                         'overview' => '5-Star AI Dual Inverter Split AC with 4-way motorized swing, cooling up to 54°C ambient heat, and smart self-clean.',
                         'offer_text' => 'Flat ₹2000 Cashback on Prepaid Booking + Free Installation',
-                        'main_image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1614633833026-072049d5c41a?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '5-Star Inverter Rating with Super ISEER 5.2',
                             'Dual Rotary Inverter Compressor with Variable Speed',
@@ -343,11 +295,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 49999.00,
                         'overview' => 'Heavy-duty 2.0 Ton Inverter AC engineered for large living rooms up to 260 sq. ft., featuring massive 1200 CFM airflow and stabilizer-free operation.',
                         'offer_text' => 'Free 5-Star Stabilizer worth ₹3,500 on purchase',
-                        'main_image' => 'https://images.unsplash.com/photo-1614633833026-072049d5c41a?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1614633833026-072049d5c41a?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '2.0 Ton High Capacity for Large Halls & Offices',
                             'Heavy Duty Dual Inverter with 6-in-1 Convertible Modes',
@@ -374,10 +321,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 27499.00,
                         'overview' => 'Reliable and durable 1.5 Ton Window AC with 100% copper condenser coil, high ambient rotary compressor, and slide-out easy-clean chassis.',
                         'offer_text' => 'Easy EMI starting at ₹2,299/month',
-                        'main_image' => 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1.5 Ton High Performance Window Cooling',
                             '100% Copper Condenser with Anti-Rust Coating',
@@ -404,10 +347,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 8499.00,
                         'overview' => '65-liter desert air cooler with 3-sided thick honeycomb cooling pads, 45-foot high-velocity air throw, and dedicated ice chamber.',
                         'offer_text' => 'Includes Free Inverter Compatibility Kit',
-                        'main_image' => 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '65 Liters Heavy-Duty Tank for All-Night Cooling',
                             '3-Side Dense Honeycomb Evaporative Pads',
@@ -434,10 +373,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 3299.00,
                         'overview' => 'Energy-saving 28W Brushless DC (BLDC) motor fan with 1200mm aerodynamically balanced aluminium blades and smart RF remote.',
                         'offer_text' => 'Save up to ₹1,500/year per fan on your electricity bill',
-                        'main_image' => 'https://images.unsplash.com/photo-1615873968403-89e068629265?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1615873968403-89e068629265?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Consumes only 28W at Top Speed (65% Power Saving)',
                             'Smart RF Remote with Boost, Sleep & 1-8 Hr Timer Modes',
@@ -464,10 +399,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 5499.00,
                         'overview' => 'Luxury 6-blade designer fan with integrated 15W 3-color dimmable LED under-light, whisper-quiet motor, and bi-directional reverse circulation.',
                         'offer_text' => 'Includes Multi-Tone Dimmable LED Under-Light System',
-                        'main_image' => 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '6 Aerodynamically Molded ABS Noise-Dampening Blades',
                             'Integrated 15W LED Under-Light (Warm, Day, Cool White)',
@@ -494,10 +425,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1899.00,
                         'overview' => 'Classic high-speed 1200mm ceiling fan with 100% copper double ball bearing motor and glossy anti-dust powder coating.',
                         'offer_text' => 'Pack of 3 gets extra 10% discount',
-                        'main_image' => 'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1581781870027-04212e231e96?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '100% Copper High-Torque Heavy Winding Motor',
                             'Double Ball Bearing for Long Smooth Operation',
@@ -524,10 +451,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1699.00,
                         'overview' => 'Compact 600mm (24-inch) 4-blade high-velocity ceiling fan delivering 850 RPM for kitchens, compact rooms, verandas, and corridors.',
                         'offer_text' => 'Ideal for Kitchens & Walk-in Closets',
-                        'main_image' => 'https://images.unsplash.com/photo-1594904351111-a072f80b1a71?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1594904351111-a072f80b1a71?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Super High Velocity 850 RPM Airflow',
                             '4 Sturdy Gauge Metallic Blades',
@@ -554,10 +477,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 2799.00,
                         'overview' => '400mm adjustable telescopic pedestal fan with 90° motorized oscillation, 3-speed control panel, and thermal overload protection.',
                         'offer_text' => 'High-velocity portable airflow with weighted anti-topple base',
-                        'main_image' => 'https://images.unsplash.com/photo-1590959651369-b3a6d71b3e85?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1590959651369-b3a6d71b3e85?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '400 mm (16 Inch) Aerodynamic 3-Blade System',
                             'Telescopic Height Adjustable up to 135 cm',
@@ -584,10 +503,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1899.00,
                         'overview' => 'Compact desk fan with focused high-speed air throw, finger-proof safety guard, and silent copper motor for workspaces and study tables.',
                         'offer_text' => 'Portable & lightweight personal desk cooling',
-                        'main_image' => 'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'High-Velocity Focused Desk Airflow',
                             'Close-Mesh Finger-Safe Powder Coated Guard',
@@ -614,10 +529,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1199.00,
                         'overview' => 'Heavy-duty 200mm high-suction exhaust fan with automatic back shutters to block insects, dust, and backdraft.',
                         'offer_text' => 'Essential kitchen and bathroom moisture & odor extraction',
-                        'main_image' => 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Automatic Gravity Louver Shutters (Prevents Pest Entry)',
                             'Rust-Proof Lightweight High-Grade Polymer Body',
@@ -649,7 +560,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => 10.00,
                     'icon' => 'solar:fridge-bold-duotone',
                     'description' => 'Single, Double & Multi-Door Refrigerators, Commercial Chest Deep Freezers, and Semi & Fully Automatic Washing Machines.',
-                    'image' => 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=800&auto=format&fit=crop&q=80',
+                    'image' => $defaultPlaceholder,
                     'sort_order' => 3,
                     'is_active' => true,
                 ],
@@ -661,11 +572,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 14999.00,
                         'overview' => '4-Star energy-efficient 190L Direct Cool refrigerator with rapid ice making, toughened glass shelves, and anti-bacterial gasket.',
                         'offer_text' => 'Stabilizer-Free Operation (135V-290V) + Free Door Lock',
-                        'main_image' => 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '190 Liters Direct Cool Capacity',
                             '4-Star BEE Rating with Ultra-Low Electricity Usage',
@@ -692,11 +598,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 24999.00,
                         'overview' => 'Frost-free 255L double-door refrigerator with smart inverter compressor, Multi Air Flow 360° uniform cooling, and convertible freezer zone.',
                         'offer_text' => 'Flat ₹1500 Instant Discount on Prepaid Booking',
-                        'main_image' => 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '255 Liters Frost-Free Double Door Design',
                             'Smart Inverter Compressor with Auto Load Sensing',
@@ -723,11 +624,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 44999.00,
                         'overview' => 'Premium French-door multi-door refrigerator with dual independent cooling zones, digital touch temperature control, and twist ice maker.',
                         'offer_text' => 'Premium Brushed Steel Finish + VIP Installation Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '350 Liters Spacious Multi-Door French Styling',
                             'Duo-Cool Independent Evaporator Technology',
@@ -754,10 +650,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 21999.00,
                         'overview' => '300L heavy-duty commercial chest deep freezer with dual convertible temperature mode (Chiller/Freezer), heavy PUF insulation, and lockable safety lid.',
                         'offer_text' => 'Maintains sub-zero chill for 14 hours during power outages',
-                        'main_image' => 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1584992236310-6edddc08acff?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '300 Liters Large Volume Commercial Storage',
                             'Convertible Dual Mode (-24°C Deep Freeze to +8°C Chiller)',
@@ -784,11 +676,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 11499.00,
                         'overview' => 'Durable 8 kg twin tub semi-automatic washing machine with heavy-duty turbo pulsator, 1400 RPM spin shower, and rust-proof fiber body.',
                         'offer_text' => 'Rust-Proof Polypropylene Body with Rat-Mesh Base',
-                        'main_image' => 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '8.0 kg Wash / 6.0 kg Spin Drying Capacity',
                             'Turbo Pulsator with Scrubbing Teeth for Tough Collar Stains',
@@ -815,11 +702,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 18999.00,
                         'overview' => 'Smart 8 kg top load washer with 8 intelligent wash cycles, stainless steel diamond drum, fuzzy logic weight sensor, and soft-closing glass lid.',
                         'offer_text' => 'Free Inlet & Drain Pipe Extension Kit Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '8.0 kg Fully Automatic Top Load with 5-Star BEE Rating',
                             'Fuzzy Logic Automatic Water Level & Weight Sensing',
@@ -846,11 +728,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 32999.00,
                         'overview' => 'Premium 9 kg Front Load Washing Machine with 90°C Hygiene Steam Clean, BLDC Inverter motor, 1400 RPM spin, and 15 fabric programs.',
                         'offer_text' => 'Flat ₹2000 Cashback + Free Descaler Pack',
-                        'main_image' => 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '9.0 kg Heavy Capacity with Direct Drive BLDC Inverter Motor',
                             'Hygiene Steam 90°C Allergen & Germ Removal (99.9%)',
@@ -883,7 +760,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => 10.00,
                     'icon' => 'solar:chef-hat-bold-duotone',
                     'description' => 'Heavy-duty 650W-1200W mixer grinders, 2000W induction cooktops, toughened glass gas stoves, built-in hobs, and chimneys.',
-                    'image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
+                    'image' => $defaultPlaceholder,
                     'sort_order' => 4,
                     'is_active' => true,
                 ],
@@ -895,11 +772,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 2799.00,
                         'overview' => '650W high-torque mixer grinder with 3 stainless steel jars with flow breakers, razor-sharp blades, and automatic overload protection.',
                         'offer_text' => 'Includes 3 Heavy SS 304 Food Grade Jars',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '650W 100% Copper High-Torque Motor',
                             '3 Stainless Steel Jars (1.25L Liquid, 0.8L Dry, 0.4L Chutney)',
@@ -926,10 +798,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 3499.00,
                         'overview' => '750W heavy-duty mixer grinder with 4 jars including transparent juicer extractor, dual cooling fan airflow, and crystal styling.',
                         'offer_text' => '4th Juicer Jar with Mesh Filter Included Free',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '750W Turbo Copper Motor for Fine Masala Grinding',
                             '4 Jars (1.5L Juicer, 1.25L Wet, 0.8L Dry, 0.4L Chutney)',
@@ -956,10 +824,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 4799.00,
                         'overview' => 'Heavy-duty 1 HP (750W+ High-Torque) commercial-grade mixer grinder capable of grinding tough raw turmeric, grains, and dry spices continuously.',
                         'offer_text' => 'Unbreakable Commercial Grade Metallic Jar Locks',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1 HP High-Torque Heavy Commercial Motor',
                             'Extra Thick Gauge Heavy Stainless Steel Jars',
@@ -986,10 +850,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 5999.00,
                         'overview' => 'Ultra-powerful 1200W professional mixer grinder with digital LED timer display, variable speed dial, and stone-grinding perfection.',
                         'offer_text' => 'Digital LED Countdown Timer & Master Chef Jar Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1200W Peak Performance Commercial Grade Motor',
                             'Digital LED Timer Display with Precise Auto Shut-off',
@@ -1016,10 +876,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 2499.00,
                         'overview' => '2000W fast heating induction cooktop with Indian preset cooking menus, crystal glass plate, and auto voltage regulator.',
                         'offer_text' => '8 Indian Cooking Presets + Auto Pan Detection',
-                        'main_image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '2000W Fast Electromagnetic Heating (Boils Water in 90s)',
                             '8 Indian Preset Menus (Roti, Dosa, Curry, Idli, Milk, Deep Fry, etc.)',
@@ -1046,10 +902,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 2999.00,
                         'overview' => 'Sleek 2-burner gas stove with 7mm shatter-proof toughened glass top, 100% forged tri-pin brass burners, and anti-skid rubber feet.',
                         'offer_text' => '7mm Toughened Glass with 5-Year Glass Warranty',
-                        'main_image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '7mm Thermal Toughened Shatter-Proof Glass Top',
                             '100% Solid Forged Tri-Pin Brass Burners',
@@ -1076,10 +928,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 4299.00,
                         'overview' => 'Spacious 3-burner gas stove engineered for multi-task family cooking with heavy-gauge pan supports and 360° revolving gas nozzle.',
                         'offer_text' => 'Includes 1 Jumbo + 1 Medium + 1 Small Brass Burners',
-                        'main_image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Spacious 3-Burner Layout (Accommodates large utensils)',
                             '8mm Premium Thermal Toughened Glass',
@@ -1106,10 +954,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 12999.00,
                         'overview' => 'Ultra-luxury built-in kitchen hob with 8mm beveled edge black glass, Italian dual-ring burners, and integrated multi-spark auto-ignition.',
                         'offer_text' => 'Dual Design: Use as Built-In Countertop Hob or Tabletop Stove',
-                        'main_image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Dual Use: Flush Built-in Hob or Tabletop Cooktop',
                             '8mm Beveled Scratch-Resistant Obsidian Black Glass',
@@ -1136,10 +980,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 8999.00,
                         'overview' => 'Filterless 60cm curved glass chimney with 1200 m³/hr suction, smart motion gesture control, and thermal heat auto-clean technology.',
                         'offer_text' => 'Free 6-ft Aluminium Exhaust Duct Pipe Kit Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1200 m³/hr High Suction Capacity',
                             'Wave Gesture Motion Sensor & Touch Control',
@@ -1171,7 +1011,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => 10.00,
                     'icon' => 'solar:cup-bold-duotone',
                     'description' => '90cm Chimneys, Digital Air Fryers, OTG & Microwave Ovens, Stainless Kettles, Blenders, Choppers, Sandwich Makers & Egg Boilers.',
-                    'image' => 'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
+                    'image' => $defaultPlaceholder,
                     'sort_order' => 5,
                     'is_active' => true,
                 ],
@@ -1183,10 +1023,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 13999.00,
                         'overview' => 'Wide 90cm black curved glass chimney with massive 1500 m³/hr suction, motion wave control, and thermal auto-clean for 3-5 burner stoves.',
                         'offer_text' => 'Extra 10% Off + Free Complete Ducting & Cowl Set',
-                        'main_image' => 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1500 m³/hr Ultra High Suction Capacity',
                             '90cm Wide Curved Glass Coverage for 3-5 Burner Stoves',
@@ -1213,10 +1049,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 5499.00,
                         'overview' => '6.5L Digital Air Fryer with 360° Rapid Air Circulation, 8 preset cooking menus, and up to 85% oil reduction for healthy crispy meals.',
                         'offer_text' => 'Free Non-Stick Silicone Liner & Recipe Cookbook',
-                        'main_image' => 'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '6.5 Liters Large Family Capacity Square Basket',
                             '360° Rapid Hot Air Circulation for Crisp Frying',
@@ -1243,10 +1075,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 6999.00,
                         'overview' => '30L Oven Toaster Griller (OTG) with motorized 360° rotisserie, convection baking fan, and dual heating elements for cakes, breads, and roasts.',
                         'offer_text' => 'Complete Accessories Set (Rotisserie, Baking Tray, Wire Grill, Tongs) Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '30 Liters Spacious Chamber (Bakes up to 10\" Pizzas & Cakes)',
                             'Motorized 360° Rotisserie for Perfectly Even Grilling',
@@ -1273,10 +1101,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 11499.00,
                         'overview' => '25L Convection & Grill Microwave Oven with 101 Indian auto-cook recipes, quartz heater for instant browning, and stainless steel cavity.',
                         'offer_text' => 'Free Starter Microwave Cookware Kit Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1585659722983-3a675dabf23d?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585659722983-3a675dabf23d?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '25 Liters Convection + Grill + Microwave Combo',
                             '101 Indian Auto-Cook Menus & Express Defrost',
@@ -1303,10 +1127,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1299.00,
                         'overview' => '1.8L food-grade SS 304 electric kettle with concealed heating element, 360° cordless swivel base, and auto shut-off safety.',
                         'offer_text' => 'Fast 3-minute boiling with dry-boil auto protection',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1.8 Liters Large Capacity for Tea, Coffee & Instant Soups',
                             '100% Food-Grade SS 304 Stainless Steel Inner Body',
@@ -1333,10 +1153,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1699.00,
                         'overview' => '400W silent DC motor hand blender with stainless steel detachable blending wand, turbo speed button, and splash-guard blade design.',
                         'offer_text' => 'Includes 600ml Measuring & Blending Jar Free',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '400W High Torque Low-Noise DC Motor',
                             'Detachable Food Grade Stainless Steel Blending Stem',
@@ -1363,10 +1179,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1499.00,
                         'overview' => '300W quick vegetable and meat chopper with 4 bi-level stainless steel blades and unbreakable 1.0L transparent bowl for fine dicing in seconds.',
                         'offer_text' => 'Chop Onions, Garlic, Veggies & Dry Fruits in 5 seconds',
-                        'main_image' => 'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '300W Pure Copper High-Speed Motor',
                             '4 Bi-Level Stainless Steel 304 Blades',
@@ -1393,10 +1205,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1599.00,
                         'overview' => '750W non-stick grill sandwich maker with dual heat indicator lights, cool-touch handle lock, and easy-clean non-toxic coating.',
                         'offer_text' => 'Crisp cafe-style grilled sandwiches at home',
-                        'main_image' => 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '750W Dual-Plate Rapid Heating Element',
                             'Deep Ribbed Non-Stick Grill Plates (Accommodates 2 Jumbo Slices)',
@@ -1423,10 +1231,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 899.00,
                         'overview' => '350W instant egg boiler capable of cooking up to 7 eggs simultaneously in 3 firmness modes (Soft, Medium, Hard) with auto shutoff buzzer.',
                         'offer_text' => 'Includes Measuring Cup with Egg Piercing Pin',
-                        'main_image' => 'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Cooks Up to 7 Eggs in under 8 Minutes',
                             '3 Selectable Boiling Modes (Soft, Medium, Hard-Boiled)',
@@ -1458,7 +1262,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => 10.00,
                     'icon' => 'solar:scooter-bold-duotone',
                     'description' => 'Garment irons, 8-stage RO water purifiers, instant & storage water geysers, and high-performance smart electric scooters.',
-                    'image' => 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
+                    'image' => $defaultPlaceholder,
                     'sort_order' => 6,
                     'is_active' => true,
                 ],
@@ -1470,10 +1274,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 899.00,
                         'overview' => '1000W lightweight dry iron with non-stick American Heritage soleplate, 360° swivel cord, and precise fabric temperature dial.',
                         'offer_text' => 'Non-Stick Soleplate for smooth wrinkle-free ironing',
-                        'main_image' => 'https://images.unsplash.com/photo-1584265085465-207010f37085?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1584265085465-207010f37085?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1000W Fast Heating Element for Instant Pressing',
                             'American Heritage Golden Non-Stick Soleplate',
@@ -1500,10 +1300,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 1799.00,
                         'overview' => '1600W continuous steam iron with scratch-resistant ceramic soleplate, vertical steam shot, fine spray, and anti-calc self-cleaning system.',
                         'offer_text' => '100g/min Steam Boost for stubborn denim & linen creases',
-                        'main_image' => 'https://images.unsplash.com/photo-1584265085465-207010f37085?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1584265085465-207010f37085?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '1600W Heavy Steam Performance with Fast Heat-Up',
                             'Ceramic Glaze Scratch-Resistant Smooth Glide Soleplate',
@@ -1530,10 +1326,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 11999.00,
                         'overview' => '8-Stage RO + UV + UF + TDS Controller water purifier with active copper zinc mineral booster and 10-liter food-grade storage tank.',
                         'offer_text' => 'Free Pre-Filter Housing Kit + Free Standard Installation',
-                        'main_image' => 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '8-Stage Purification: Sediment, Carbon, RO, UV, UF, Copper Zinc, TDS Infuser',
                             'Active Copper & Mineralizer Technology for Alkaline Hydration',
@@ -1560,10 +1352,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 2799.00,
                         'overview' => '3000W 1-liter instant water geyser for kitchens and washbasins with high-grade SS 304 tank and instant 5-second hot water delivery.',
                         'offer_text' => 'Instant 5-Second Hot Water for Kitchens & Washbasins',
-                        'main_image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '3000W Heavy Copper Fast Heating Element',
                             'SS 304 Anti-Rust Stainless Steel Inner Tank',
@@ -1590,10 +1378,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 3499.00,
                         'overview' => '3000W 3-liter instant water heater with LED status indicators, anti-siphon valve, and 8.0 bar pressure rating for multi-story buildings.',
                         'offer_text' => '8 Bar Pressure Rating (Ideal for Tall Apartment Towers)',
-                        'main_image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '3 Liters Instant Tank Capacity',
                             '8.0 Bar Working Pressure for High-Rise Apartments',
@@ -1620,10 +1404,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 6499.00,
                         'overview' => '5-Star 10-liter storage water geyser with glass-lined titanium enamel tank, magnesium anode rod, and rotary temperature dial.',
                         'offer_text' => '5-Star Energy Certified + Magnesium Anode Hard Water Rod',
-                        'main_image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '10 Liters Storage Glass-Lined Titanium Enamel Tank',
                             '5-Star Energy Rating with High-Density PUF Insulation',
@@ -1650,10 +1430,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 7999.00,
                         'overview' => '15-liter smart storage geyser with digital LED real-time temperature display, Whirlflow technology for 20% more hot water, and 5-star energy saving.',
                         'offer_text' => 'Digital LED Temperature Display + 7-Year Tank Warranty',
-                        'main_image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '15 Liters Family Capacity with 5-Star BEE Certified Insulation',
                             'Digital LED Real-Time Water Temperature Display',
@@ -1680,10 +1456,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 9999.00,
                         'overview' => 'Large 25-liter luxury storage water geyser engineered for bathtub, jacuzzi, and long rain shower experiences with maximum thermal insulation.',
                         'offer_text' => 'Ideal for Bathtubs & Large Rain Showers',
-                        'main_image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '25 Liters Large Volume for Extended Rain Showers & Bathtubs',
                             'Extra Thick CFC-Free PUF Insulation (Keeps Water Hot for 24 Hrs)',
@@ -1710,11 +1482,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 84999.00,
                         'overview' => 'High-speed urban electric scooter with 100 km certified range, 2.5 kWh portable lithium-ion battery, 7” digital cluster, and CBS disc brakes.',
                         'offer_text' => 'State EV Subsidy Eligible + Free Smart Fast Charger',
-                        'main_image' => 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '100 km Real-World Urban Range per Charge',
                             '2.5 kWh Swappable Smart Lithium-ion Battery',
@@ -1742,11 +1509,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 99999.00,
                         'overview' => 'Performance electric scooter featuring 3.6 kWh dual battery pack, 130 km highway range, 80 km/h top speed, cruise control, and mobile app connectivity.',
                         'offer_text' => 'Includes Connected Smart IoT App with GPS Tracking & Remote Lock',
-                        'main_image' => 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             '130 km Long Range with Dual Smart LiFePO4 Battery Pack',
                             '80 km/h Top Speed with 0-40 km/h in 3.3 Seconds',
@@ -1774,11 +1536,6 @@ class NexviaCatalogSeeder extends Seeder
                         'mrp' => 109999.00,
                         'overview' => 'Vintage Italian aesthetic meets cutting-edge EV engineering with chrome accents, handcrafted leather split seat, 120 km range, and silent belt drive.',
                         'offer_text' => 'Keyless NFC Card Start + Premium Chrome Accessories Included',
-                        'main_image' => 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
-                        'gallery' => [
-                            'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
-                            'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
-                        ],
                         'key_features' => [
                             'Classic Italian Vintage Aesthetic with Mirror Chrome Accents',
                             'Handcrafted Split Saddle Tan Leather Seating',
@@ -1818,7 +1575,7 @@ class NexviaCatalogSeeder extends Seeder
                     'commission_percentage' => $catData['commission_percentage'] ?? 10.00,
                     'icon' => $catData['icon'],
                     'description' => $catData['description'],
-                    'image' => $catData['image'],
+                    'image' => $defaultPlaceholder,
                     'sort_order' => $catData['sort_order'] ?? 0,
                     'is_active' => $catData['is_active'] ?? true,
                 ]
@@ -1850,8 +1607,8 @@ class NexviaCatalogSeeder extends Seeder
                         'stock' => 50,
                         'overview' => $prodData['overview'],
                         'offer_text' => $prodData['offer_text'] ?? null,
-                        'main_image' => $prodData['main_image'],
-                        'gallery' => $prodData['gallery'] ?? [$prodData['main_image']],
+                        'main_image' => $defaultPlaceholder,
+                        'gallery' => [$defaultPlaceholder],
                         'key_features' => $prodData['key_features'] ?? [],
                         'specs' => $prodData['specs'] ?? [],
                         'warranty_info' => $prodData['warranty_info'] ?? '1 Year Brand Warranty',
@@ -1865,6 +1622,13 @@ class NexviaCatalogSeeder extends Seeder
             }
         }
 
-        $this->command->info("Seeded {$totalCategories} categories and {$totalProducts} products successfully.");
+        // Also update any other existing categories and products in the database to use no-image
+        Category::query()->update(['image' => $defaultPlaceholder]);
+        Product::query()->update([
+            'main_image' => $defaultPlaceholder,
+            'gallery' => json_encode([$defaultPlaceholder]),
+        ]);
+
+        $this->command->info("Updated {$totalCategories} categories and {$totalProducts} products to use {$defaultPlaceholder}.");
     }
 }
