@@ -18,7 +18,9 @@ return new class extends Migration
         });
 
         if (Schema::hasTable('users') && Schema::hasColumn('users', 'self_dealer_status')) {
-            \Illuminate\Support\Facades\DB::statement("ALTER TABLE users MODIFY COLUMN self_dealer_status ENUM('inactive', 'pending', 'active', 'suspended', 'cancelled') DEFAULT 'inactive'");
+            if (\Illuminate\Support\Facades\DB::getDriverName() === 'mysql' || \Illuminate\Support\Facades\DB::getDriverName() === 'mariadb') {
+                \Illuminate\Support\Facades\DB::statement("ALTER TABLE users MODIFY COLUMN self_dealer_status ENUM('inactive', 'pending', 'active', 'suspended', 'cancelled') DEFAULT 'inactive'");
+            }
         }
     }
 
