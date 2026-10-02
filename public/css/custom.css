@@ -59,3 +59,59 @@
     background-color: #7c3aed !important;
     border-color: #7c3aed !important;
 }
+
+/* Pagination Styling */
+.pagination {
+    margin-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px;
+}
+
+.pagination .page-item .page-link {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 32px;
+    height: 32px;
+    padding: 0.25rem 0.6rem !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    color: #4b5563 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    text-decoration: none !important;
+    transition: all 0.15s ease-in-out;
+}
+
+.pagination .page-item .page-link:hover {
+    color: #7c3aed !important;
+    background-color: #f5f3ff !important;
+    border-color: #ddd6fe !important;
+}
+
+.pagination .page-item.active .page-link {
+    color: #ffffff !important;
+    background-color: #7c3aed !important;
+    border-color: #7c3aed !important;
+    box-shadow: 0 2px 4px rgba(124, 58, 237, 0.25) !important;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #9ca3af !important;
+    background-color: #f9fafb !important;
+    border-color: #f3f4f6 !important;
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+
+/* Fix any SVG icons in pagination */
+.pagination svg,
+nav[role="navigation"] svg {
+    width: 14px !important;
+    height: 14px !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+

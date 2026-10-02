@@ -8,14 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Extend users table — add missing Self Dealer fields only
-        // (is_self_dealer, self_dealer_code, referral_code already exist)
+        // 1. Extend users table — add missing Self Dealer fields
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('self_dealer_status', ['inactive', 'pending', 'active', 'suspended', 'cancelled'])->default('inactive')->after('self_dealer_code');
-            $table->timestamp('self_dealer_activated_at')->nullable()->after('self_dealer_status');
-            $table->foreignId('activation_booking_id')->nullable()->constrained('bookings')->onDelete('set null')->after('self_dealer_activated_at');
-            $table->string('terms_version', 20)->nullable()->after('activation_booking_id');
-            $table->timestamp('terms_accepted_at')->nullable()->after('terms_version');
+            if (!Schema::hasColumn('users', 'is_self_dealer')) {
+                $table->boolean('is_self_dealer')->default(false)->after('status');
+            }
+            if (!Schema::hasColumn('users', 'self_dealer_code')) {
+                $table->string('self_dealer_code', 30)->nullable()->unique()->after('is_self_dealer');
+            }
+            if (!Schema::hasColumn('users', 'self_dealer_status')) {
+                $table->enum('self_dealer_status', ['inactive', 'pending', 'active', 'suspended', 'cancelled'])->default('inactive')->after('self_dealer_code');
+            }
+            if (!Schema::hasColumn('users', 'self_dealer_activated_at')) {
+                $table->timestamp('self_dealer_activated_at')->nullable()->after('self_dealer_status');
+            }
+            if (!Schema::hasColumn('users', 'activation_booking_id')) {
+                $table->foreignId('activation_booking_id')->nullable()->constrained('bookings')->onDelete('set null')->after('self_dealer_activated_at');
+            }
+            if (!Schema::hasColumn('users', 'terms_version')) {
+                $table->string('terms_version', 20)->nullable()->after('activation_booking_id');
+            }
+            if (!Schema::hasColumn('users', 'terms_accepted_at')) {
+                $table->timestamp('terms_accepted_at')->nullable()->after('terms_version');
+            }
         });
 
         // 2. Extend customer_category_progress — add stage & cycle columns

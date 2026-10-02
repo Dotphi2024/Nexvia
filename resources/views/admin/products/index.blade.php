@@ -207,9 +207,14 @@
             </div>
 
             <!-- Pagination -->
-            @if($products->hasPages())
-                <div class="p-3 border-top bg-white d-flex justify-content-end">
-                    {{ $products->links() }}
+            @if($products->hasPages() || $products->total() > 0)
+                <div class="p-3 border-top bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="text-muted small">
+                        Showing <strong>{{ $products->firstItem() ?? 0 }}</strong> to <strong>{{ $products->lastItem() ?? 0 }}</strong> of <strong>{{ $products->total() }}</strong> results
+                    </div>
+                    <div>
+                        {{ $products->withQueryString()->links() }}
+                    </div>
                 </div>
             @endif
         </div>

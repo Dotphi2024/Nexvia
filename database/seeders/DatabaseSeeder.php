@@ -29,5 +29,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(PermissionSeeder::class);
         $this->call(PageSeeder::class);
+        $this->call(NexviaCatalogSeeder::class);
     }
 }
