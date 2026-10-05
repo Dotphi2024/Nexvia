@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Admin\SubcategoryAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\DlsFarmCategoryAdminController;
+use App\Http\Controllers\Admin\DlsFarmSubcategoryAdminController;
 use App\Http\Controllers\Admin\DlsFarmProductAdminController;
 use App\Http\Controllers\Admin\BookingAdminController;
 use App\Http\Controllers\Admin\BookingEngineController;
@@ -53,6 +54,13 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
         Route::put('/categories/{id}', [DlsFarmCategoryAdminController::class, 'update'])->name('categories.update');
         Route::post('/categories/{id}/update', [DlsFarmCategoryAdminController::class, 'update'])->name('categories.update.post');
         Route::delete('/categories/{id}', [DlsFarmCategoryAdminController::class, 'destroy'])->name('categories.destroy');
+
+        // Subcategories
+        Route::get('/subcategories', [DlsFarmSubcategoryAdminController::class, 'index'])->name('subcategories.index');
+        Route::post('/subcategories', [DlsFarmSubcategoryAdminController::class, 'store'])->name('subcategories.store');
+        Route::put('/subcategories/{id}', [DlsFarmSubcategoryAdminController::class, 'update'])->name('subcategories.update');
+        Route::delete('/subcategories/{id}', [DlsFarmSubcategoryAdminController::class, 'destroy'])->name('subcategories.destroy');
+        Route::get('/subcategories/by-category', [DlsFarmSubcategoryAdminController::class, 'byCategory'])->name('subcategories.by-category');
 
         // Products
         Route::get('/products', [DlsFarmProductAdminController::class, 'index'])->name('products.index');

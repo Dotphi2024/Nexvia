@@ -14,7 +14,7 @@ class DlsFarmCategoryAdminController extends Controller
     public function index()
     {
         $categories = Category::where('type', self::TYPE)
-            ->withCount('products')
+            ->withCount(['products', 'subcategories'])
             ->orderBy('sort_order')
             ->get();
 

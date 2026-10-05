@@ -93,6 +93,15 @@
                </li>
 
                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dls_farm_equipments.subcategories.*') ? 'active' : '' }}" href="{{ route('admin.dls_farm_equipments.subcategories.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:layers-minimalistic-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Subcategories</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.dls_farm_equipments.products.*') ? 'active' : '' }}" href="{{ route('admin.dls_farm_equipments.products.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:box-minimalistic-outline"></iconify-icon>

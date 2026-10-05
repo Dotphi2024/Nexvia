@@ -2275,35 +2275,28 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
       "image": "http://127.0.0.1:8000/storage/categories/solar-pump.jpg",
       "image_url": "http://127.0.0.1:8000/storage/categories/solar-pump.jpg",
       "sort_order": 1,
-      "products_count": 5
-    },
-    {
-      "id": 11,
-      "name": "Power Tillers & Cultivators",
-      "slug": "power-tillers-cultivators",
-      "type": "dls_farm_equipment",
-      "referral_category_code": "TILLER",
-      "referral_eligible": true,
-      "commission_percentage": 12.00,
-      "description": "Heavy duty diesel and electric power tillers for dryland and wetland farming",
-      "image": "http://127.0.0.1:8000/storage/categories/tiller.jpg",
-      "image_url": "http://127.0.0.1:8000/storage/categories/tiller.jpg",
-      "sort_order": 2,
-      "products_count": 4
-    },
-    {
-      "id": 12,
-      "name": "Sprayers & Agricultural Drones",
-      "slug": "sprayers-agri-drones",
-      "type": "dls_farm_equipment",
-      "referral_category_code": "DRONE",
-      "referral_eligible": true,
-      "commission_percentage": 15.00,
-      "description": "Battery-operated high precision crop sprayers and automated agricultural payload drones",
-      "image": "http://127.0.0.1:8000/storage/categories/drone.jpg",
-      "image_url": "http://127.0.0.1:8000/storage/categories/drone.jpg",
-      "sort_order": 3,
-      "products_count": 3
+      "products_count": 5,
+      "subcategories_count": 3,
+      "subcategories": [
+        {
+          "id": 13,
+          "name": "Solar Submersible Pumps 3HP-10HP",
+          "slug": "solar-submersible-pumps-3hp-10hp",
+          "image": "http://127.0.0.1:8000/images/no-image.png",
+          "description": "High grade submersible borehole pumps",
+          "sort_order": 1,
+          "products_count": 3
+        },
+        {
+          "id": 14,
+          "name": "Solar Monoblock Surface Pumps",
+          "slug": "solar-monoblock-surface-pumps",
+          "image": "http://127.0.0.1:8000/images/no-image.png",
+          "description": "High discharge open-well surface pumps",
+          "sort_order": 2,
+          "products_count": 2
+        }
+      ]
     }
   ]
 }
@@ -2311,7 +2304,121 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
 
 ---
 
-### 14.2 List DLS Agro Products
+### 14.2 List DLS Agro Subcategories
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/subcategories` (or `/api/dls-farm/subcategories`)
+* **Auth**: Public
+
+#### Query / Request Body Parameters
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `category_id` / `category` | Integer / String | No | Filter by parent agro category ID or slug (e.g. `solar-water-pumps`). |
+| `search` | String | No | Search keyword matching subcategory name, slug, or description. |
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro subcategories retrieved successfully.",
+  "count": 3,
+  "total": 3,
+  "subcategories": [
+    {
+      "id": 13,
+      "name": "Solar Submersible Pumps 3HP-10HP",
+      "slug": "solar-submersible-pumps-3hp-10hp",
+      "image": "http://127.0.0.1:8000/images/no-image.png",
+      "description": "High grade Solar Submersible Pumps 3HP-10HP designed for harsh agricultural operations.",
+      "sort_order": 1,
+      "products_count": 1,
+      "category": {
+        "id": 10,
+        "name": "Solar Water Pumps",
+        "slug": "solar-water-pumps",
+        "type": "dls_farm_equipment",
+        "referral_category_code": "SOLPUMP"
+      }
+    }
+  ],
+  "data": [ ... ]
+}
+```
+
+---
+
+### 14.3 List DLS Agro Subcategories by Parent Category
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/categories/{idOrSlug}/subcategories` (or `/api/dls-farm/categories/{idOrSlug}/subcategories`)
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Subcategories retrieved successfully for category.",
+  "category": {
+    "id": 10,
+    "name": "Solar Water Pumps",
+    "slug": "solar-water-pumps",
+    "type": "dls_farm_equipment",
+    "referral_category_code": "SOLPUMP"
+  },
+  "count": 3,
+  "total": 3,
+  "subcategories": [ ... ],
+  "data": [ ... ]
+}
+```
+
+---
+
+### 14.4 DLS Agro Subcategory Details & Products
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/subcategories/{idOrSlug}` (or `/api/dls-farm/subcategories/{idOrSlug}`)
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro subcategory retrieved successfully.",
+  "subcategory": {
+    "id": 13,
+    "name": "Solar Submersible Pumps 3HP-10HP",
+    "slug": "solar-submersible-pumps-3hp-10hp",
+    "image": "http://127.0.0.1:8000/images/no-image.png",
+    "description": "High grade Solar Submersible Pumps 3HP-10HP designed for harsh agricultural operations.",
+    "sort_order": 1,
+    "products_count": 1,
+    "category": {
+      "id": 10,
+      "name": "Solar Water Pumps",
+      "slug": "solar-water-pumps",
+      "type": "dls_farm_equipment",
+      "referral_category_code": "SOLPUMP"
+    },
+    "products": [
+      {
+        "id": 20,
+        "name": "NEXVIA Solar Submersible Pump 5HP DC",
+        "slug": "nexvia-solar-submersible-pump-5hp-dc",
+        "model_code": "NEX-AGRO-P500",
+        "sku": "SKU-FARM-001",
+        "mrp": 125000.00,
+        "booking_percentage": 20.00,
+        "booking_amount": 25000.00,
+        "balance_amount": 100000.00,
+        "stock": 10,
+        "is_featured": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 14.5 List DLS Agro Products
 * **Method**: `GET` or `POST`
 * **URL**: `/api/dls-agro/products` (or `/api/dls-farm/products`)
 * **Auth**: Public
@@ -2319,7 +2426,8 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
 #### Query / Request Body Parameters
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `category_id` / `category` | Integer / String | No | Filter by category ID or category slug (e.g. `solar-water-pumps`). |
+| `category_id` / `category` | Integer / String | No | Filter by parent category ID or slug (e.g. `solar-water-pumps`). |
+| `subcategory_id` / `subcategory` | Integer / String | No | Filter by subcategory ID or slug (e.g. `solar-submersible-pumps-3hp-10hp`). |
 | `search` | String | No | Search keyword in product name, SKU, model code, or offer text. |
 | `sortBy` | String | No | Sort option: `price_low`, `price_high`, `featured`, `trending`, or default (latest). |
 | `page` | Integer | No | Page number (default: `1`). |
@@ -2352,6 +2460,13 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
         "type": "dls_farm_equipment",
         "referral_category_code": "SOLPUMP"
       },
+      "subcategory": {
+        "id": 13,
+        "name": "Solar Submersible Pumps 3HP-10HP",
+        "slug": "solar-submersible-pumps-3hp-10hp",
+        "image": "http://127.0.0.1:8000/images/no-image.png",
+        "description": "High grade submersible borehole pumps"
+      },
       "mrp": 85000.00,
       "booking_percentage": 20.00,
       "booking_amount": 17000.00,
@@ -2378,7 +2493,7 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
 
 ---
 
-### 14.3 Featured DLS Agro Products
+### 14.6 Featured DLS Agro Products
 * **Method**: `GET` or `POST`
 * **URL**: `/api/dls-agro/products/featured` (or `/api/dls-farm/products/featured`)
 * **Auth**: Public
@@ -2402,6 +2517,20 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
       "model_code": "DLS-SOL-5000",
       "sku": "SKU-FARM-PUMP-01",
       "product_type": "dls_farm_equipment",
+      "category": {
+        "id": 10,
+        "name": "Solar Water Pumps",
+        "slug": "solar-water-pumps",
+        "type": "dls_farm_equipment",
+        "referral_category_code": "SOLPUMP"
+      },
+      "subcategory": {
+        "id": 13,
+        "name": "Solar Submersible Pumps 3HP-10HP",
+        "slug": "solar-submersible-pumps-3hp-10hp",
+        "image": "http://127.0.0.1:8000/images/no-image.png",
+        "description": "High grade submersible borehole pumps"
+      },
       "mrp": 85000.00,
       "booking_amount": 17000.00,
       "balance_amount": 68000.00,
@@ -2413,7 +2542,7 @@ Dedicated endpoints for accessing DLS Agro & Farm Equipment catalog (e.g., Solar
 
 ---
 
-### 14.4 DLS Agro Product Details
+### 14.7 DLS Agro Product Details
 * **Method**: `GET` or `POST`
 * **URL**: `/api/dls-agro/products/{idOrSlug}` (or `/api/dls-farm/products/{idOrSlug}`)
 * **Auth**: Public

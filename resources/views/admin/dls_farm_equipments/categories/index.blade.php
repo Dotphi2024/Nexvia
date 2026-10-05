@@ -9,7 +9,10 @@
             <h4 class="fw-bold text-dark mb-1">DLS Farm Equipments – Categories</h4>
             <p class="text-muted small mb-0">Manage farm machinery, solar, and equipment categories</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.dls_farm_equipments.subcategories.index') }}" class="btn btn-outline-secondary btn-sm fw-semibold">
+                <i class="bx bx-layers me-1"></i> Manage Subcategories
+            </a>
             <a href="{{ route('admin.dls_farm_equipments.products.index') }}" class="btn btn-outline-primary btn-sm fw-semibold">
                 <i class="bx bx-box me-1"></i> View Farm Products
             </a>
@@ -87,6 +90,7 @@
                                     <th>#</th>
                                     <th>Image</th>
                                     <th>Category Details</th>
+                                    <th>Subcategories</th>
                                     <th>Products</th>
                                     <th class="text-end">Action</th>
                                 </tr>
@@ -109,9 +113,16 @@
                                             <span class="text-muted small font-monospace">{{ $category->slug }}</span>
                                         </td>
                                         <td>
-                                            <span class="badge bg-secondary-subtle text-secondary fs-12">
+                                            <a href="{{ route('admin.dls_farm_equipments.subcategories.index', ['category_id' => $category->id]) }}" 
+                                               class="badge bg-primary-subtle text-primary border border-primary-subtle text-decoration-none">
+                                                <i class="bx bx-layers me-1"></i>{{ $category->subcategories_count ?? 0 }} subcategories
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <a href="{{ route('admin.dls_farm_equipments.products.index', ['category_id' => $category->id]) }}" 
+                                               class="badge bg-secondary-subtle text-secondary fs-12 text-decoration-none">
                                                 {{ $category->products_count ?? $category->products()->count() }} items
-                                            </span>
+                                            </a>
                                         </td>
                                         <td class="text-end">
                                             <div class="d-inline-flex gap-1">

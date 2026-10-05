@@ -3234,3 +3234,55 @@ In all product list/search responses, each product contains its `subcategory` ob
   "balance_amount": 19999.20
 }
 ```
+
+---
+
+### 18.5 DLS Agro / Farm Equipment Subcategories APIs
+
+Dedicated endpoints for DLS Farm Equipment subcategories (Solar Water Pumps, Tillers, Sprayers, etc.):
+
+#### 18.5.1 List All Agro Subcategories
+- **Method:** `GET` / `POST`
+- **URL:** `/api/dls-agro/subcategories` (or `/api/dls-farm/subcategories`)
+- **Query / Body Params:**
+  - `category_id` (integer / string) — Filter by parent agro category ID or slug.
+  - `search` (string) — Search subcategory name or slug.
+
+#### 18.5.2 List Subcategories by Agro Category
+- **Method:** `GET` / `POST`
+- **URL:** `/api/dls-agro/categories/{idOrSlug}/subcategories` (or `/api/dls-farm/categories/{idOrSlug}/subcategories`)
+
+#### 18.5.3 Get Agro Subcategory Details & Products
+- **Method:** `GET` / `POST`
+- **URL:** `/api/dls-agro/subcategories/{idOrSlug}` (or `/api/dls-farm/subcategories/{idOrSlug}`)
+
+#### 18.5.4 Filter Agro Products by Subcategory
+- **Method:** `GET` / `POST`
+- **URL:** `/api/dls-agro/products?subcategory_id={id}` (or `subcategory={slug}`)
+
+**Sample Product Item in Agro Response:**
+```json
+{
+  "id": 20,
+  "name": "NEXVIA Solar Submersible Pump 5HP DC",
+  "slug": "nexvia-solar-submersible-pump-5hp-dc",
+  "category": {
+    "id": 7,
+    "name": "Solar Water Pumps",
+    "slug": "solar-water-pumps",
+    "type": "dls_farm_equipment"
+  },
+  "subcategory": {
+    "id": 13,
+    "name": "Solar Submersible Pumps 3HP-10HP",
+    "slug": "solar-submersible-pumps-3hp-10hp",
+    "image": "https://backend.nexviadls.com/images/no-image.png",
+    "description": "High grade submersible borehole pumps"
+  },
+  "mrp": 125000.00,
+  "booking_amount": 25000.00,
+  "balance_amount": 100000.00,
+  "stock": 10,
+  "is_featured": true
+}
+```

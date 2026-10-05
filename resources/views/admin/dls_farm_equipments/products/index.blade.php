@@ -12,7 +12,10 @@
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('admin.dls_farm_equipments.categories.index') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bx bx-category me-1"></i> Manage Categories
+                <i class="bx bx-category me-1"></i> Categories
+            </a>
+            <a href="{{ route('admin.dls_farm_equipments.subcategories.index') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bx bx-layers me-1"></i> Subcategories
             </a>
             <a href="{{ route('admin.dls_farm_equipments.products.create') }}" class="btn btn-primary btn-sm fw-semibold px-3">
                 <i class="bx bx-plus me-1"></i> Add Farm Product
@@ -51,12 +54,12 @@
                     </a>
                 </div>
 
-                <!-- Category & Search Filters -->
-                <form action="{{ route('admin.dls_farm_equipments.products.index') }}" method="GET" class="d-flex align-items-center gap-2 m-0">
+                <!-- Category, Subcategory & Search Filters -->
+                <form action="{{ route('admin.dls_farm_equipments.products.index') }}" method="GET" class="d-flex flex-wrap align-items-center gap-2 m-0">
                     @if(!empty($filter) && $filter !== 'all')
                         <input type="hidden" name="filter" value="{{ $filter }}">
                     @endif
-                    <select name="category_id" class="form-select form-select-sm" style="min-width: 170px;" onchange="this.form.submit()">
+                    <select name="category_id" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
                         <option value="">All Farm Categories</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ (string)($categoryId ?? '') === (string)$cat->id ? 'selected' : '' }}>
@@ -65,14 +68,25 @@
                         @endforeach
                     </select>
 
-                    <div class="input-group input-group-sm" style="max-width: 220px;">
+                    @if($subcategories->isNotEmpty())
+                        <select name="subcategory_id" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
+                            <option value="">All Subcategories</option>
+                            @foreach($subcategories as $sub)
+                                <option value="{{ $sub->id }}" {{ (string)($subcategoryId ?? '') === (string)$sub->id ? 'selected' : '' }}>
+                                    {{ $sub->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
+
+                    <div class="input-group input-group-sm" style="max-width: 200px;">
                         <input type="text" name="q" value="{{ $search ?? '' }}" class="form-control" placeholder="Search product...">
                         <button class="btn btn-outline-secondary" type="submit">
                             <i class="bx bx-search"></i>
                         </button>
                     </div>
 
-                    @if(!empty($categoryId) || !empty($search))
+                    @if(!empty($categoryId) || !empty($subcategoryId) || !empty($search))
                         <a href="{{ route('admin.dls_farm_equipments.products.index', ['filter' => $filter ?? 'all']) }}" class="btn btn-sm btn-light text-muted" title="Clear search">
                             <i class="bx bx-x"></i>
                         </a>
@@ -91,7 +105,51 @@
                         <tr>
                             <th class="ps-3" style="width: 50px;">Photo</th>
                             <th>Product Details</th>
-                            <th>Category</th>
+                            <th>Category & Subcategory</th>
+                            <th>Pricing (MRP / 20% Booking)</th>
+                            <th>Stock & Badges</th>
+                            <th>Status</th>
+                            <th>Featured</th>
+                            <th class="text-end pe-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($products as $product)
+                            <tr>
+                                <td class="ps-3">
+                                    <img src="{{ \App\Helpers\ImageHelper::resolve($product->main_image) }}" 
+                                         alt="{{ $product->name }}" 
+                                         class="rounded border" 
+                                         width="44" height="44" 
+                                         style="object-fit: cover;"
+                                         onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark fs-14">{{ $product->name }}</div>
+                                    <div class="text-muted small">
+                                        @if($product->model_code)
+                                            <span class="badge bg-light text-secondary border font-monospace me-1">{{ $product->model_code }}</span>
+                                        @endif
+                                        @if($product->sku)
+                                            <span class="text-muted font-monospace micro">SKU: {{ $product->sku }}</span>
+                                        @endif
+                                    </div>
+                                    @if($product->offer_text)
+                                        <span class="badge bg-danger-subtle text-danger micro mt-1">{{ $product->offer_text }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                        {{ $product->category->name ?? 'Farm Category' }}
+                                    </span>
+                                    @if($product->subcategory)
+                                        <div class="mt-1">
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bx bx-subdirectory-right me-1"></i>{{ $product->subcategory->name }}
+                                            </span>
+                                        </div>
+                                    @endif
+                                </td>
                             <th>Pricing (MRP / 20% Booking)</th>
                             <th>Stock & Badges</th>
                             <th>Status</th>
