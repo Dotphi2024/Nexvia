@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Subcategory;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -16,14 +17,19 @@ class DlsFarmProductAdminController extends Controller
     {
         $filter = $request->query('filter', 'all');
         $categoryId = $request->query('category_id');
+        $subcategoryId = $request->query('subcategory_id');
         $search = trim((string)$request->query('q'));
 
         $query = Product::whereHas('category', function ($q) {
             $q->where('type', self::TYPE);
-        })->with('category');
+        })->with(['category', 'subcategory']);
 
         if (!empty($categoryId)) {
             $query->where('category_id', $categoryId);
+        }
+
+        if (!empty($subcategoryId)) {
+            $query->where('subcategory_id', $subcategoryId);
         }
 
         if (!empty($search)) {
@@ -44,6 +50,14 @@ class DlsFarmProductAdminController extends Controller
 
         $products = $query->latest()->paginate(15)->withQueryString();
         $categories = Category::where('type', self::TYPE)->orderBy('name')->get();
+        
+        $subcategoriesQuery = Subcategory::whereHas('category', function ($q) {
+            $q->where('type', self::TYPE);
+        });
+        if (!empty($categoryId)) {
+            $subcategoriesQuery->where('category_id', $categoryId);
+        }
+        $subcategories = $subcategoriesQuery->orderBy('name')->get();
 
         $baseCountQuery = Product::whereHas('category', function ($q) {
             $q->where('type', self::TYPE);
@@ -56,8 +70,10 @@ class DlsFarmProductAdminController extends Controller
         return view('admin.dls_farm_equipments.products.index', compact(
             'products',
             'categories',
+            'subcategories',
             'filter',
             'categoryId',
+            'subcategoryId',
             'search',
             'totalCount',
             'trendingCount',
@@ -68,22 +84,27 @@ class DlsFarmProductAdminController extends Controller
     public function create()
     {
         $categories = Category::where('type', self::TYPE)->orderBy('name')->get();
-        return view('admin.dls_farm_equipments.products.create', compact('categories'));
+        $subcategories = Subcategory::whereHas('category', function ($q) {
+            $q->where('type', self::TYPE);
+        })->orderBy('name')->get();
+
+        return view('admin.dls_farm_equipments.products.create', compact('categories', 'subcategories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name'        => 'required|string|max:255',
-            'model_code'  => 'nullable|string|max:100',
-            'sku'         => 'nullable|string|max:100',
-            'mrp'         => 'required|numeric|min:0',
-            'stock'       => 'required|integer|min:0',
-            'video_url'   => 'nullable|url',
-            'offer_text'  => 'nullable|string|max:255',
-            'main_image'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'gallery.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'category_id'    => 'required|exists:categories,id',
+            'subcategory_id' => 'nullable|exists:subcategories,id',
+            'name'           => 'required|string|max:255',
+            'model_code'     => 'nullable|string|max:100',
+            'sku'            => 'nullable|string|max:100',
+            'mrp'            => 'required|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'video_url'      => 'nullable|url',
+            'offer_text'     => 'nullable|string|max:255',
+            'main_image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'gallery.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         $mrp = (float)$request->mrp;
@@ -118,6 +139,7 @@ class DlsFarmProductAdminController extends Controller
 
         Product::create([
             'category_id'             => $request->category_id,
+            'subcategory_id'          => $request->subcategory_id ?: null,
             'name'                    => $request->name,
             'overview'                => $overview,
             'model_code'              => $request->model_code,
@@ -145,15 +167,16 @@ class DlsFarmProductAdminController extends Controller
         ]);
 
         return redirect()->route('admin.dls_farm_equipments.products.index')
-            ->with('success', 'DLS Farm Equipment product created successfully with technical specifications and features!');
+            ->with('success', 'DLS Farm Equipment product created successfully with technical specifications, subcategory and features!');
     }
 
     public function edit($id)
     {
         $product = Product::findOrFail($id);
         $categories = Category::where('type', self::TYPE)->orderBy('name')->get();
+        $subcategories = Subcategory::where('category_id', $product->category_id)->orderBy('name')->get();
 
-        return view('admin.dls_farm_equipments.products.edit', compact('product', 'categories'));
+        return view('admin.dls_farm_equipments.products.edit', compact('product', 'categories', 'subcategories'));
     }
 
     public function update(Request $request, $id)
@@ -161,13 +184,14 @@ class DlsFarmProductAdminController extends Controller
         $product = Product::findOrFail($id);
 
         $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name'        => 'required|string|max:255',
-            'mrp'         => 'required|numeric|min:0',
-            'stock'       => 'required|integer|min:0',
-            'video_url'   => 'nullable|url',
-            'main_image'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'gallery.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'category_id'    => 'required|exists:categories,id',
+            'subcategory_id' => 'nullable|exists:subcategories,id',
+            'name'           => 'required|string|max:255',
+            'mrp'            => 'required|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'video_url'      => 'nullable|url',
+            'main_image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'gallery.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         $mrp = (float)$request->mrp;
@@ -206,6 +230,7 @@ class DlsFarmProductAdminController extends Controller
 
         $product->update([
             'category_id'             => $request->category_id,
+            'subcategory_id'          => $request->subcategory_id ?: null,
             'name'                    => $request->name,
             'overview'                => $overview,
             'model_code'              => $request->model_code,
@@ -232,7 +257,7 @@ class DlsFarmProductAdminController extends Controller
         ]);
 
         return redirect()->route('admin.dls_farm_equipments.products.index')
-            ->with('success', 'DLS Farm Equipment product updated successfully with technical specifications and features!');
+            ->with('success', 'DLS Farm Equipment product updated successfully with technical specifications, subcategory and features!');
     }
 
     /**
