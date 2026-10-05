@@ -79,6 +79,13 @@
     - [12.8 Apply & Validate Referral Code at Checkout (v1)](#128-apply--validate-referral-code-at-checkout-v1)
     - [12.9 Product Referral Benefit Calculator (v1)](#129-product-referral-benefit-calculator-v1)
     - [12.10 Redeem Incentive Points on Booking Balance (v1)](#1210-redeem-incentive-points-on-booking-balance-v1)
+13. [Summary of Standard HTTP Status Codes](#13-summary-of-standard-http-status-codes)
+14. [Razorpay Payment Gateway Integration (Live APIs)](#14-razorpay-payment-gateway-integration-live-apis)
+    - [14.1 Live Gateway Credentials](#141-live-gateway-credentials)
+    - [14.2 Create Gateway Payment Order](#142-create-gateway-payment-order)
+    - [14.3 Verify Payment & Cryptographic Signature](#143-verify-payment--cryptographic-signature)
+    - [14.4 Razorpay Webhook Event Listener](#144-razorpay-webhook-event-listener)
+    - [14.5 Mobile & Web SDK Client Integration Code](#145-mobile--web-sdk-client-integration-code)
 
 ---
 
@@ -2392,3 +2399,363 @@ Redeem available wallet points towards paying down the remaining balance of an a
 | `422 Unprocessable` | Validation error | Validation failure (e.g. duplicate phone, self-referral) |
 | `429 Too Many Requests` | Rate limit hit | OTP resend within cooldown window |
 | `500 Server Error` | Internal exception | Unexpected server failure |
+
+---
+
+## 14. Razorpay Payment Gateway Integration (Live APIs)
+
+### 14.1 Live Gateway Credentials & Configuration
+
+```env
+# Razorpay Live API Credentials
+RAZORPAY_KEY_ID=rzp_live_Tk75PpmJwnvItA
+RAZORPAY_KEY_SECRET=rql5885952DBD5XyO1kijFnm
+RAZORPAY_WEBHOOK_SECRET=nexvia_razorpay_secret_2026
+```
+
+---
+
+### 14.2 Create Gateway Payment Order
+
+Generates a real, cryptographically secure Razorpay Order ID (`order_xxxxxxxxxxxxxx`) directly via the Razorpay Orders API for token booking (20%), full payment (100%), or balance settlement.
+
+- **Method:** `POST`
+- **URL:** `/api/payments/create-order` or `/api/customer/payments/create-order`
+- **Headers:** 
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <token>` *(Optional if guest)*
+
+#### Request Body
+```json
+{
+  "productId": 1,
+  "amountPayable": 500.00,
+  "currency": "INR",
+  "paymentType": "booking_20",
+  "selectedColor": "Graphite Grey",
+  "quantity": 1,
+  "name": "John Doe",
+  "email": "customer@nexvia.in",
+  "phone": "9876543210"
+}
+```
+
+#### Request Parameters
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `productId` | Integer / String | Optional | ID or Slug of the product to book. If omitted, `amountPayable` is required. |
+| `amountPayable` | Float / Number | Optional | Explicit amount in INR (e.g. `500.00`). If omitted, calculated from 20% or full product MRP. |
+| `paymentType` | String | No | `booking_20` (20% token) or `full_payment` (100% full amount). Default: `booking_20`. |
+| `currency` | String | No | ISO 4217 Currency Code. Default: `INR`. |
+| `selectedColor` | String | No | Selected color variant. |
+| `quantity` | Integer | No | Number of units (default: `1`). |
+| `bookingNumber` | String | No | Booking reference (e.g. `NEX-2026-ABC123`) if paying remaining balance. |
+| `name` | String | No | Customer full name for checkout prefill. |
+| `phone` | String | No | Customer mobile phone number for checkout prefill. |
+| `email` | String | No | Customer email address for checkout prefill. |
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Payment order ID generated successfully.",
+  "gateway": {
+    "provider": "razorpay",
+    "integration_mode": "live_razorpay",
+    "is_live": true,
+    "key_id": "rzp_live_Tk75PpmJwnvItA"
+  },
+  "order": {
+    "id": "order_Tk7kL8rrYdb0UV",
+    "order_id": "order_Tk7kL8rrYdb0UV",
+    "entity": "order",
+    "amount": 50000,
+    "amount_paid": 0,
+    "amount_due": 50000,
+    "amount_in_rupees": 500.0,
+    "currency": "INR",
+    "receipt": "rcpt_20261005061356_587",
+    "status": "created",
+    "attempts": 0,
+    "payment_type": "booking_20",
+    "created_at": 1791180838,
+    "notes": {
+      "product_id": 1,
+      "product_name": "NEXVIA 43” Smart LED TV",
+      "model_code": "NEX-ENT-43TV",
+      "selected_color": null,
+      "quantity": 1,
+      "user_id": null,
+      "customer_name": "John Doe"
+    }
+  },
+  "checkout_options": {
+    "key": "rzp_live_Tk75PpmJwnvItA",
+    "amount": 50000,
+    "currency": "INR",
+    "name": "NEXVIA Mobility",
+    "description": "Token Booking (20%) for NEXVIA 43” Smart LED TV",
+    "order_id": "order_Tk7kL8rrYdb0UV",
+    "prefill": {
+      "name": "John Doe",
+      "email": "customer@nexvia.in",
+      "contact": "9876543210"
+    },
+    "notes": {
+      "booking_type": "booking_20",
+      "product_id": 1,
+      "color": null
+    },
+    "theme": {
+      "color": "#0D6EFD"
+    }
+  },
+  "upi_qr": {
+    "enabled": true,
+    "account_name": "DLS AGRO INFRAVENTURE PRIVATE LIMITED",
+    "upi_id": "dlsagroin.09@idfcbank",
+    "bank_name": "IDFC FIRST Bank",
+    "qr_image_url": "https://nexviadls.com/images/dls_payment_qr.png",
+    "instructions": "Scan this QR code with any UPI app (GPay, PhonePe, Paytm, BHIM) to transfer"
+  }
+}
+```
+
+---
+
+### 14.3 Verify Payment & Cryptographic Signature
+
+Verifies the Razorpay payment callback parameters (`razorpay_order_id`, `razorpay_payment_id`, `razorpay_signature`) using **HMAC SHA-256** validation against the server's `RAZORPAY_KEY_SECRET`. Upon verification, updates the associated Booking status and ledger.
+
+- **Method:** `POST`
+- **URL:** `/api/payments/verify` or `/api/customer/payments/verify`
+- **Headers:** 
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <token>` *(Optional)*
+
+#### Request Body
+```json
+{
+  "razorpay_order_id": "order_Tk7kL8rrYdb0UV",
+  "razorpay_payment_id": "pay_9876543210abcdef",
+  "razorpay_signature": "4a72d3f25c38714b9812401f8220807b5a593cb84029279a77610df666133480",
+  "booking_number": "NEX-2026-ABC123",
+  "is_balance_payment": false,
+  "amount": 500.00
+}
+```
+
+#### Request Parameters
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `razorpay_order_id` | String | **Yes** | The Razorpay Order ID returned from `/create-order`. |
+| `razorpay_payment_id` | String | **Yes** | The Razorpay Payment ID returned on successful transaction. |
+| `razorpay_signature` | String | **Yes** | Cryptographic HMAC SHA-256 signature generated by Razorpay. |
+| `booking_number` | String | No | The NEXVIA Booking number (`NEX-YYYY-XXXXXX`) to auto-confirm. |
+| `is_balance_payment` | Boolean | No | Set `true` if this payment is towards 80% balance / EMI installment. |
+| `amount` | Float | No | Amount paid in INR. |
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Payment verified and captured successfully.",
+  "payment_status": "captured",
+  "data": {
+    "order_id": "order_Tk7kL8rrYdb0UV",
+    "payment_id": "pay_9876543210abcdef",
+    "signature": "4a72d3f25c38714b9812401f8220807b5a593cb84029279a77610df666133480",
+    "status": "paid",
+    "booking_number": "NEX-2026-ABC123",
+    "verified_at": "2026-10-05T11:45:00+05:30"
+  }
+}
+```
+
+#### Failure Response (`400 Bad Request`)
+```json
+{
+  "status": false,
+  "message": "Payment signature verification failed. Invalid or fraudulent transaction."
+}
+```
+
+---
+
+### 14.4 Razorpay Webhook Event Listener
+
+Receives asynchronous server-to-server webhook notifications from Razorpay for events like `order.paid`, `payment.captured`, and `payment.failed`.
+
+- **Method:** `POST`
+- **URL:** `/api/webhooks/razorpay` or `/api/payments/webhook`
+- **Headers:** 
+  - `Content-Type: application/json`
+  - `X-Razorpay-Signature: <signature_header>`
+- **Webhook Secret:** `nexvia_razorpay_secret_2026`
+
+#### Handled Events
+- `order.paid`: Automatically confirms booking and marks initial payment complete.
+- `payment.captured`: Automatically records transaction reference.
+- `payment.failed`: Logs failure diagnostics.
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Webhook processed successfully"
+}
+```
+
+---
+
+### 14.5 Mobile & Web SDK Client Integration Code
+
+#### Flutter Integration Example (`razorpay_flutter`)
+
+```dart
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class PaymentService {
+  late Razorpay _razorpay;
+
+  void init() {
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+  }
+
+  Future<void> openCheckout({required int productId, required double amount}) async {
+    // 1. Create order on backend
+    final response = await http.post(
+      Uri.parse('https://nexviadls.com/api/payments/create-order'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'productId': productId,
+        'amountPayable': amount,
+        'paymentType': 'booking_20',
+        'name': 'Customer Name',
+        'phone': '9876543210'
+      }),
+    );
+    final data = jsonDecode(response.body);
+
+    // 2. Open Razorpay Checkout Sheet
+    var options = {
+      'key': data['gateway']['key_id'],
+      'amount': data['order']['amount'],
+      'name': 'NEXVIA Mobility',
+      'description': 'Token Booking (20%)',
+      'order_id': data['order']['id'],
+      'prefill': data['checkout_options']['prefill'],
+      'theme': {'color': '#0D6EFD'}
+    };
+
+    _razorpay.open(options);
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    // 3. Verify on backend
+    await http.post(
+      Uri.parse('https://nexviadls.com/api/payments/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'razorpay_order_id': response.orderId,
+        'razorpay_payment_id': response.paymentId,
+        'razorpay_signature': response.signature,
+      }),
+    );
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    print('Payment Failed: ${response.message}');
+  }
+}
+```
+
+#### React Native Integration Example (`react-native-razorpay`)
+
+```javascript
+import RazorpayCheckout from 'react-native-razorpay';
+
+const payWithRazorpay = async (productId, amount) => {
+  // 1. Create Order ID from Backend API
+  const res = await fetch('https://nexviadls.com/api/payments/create-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId, amountPayable: amount, paymentType: 'booking_20' }),
+  });
+  const data = await res.json();
+
+  // 2. Launch Razorpay Native Modal
+  const options = {
+    key: data.gateway.key_id,
+    amount: data.order.amount,
+    currency: 'INR',
+    name: 'NEXVIA Mobility',
+    description: '20% Token Booking',
+    order_id: data.order.id,
+    prefill: data.checkout_options.prefill,
+    theme: { color: '#0D6EFD' }
+  };
+
+  RazorpayCheckout.open(options).then((paymentData) => {
+    // 3. Verify Payment
+    fetch('https://nexviadls.com/api/payments/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_signature: paymentData.razorpay_signature,
+      }),
+    });
+  }).catch((error) => {
+    console.log('Payment Error:', error);
+  });
+};
+```
+
+#### Web Browser Integration Example (`Razorpay Checkout JS`)
+
+```html
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+async function startPayment(productId, amount) {
+  // 1. Create order
+  const response = await fetch('/api/payments/create-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId: productId, amountPayable: amount, paymentType: 'booking_20' })
+  });
+  const data = await response.json();
+
+  // 2. Open Razorpay modal
+  const options = {
+    key: data.gateway.key_id,
+    amount: data.order.amount,
+    currency: 'INR',
+    name: 'NEXVIA Mobility',
+    order_id: data.order.id,
+    prefill: data.checkout_options.prefill,
+    theme: { color: '#0D6EFD' },
+    handler: async function (paymentResponse) {
+      // 3. Verify Signature
+      await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_order_id: paymentResponse.razorpay_order_id,
+          razorpay_payment_id: paymentResponse.razorpay_payment_id,
+          razorpay_signature: paymentResponse.razorpay_signature
+        })
+      });
+      window.location.reload();
+    }
+  };
+  const rzp = new Razorpay(options);
+  rzp.open();
+}
+</script>
+```

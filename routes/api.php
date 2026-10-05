@@ -471,6 +471,8 @@ Route::post('/checkout/calculate',                      [CheckoutApiController::
 // Direct Payment Order & Gateway Routes (/api/payments/*)
 Route::post('/payments/create-order',                   [PaymentApiController::class, 'createOrder']);
 Route::post('/payments/verify',                         [PaymentApiController::class, 'verifyPayment']);
+Route::post('/payments/webhook',                        [PaymentApiController::class, 'handleWebhook']);
+Route::post('/webhooks/razorpay',                       [PaymentApiController::class, 'handleWebhook']);
 
 // Direct Bookings Routes (/api/bookings/*)
 Route::match(['get', 'post'], '/bookings/list',         [BookingApiController::class, 'index']);

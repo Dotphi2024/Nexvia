@@ -132,6 +132,14 @@ class BookingController extends Controller
             $receiptPath = 'uploads/payment_receipts/' . $rName;
         }
 
+        // Check Razorpay payment info
+        $paymentMethod = 'upi_manual';
+        $paymentRef = null;
+        if ($request->filled('razorpay_payment_id')) {
+            $paymentMethod = 'razorpay';
+            $paymentRef = $request->input('razorpay_payment_id');
+        }
+
         $booking = Booking::create([
             'booking_number'          => $bookingNumber,
             'user_id'                 => $user?->id,
@@ -157,6 +165,8 @@ class BookingController extends Controller
             'state'                   => $request->state,
             'qr_code_hash'            => md5($bookingNumber . Str::random(10)),
             'payment_receipt'         => $receiptPath,
+            'offline_payment_method'  => $paymentMethod,
+            'offline_payment_ref'     => $paymentRef,
         ]);
 
         // Initialize Delivery Record for DSP
