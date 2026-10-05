@@ -26,6 +26,7 @@ class Delivery extends Model
         'delivery_otp',
         'delivery_notes',
         'dispatched_at',
+        'received_at_dsp_at',
         'delivered_at',
         'installation_completed_at',
     ];
@@ -33,6 +34,7 @@ class Delivery extends Model
     protected $casts = [
         'dsp_commission_amount'     => 'decimal:2',
         'dispatched_at'             => 'datetime',
+        'received_at_dsp_at'        => 'datetime',
         'delivered_at'              => 'datetime',
         'installation_completed_at' => 'datetime',
     ];

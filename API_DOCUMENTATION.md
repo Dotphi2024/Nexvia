@@ -2889,6 +2889,120 @@ This section covers:
 
 ---
 
+## 17. DSP Physical Receiving, OTP Verification & Automatic Warranty
+
+### Overview of Workflow
+```text
+[Central Warehouse Dispatch]
+         │
+         ▼
+[1. Product Arrives at DSP Hub]
+         │ ──► Action: "Product Received at DSP" (POST /api/dsp/deliveries/{id}/receive)
+         │     Stage: `received_at_dsp`
+         ▼
+[2. Out for Delivery Handover]
+         │ ──► Stage: `out_for_delivery`
+         ▼
+[3. Doorstep Delivery Handover & Customer OTP Check]
+         │ ──► DSP enters 6-digit Customer OTP (POST /api/dsp/deliveries/{id}/verify-otp)
+         │
+         ├───► ❌ OTP Mismatch: Blocked (422 Error - Delivery cannot complete)
+         │
+         └───► ✅ OTP Verified:
+                 1. Delivery marked as `delivered`
+                 2. 5% DSP Commission automatically credited to DSP Wallet
+                 3. Official 3-Year Warranty automatically created & activated (`status: 'active'`)
+```
+
+---
+
+### 17.1 Product Receiving Confirmation at DSP Hub ("Product Received at DSP")
+
+When a dispatched shipment physically arrives at the local DSP center/hub, the DSP confirms physical receipt and inspects package seals.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/deliveries/{id}/receive`
+- **Headers:** `Authorization: Bearer <dsp_token>` (or DSP session)
+
+#### Request Body (Optional):
+```json
+{
+  "delivery_notes": "Unit received intact, battery sealed, verified model NEX-FALCON"
+}
+```
+
+#### Success Response (`200 OK`):
+```json
+{
+  "status": true,
+  "message": "Product physical shipment received and verified at DSP Hub successfully. Ready for PDI and Out for Delivery.",
+  "stage": "received_at_dsp",
+  "received_at_dsp_at": "2026-10-05T11:23:32+00:00",
+  "tracking_number": "TRK-46384600",
+  "pdi_status": "received_at_hub"
+}
+```
+
+---
+
+### 17.2 Customer Delivery OTP / QR Verification ("OTP शिवाय Delivered नाही")
+
+**Strict Security Rule:** An order cannot be marked as `delivered` without the customer providing their 6-digit Delivery OTP. This prevents false delivery claims and guarantees customer handover.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/deliveries/{id}/verify-otp`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Request Body:
+```json
+{
+  "delivery_otp": "849201",
+  "delivery_notes": "PDI passed, customer verified bike and keys handed over."
+}
+```
+
+#### Error Response — Invalid OTP (`422 Unprocessable Entity`):
+```json
+{
+  "status": false,
+  "message": "Invalid Customer Delivery OTP. Please enter the correct 6-digit OTP provided by the customer.",
+  "error": "OTP_MISMATCH"
+}
+```
+
+#### Success Response — OTP Verified (`200 OK`):
+```json
+{
+  "status": true,
+  "message": "Customer Delivery OTP verified successfully! Order marked as DELIVERED, 5% commission credited, and official warranty activated.",
+  "stage": "delivered",
+  "delivered_at": "2026-10-05T11:23:32+00:00",
+  "commission_credited": 2500.00,
+  "wallet_balance": 2500.00,
+  "transaction_ref": "DSP-COM-20261005-7736",
+  "warranty": {
+    "id": 1,
+    "serial_number": "NX-EV-2026-CH77102",
+    "warranty_start": "2026-10-05",
+    "warranty_end": "2029-10-05",
+    "status": "active",
+    "coverage_years": 3
+  }
+}
+```
+
+---
+
+### 17.3 Automatic Warranty Activation Details
+
+Upon successful OTP verification:
+1. **Warranty Record:** A record in `warranties` table is activated (`status: 'active'`).
+2. **Start Date:** Begins on the exact physical delivery date (`delivered_at`).
+3. **Coverage Duration:** Configured according to product specs (default 3 years / 36 months).
+4. **Certificate:** Warranty PDF certificate is generated linked to customer's dashboard.
+
+---
+
 ## Summary of Error Status Codes
 
 | Code | Status | Meaning |

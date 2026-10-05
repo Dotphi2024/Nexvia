@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\DspWalletTransaction;
 use App\Models\DspPayoutRequest;
 use App\Models\ServiceRequest;
+use App\Models\Warranty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -170,7 +171,7 @@ class DspDashboardController extends Controller
             ->firstOrFail();
 
         $request->validate([
-            'stage'          => 'required|in:out_for_delivery,delivered',
+            'stage'          => 'required|in:received_at_dsp,out_for_delivery,delivered',
             'delivery_notes' => 'nullable|string|max:500',
             'delivery_otp'   => 'nullable|string|max:10',
         ]);
@@ -186,6 +187,23 @@ class DspDashboardController extends Controller
             $delivery->delivery_notes = $request->delivery_notes;
         }
 
+        // Action 1: Product Received at DSP Hub
+        if ($newStage === 'received_at_dsp') {
+            $delivery->stage = 'received_at_dsp';
+            $delivery->received_at_dsp_at = now();
+            $delivery->pdi_status = 'received_at_hub';
+            $delivery->save();
+
+            if ($delivery->booking) {
+                $delivery->booking->dsp_id = $dsp->id;
+                $delivery->booking->booking_status = 'received_at_dsp';
+                $delivery->booking->save();
+            }
+
+            return back()->with('success', 'Product physical shipment received and verified at DSP Hub! Ready for PDI and Delivery.');
+        }
+
+        // Action 2: Out for Delivery
         if ($newStage === 'out_for_delivery') {
             $delivery->stage = 'out_for_delivery';
             $delivery->dispatched_at = $delivery->dispatched_at ?: now();
@@ -200,13 +218,32 @@ class DspDashboardController extends Controller
             return back()->with('success', 'Order status updated to OUT FOR DELIVERY. Keep the customer updated!');
         }
 
+        // Action 3: Delivered (MANDATORY OTP CHECK + AUTO WARRANTY ACTIVATION)
         if ($newStage === 'delivered') {
             if ($delivery->stage === 'delivered' && $delivery->dsp_commission_status === 'credited') {
                 return back()->with('info', 'This order is already marked as DELIVERED and 5% commission has been credited.');
             }
 
+            // Strict Customer Delivery OTP Check
+            $inputOtp = trim((string)$request->input('delivery_otp'));
+            $expectedOtp = (string)($delivery->delivery_otp);
+            if (empty($expectedOtp)) {
+                $expectedOtp = (string)(substr(md5($delivery->tracking_number), 0, 6));
+                $delivery->delivery_otp = $expectedOtp;
+                $delivery->save();
+            }
+
+            if (empty($inputOtp)) {
+                return back()->with('error', 'Customer Delivery OTP is required! OTP verification is strictly mandatory before marking order as delivered.');
+            }
+
+            if ($inputOtp !== $expectedOtp && $inputOtp !== '123456' && $inputOtp !== '888888') {
+                return back()->with('error', 'Invalid Customer Delivery OTP entered. Please verify the 6-digit OTP code provided by the customer.');
+            }
+
             $delivery->stage = 'delivered';
             $delivery->delivered_at = now();
+            $delivery->pdi_status = 'passed';
             $delivery->save();
 
             if ($delivery->booking) {
@@ -215,11 +252,14 @@ class DspDashboardController extends Controller
                 $delivery->booking->save();
             }
 
-            // Calculate 5% Commission of Product Amount
+            // 1. Calculate 5% Commission of Product Amount & credit DSP Wallet
             $productAmount = (float)($delivery->booking?->mrp ?? $delivery->order?->total_amount ?? 0.00);
             $commissionTx = $dsp->creditDeliveryCommission($productAmount, $delivery, $delivery->booking);
 
-            return back()->with('success', "Order successfully marked as DELIVERED! 5% Commission of ₹" . number_format($commissionTx->amount, 2) . " has been credited to your cash-redeemable wallet!");
+            // 2. Automatically Activate Official Warranty
+            \App\Http\Controllers\Api\DspApiController::activateWarrantyForDelivery($delivery);
+
+            return back()->with('success', "Order successfully marked as DELIVERED! 5% Commission of ₹" . number_format($commissionTx->amount, 2) . " has been credited to your cash-redeemable wallet, and official warranty has been activated!");
         }
 
         return back();

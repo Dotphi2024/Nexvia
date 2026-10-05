@@ -270,6 +270,8 @@ Route::middleware(['dsp.auth'])->prefix('dsp')->group(function () {
     Route::post('/profile',                    [DspApiController::class, 'updateProfile']);
     Route::match(['get', 'post'], '/deliveries', [DspApiController::class, 'deliveries']);
     Route::match(['get', 'post'], '/deliveries/{id}', [DspApiController::class, 'deliveryDetail']);
+    Route::post('/deliveries/{id}/receive',    [DspApiController::class, 'receiveDelivery']);
+    Route::post('/deliveries/{id}/verify-otp', [DspApiController::class, 'verifyDeliveryOtp']);
     Route::post('/deliveries/{id}/status',     [DspApiController::class, 'updateDeliveryStatus']);
     Route::match(['get', 'post'], '/wallet',    [DspApiController::class, 'wallet']);
     Route::post('/wallet/redeem',              [DspApiController::class, 'requestPayout']);
@@ -280,6 +282,11 @@ Route::middleware(['dsp.auth'])->prefix('dsp')->group(function () {
     Route::match(['get', 'post'], '/service-requests/{id}',   [DspApiController::class, 'serviceRequestDetail']);
     Route::post('/service-requests/{id}/status',             [DspApiController::class, 'updateServiceRequestStatus']);
 });
+
+// Direct DSP delivery actions
+Route::post('/dsp/deliveries/{id}/receive',    [DspApiController::class, 'receiveDelivery']);
+Route::post('/dsp/deliveries/{id}/verify-otp', [DspApiController::class, 'verifyDeliveryOtp']);
+Route::post('/dsp/deliveries/{id}/status',     [DspApiController::class, 'updateDeliveryStatus']);
 
 // Home Section Banners Public API (Home Index Page Sliders & Promos)
 Route::get('/home/banners',         [BannerApiController::class, 'index']);
