@@ -43,5 +43,11 @@ return [
         'url'   => env('WHATSAPP_API_URL'),
         'token' => env('WHATSAPP_API_TOKEN'),
     ],
-    
+
+    'razorpay' => [
+        'key_id'         => env('RAZORPAY_KEY_ID', 'rzp_live_Tk75PpmJwnvItA'),
+        'key_secret'     => env('RAZORPAY_KEY_SECRET', 'rql5885952DBD5XyO1kijFnm'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET', 'nexvia_razorpay_secret_2026'),
+    ],
+
 ];

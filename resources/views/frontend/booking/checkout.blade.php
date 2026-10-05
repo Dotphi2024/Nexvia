@@ -174,8 +174,46 @@
                                 </div>
                             @endif
 
-                            <!-- UPI QR PAYMENT OPTION -->
-                            <div class="card p-3 border rounded-3 bg-light mb-3 text-center">
+                            <!-- PAYMENT METHOD SELECTION -->
+                            <h6 class="fw-bold text-dark mb-2">Select Payment Method</h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 w-100 bg-white shadow-sm border-primary" style="cursor: pointer;" id="optOnlineLabel">
+                                        <input type="radio" name="payment_channel" value="online" checked class="form-check-input mt-0" onchange="togglePaymentMode('online')">
+                                        <div>
+                                            <strong class="d-block text-dark small">Razorpay Online</strong>
+                                            <span class="micro text-muted">UPI / Cards / NetBanking / EMI</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <label class="p-3 border rounded-3 d-flex align-items-center gap-2 w-100 bg-light" style="cursor: pointer;" id="optQrLabel">
+                                        <input type="radio" name="payment_channel" value="qr" class="form-check-input mt-0" onchange="togglePaymentMode('qr')">
+                                        <div>
+                                            <strong class="d-block text-dark small">Scan UPI QR</strong>
+                                            <span class="micro text-muted">Direct Bank / QR Transfer</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- RAZORPAY ONLINE INFO -->
+                            <div id="razorpayOnlineBox" class="card p-3 border border-primary bg-primary bg-opacity-10 rounded-3 mb-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <iconify-icon icon="solar:shield-check-bold" class="fs-2 text-primary"></iconify-icon>
+                                    <div>
+                                        <div class="fw-bold text-dark small">Instant Secure Gateway (Razorpay)</div>
+                                        <div class="micro text-muted">Pay securely using Google Pay, PhonePe, Paytm, Debit/Credit Card, Net Banking or PayLater.</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-primary border-opacity-25">
+                                    <span class="badge bg-success text-white micro">100% Encrypted</span>
+                                    <span class="badge bg-primary text-white micro">Instant Booking Receipt</span>
+                                </div>
+                            </div>
+
+                            <!-- UPI QR PAYMENT OPTION (Hidden by default unless QR chosen) -->
+                            <div id="upiQrBox" class="card p-3 border rounded-3 bg-light mb-3 text-center d-none">
                                 <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
                                     <iconify-icon icon="solar:qr-code-bold" class="fs-4 text-primary"></iconify-icon>
                                     <span class="fw-bold text-dark small">Scan & Pay with any UPI App</span>
@@ -188,23 +226,27 @@
                                     <div class="font-monospace text-dark fw-bold mt-1">UPI ID: dlsagroin.09@idfcbank</div>
                                     <div class="micro text-muted">A/c: DLS AGRO INFRAVENTURE PVT LTD</div>
                                 </div>
+
+                                <div class="mt-3 text-start">
+                                    <label class="form-label small fw-bold text-dark d-flex justify-content-between align-items-center mb-1">
+                                        <span>
+                                            <iconify-icon icon="solar:document-upload-bold" class="text-primary me-1 align-middle"></iconify-icon>
+                                            Payment Receipt / Screenshot
+                                        </span>
+                                        <span class="badge bg-secondary-subtle text-secondary micro">Optional</span>
+                                    </label>
+                                    <input type="file" name="payment_receipt" class="form-control form-control-sm" accept="image/*,.pdf">
+                                    <span class="micro text-muted mt-1 d-block">Upload transfer screenshot (PNG, JPG, PDF).</span>
+                                </div>
                             </div>
 
-                            <!-- OPTIONAL PAYMENT RECEIPT UPLOAD -->
-                            <div class="card p-3 border rounded-3 bg-white mb-3">
-                                <label class="form-label small fw-bold text-dark d-flex justify-content-between align-items-center mb-1">
-                                    <span>
-                                        <iconify-icon icon="solar:document-upload-bold" class="text-primary me-1 align-middle"></iconify-icon>
-                                        Payment Receipt / Screenshot
-                                    </span>
-                                    <span class="badge bg-secondary-subtle text-secondary micro">Optional</span>
-                                </label>
-                                <input type="file" name="payment_receipt" class="form-control form-control-sm" accept="image/*,.pdf">
-                                <span class="micro text-muted mt-1 d-block">Upload your UPI transfer screenshot or payment receipt (PNG, JPG, PDF up to 5MB).</span>
-                            </div>
+                            <!-- Hidden Razorpay inputs populated on callback -->
+                            <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                            <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                            <input type="hidden" name="razorpay_signature" id="razorpay_signature">
 
-                            <button type="submit" class="btn btn-nexvia-primary btn-lg w-100 py-3 shadow">
-                                Confirm & Pay ₹{{ number_format($paymentType === 'booking_20' ? $product->booking_amount : $product->mrp, 0) }}
+                            <button type="button" id="submitPayBtn" class="btn btn-nexvia-primary btn-lg w-100 py-3 shadow">
+                                Pay Now ₹{{ number_format($paymentType === 'booking_20' ? $product->booking_amount : $product->mrp, 0) }}
                             </button>
                         </div>
                     </div>
@@ -216,7 +258,127 @@
 @endsection
 
 @section('scripts')
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+function togglePaymentMode(mode) {
+    const rzpBox = document.getElementById('razorpayOnlineBox');
+    const qrBox = document.getElementById('upiQrBox');
+    const optOnline = document.getElementById('optOnlineLabel');
+    const optQr = document.getElementById('optQrLabel');
+
+    if (mode === 'online') {
+        rzpBox.classList.remove('d-none');
+        qrBox.classList.add('d-none');
+        optOnline.classList.add('border-primary', 'shadow-sm', 'bg-white');
+        optOnline.classList.remove('bg-light');
+        optQr.classList.remove('border-primary', 'shadow-sm', 'bg-white');
+        optQr.classList.add('bg-light');
+    } else {
+        rzpBox.classList.add('d-none');
+        qrBox.classList.remove('d-none');
+        optQr.classList.add('border-primary', 'shadow-sm', 'bg-white');
+        optQr.classList.remove('bg-light');
+        optOnline.classList.remove('border-primary', 'shadow-sm', 'bg-white');
+        optOnline.classList.add('bg-light');
+    }
+}
+
+document.getElementById('submitPayBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+
+    const form = this.closest('form');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const selectedChannel = document.querySelector('input[name="payment_channel"]:checked')?.value || 'online';
+
+    if (selectedChannel === 'qr') {
+        form.submit();
+        return;
+    }
+
+    // Razorpay Online Flow
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Initializing Secure Payment...';
+
+    const customerName = form.querySelector('input[name="customer_name"]').value;
+    const customerPhone = form.querySelector('input[name="customer_phone"]').value;
+    const amountPayable = "{{ $paymentType === 'booking_20' ? $product->booking_amount : $product->mrp }}";
+    const productId = "{{ $product->id }}";
+    const paymentType = "{{ $paymentType }}";
+
+    fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            amountPayable: amountPayable,
+            productId: productId,
+            paymentType: paymentType,
+            name: customerName,
+            phone: customerPhone
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.status || !data.order) {
+            alert(data.message || 'Unable to create payment order. Please try again.');
+            btn.disabled = false;
+            btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+            return;
+        }
+
+        const options = {
+            "key": data.gateway.key_id || "{{ config('services.razorpay.key_id', 'rzp_live_Tk75PpmJwnvItA') }}",
+            "amount": data.order.amount,
+            "currency": "INR",
+            "name": "NEXVIA Mobility",
+            "description": "{{ $paymentType === 'booking_20' ? '20% Token Booking' : 'Full Payment' }} for {{ $product->name }}",
+            "order_id": data.order.id,
+            "prefill": {
+                "name": customerName,
+                "contact": customerPhone
+            },
+            "theme": {
+                "color": "#0D6EFD"
+            },
+            "handler": function (response) {
+                document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+                document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
+                document.getElementById('razorpay_signature').value = response.razorpay_signature;
+
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Confirming Booking...';
+                form.submit();
+            },
+            "modal": {
+                "ondismiss": function() {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+                }
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response){
+            alert("Payment failed: " + response.error.description);
+            btn.disabled = false;
+            btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+        });
+        rzp.open();
+    })
+    .catch(err => {
+        console.error('Payment Error:', err);
+        alert('Payment gateway initialization failed. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+    });
+});
+
 function lookupDsps(pincode) {
     if (!pincode || pincode.trim().length < 4) return;
     const container = document.getElementById('dspSelectionContainer');
@@ -257,3 +419,4 @@ function lookupDsps(pincode) {
 }
 </script>
 @endsection
+
