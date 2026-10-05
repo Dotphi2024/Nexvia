@@ -401,6 +401,8 @@ class PaymentApiController extends Controller
                     if ($isFullyPaid) {
                         $referralService = app(ReferralCommissionService::class);
                         $referralService->autoApprovePendingReferralsForBooking($booking);
+                        app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
+                        $booking->refresh();
                     }
                 } else {
                     // Initial booking payment confirmation
@@ -415,21 +417,27 @@ class PaymentApiController extends Controller
                     if ($isFullPayment) {
                         $referralService = app(ReferralCommissionService::class);
                         $referralService->autoApprovePendingReferralsForBooking($booking);
+                        app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
+                        $booking->refresh();
                     }
                 }
             }
 
             return response()->json([
                 'status'         => true,
-                'message'        => 'Payment verified and captured successfully.',
+                'message'        => 'Payment verified and captured successfully.' . ($booking && $booking->can_download_challan ? " Digital Delivery Challan (DC #{$booking->delivery_challan_number}) generated." : ''),
                 'payment_status' => 'captured',
                 'data'           => [
-                    'order_id'       => $orderId,
-                    'payment_id'     => $paymentId,
-                    'signature'      => $signature,
-                    'status'         => 'paid',
-                    'booking_number' => $booking ? $booking->booking_number : null,
-                    'verified_at'    => now()->toIso8601String(),
+                    'order_id'                => $orderId,
+                    'payment_id'              => $paymentId,
+                    'signature'               => $signature,
+                    'status'                  => 'paid',
+                    'booking_number'          => $booking ? $booking->booking_number : null,
+                    'delivery_challan_number' => $booking ? $booking->delivery_challan_number : null,
+                    'can_download_challan'    => $booking ? $booking->can_download_challan : false,
+                    'challan_status'          => $booking ? $booking->challan_status : null,
+                    'delivery_challan_url'    => ($booking && $booking->can_download_challan) ? url("/booking/challan/{$booking->booking_number}") : null,
+                    'verified_at'             => now()->toIso8601String(),
                 ],
             ], 200);
 
@@ -484,6 +492,10 @@ class PaymentApiController extends Controller
                             'offline_payment_method' => 'razorpay_webhook',
                             'offline_payment_ref'    => $paymentId,
                         ]);
+
+                        if ($isFullPayment) {
+                            app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
+                        }
                     }
                 }
             }

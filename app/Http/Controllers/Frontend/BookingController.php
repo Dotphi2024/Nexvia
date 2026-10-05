@@ -96,18 +96,26 @@ class BookingController extends Controller
         $appliedWalletDiscount = 0.00;
         if ($request->has('use_wallet') && $user && (float) $user->wallet_balance > 0) {
             $appliedWalletDiscount = min((float) $user->wallet_balance, $bookingAmount);
-            $bookingAmount = max(0.00, $bookingAmount - $appliedWalletDiscount);
+            $netCashPaid = max(0.00, $bookingAmount - $appliedWalletDiscount);
 
             // Deduct wallet balance
             $user->decrement('wallet_balance', $appliedWalletDiscount);
 
+            // Sync with SelfDealerWallet
+            $dealerWallet = \App\Models\SelfDealerWallet::where('user_id', $user->id)->first();
+            if ($dealerWallet) {
+                $dealerWallet->redeemPoints($appliedWalletDiscount);
+            }
+
             // Record Debit Transaction
             WalletTransaction::create([
-                'user_id'     => $user->id,
-                'amount'      => $appliedWalletDiscount,
-                'type'        => 'debit',
-                'source'      => 'booking_redemption',
-                'description' => "Redeemed Product Credit for Receipt #{$bookingNumber}",
+                'user_id'          => $user->id,
+                'amount'           => $appliedWalletDiscount,
+                'type'             => 'debit',
+                'source'           => 'booking_redemption',
+                'description'      => "Redeemed Product Credit (₹" . number_format($appliedWalletDiscount, 2) . ") for Booking #{$bookingNumber}",
+                'transaction_type' => 'redemption',
+                'status'           => 'available',
             ]);
         }
 
@@ -186,6 +194,11 @@ class BookingController extends Controller
             if ($paymentType === 'full_payment') {
                 $referralService->autoApprovePendingReferralsForBooking($booking);
             }
+        }
+
+        if ($paymentType === 'full_payment') {
+            // Automatically generate Digital Delivery Challan (DC) on 100% full payment
+            app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
         }
 
         return redirect()->route('booking.receipt', $booking->booking_number)
@@ -301,15 +314,32 @@ class BookingController extends Controller
         $booking->update($updateData);
 
         if ($isFullyPaid) {
+            // Automatically generate Digital Delivery Challan (DC) on 100% full payment
+            app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
+
             $referralService = app(\App\Services\ReferralCommissionService::class);
             $referralService->autoApprovePendingReferralsForBooking($booking);
         }
 
         $msg = $isFullyPaid
-            ? "Payment of ₹" . number_format($amountToPay, 2) . " completed successfully! Booking #{$booking->booking_number} is now FULLY PAID."
+            ? "Payment of ₹" . number_format($amountToPay, 2) . " completed successfully! Booking #{$booking->booking_number} is now FULLY PAID. Digital Delivery Challan (DC) has been generated!"
             : "Payment of ₹" . number_format($amountToPay, 2) . " processed successfully! Remaining balance: ₹" . number_format($newBalance, 2);
 
         return redirect()->route('booking.receipt', $booking->booking_number)->with('success', $msg);
+    }
+
+    /**
+     * Display and print Digital Delivery Challan (DC)
+     */
+    public function challan($bookingNumber)
+    {
+        $booking = Booking::with(['product', 'user', 'dsp', 'delivery'])
+            ->where('booking_number', $bookingNumber)
+            ->firstOrFail();
+
+        $challanData = app(\App\Services\DeliveryChallanService::class)->getChallanPayload($booking);
+
+        return view('frontend.booking.challan', compact('booking', 'challanData'));
     }
 
     /**
@@ -325,27 +355,19 @@ class BookingController extends Controller
         }
         $booking = $query->firstOrFail();
 
-        // Check if already fully paid or already reallocated
-        if ($booking->payment_status === 'fully_paid') {
-            return redirect()->route('booking.receipt', $booking->booking_number)
-                ->with('info', "Booking #{$booking->booking_number} is already fully paid and cannot be reallocated.");
-        }
-
         if ($booking->booking_status === 'reallocated') {
             return redirect()->route('products.index')
                 ->with('info', "The paid amount for Booking #{$booking->booking_number} has already been transferred to your product credit.");
         }
 
-        // Check if 60 days have passed
-        $isExpired = ($booking->days_remaining <= 0) || Carbon::parse($booking->balance_due_date)->isPast();
-        if (!$isExpired) {
-            return back()->with('error', "Reallocation to another item is available after the 60-day balance settlement window expires ({$booking->days_remaining} days remaining).");
-        }
-
-        // Calculate total amount filled/paid so far
-        $totalPaid = max(0.00, round(((float)$booking->mrp) - ((float)$booking->balance_amount), 2));
+        // Calculate total amount paid/filled so far (20% deposit + any partial/EMI balance payments)
+        $totalPaid = $booking->filled_amount;
         if ($totalPaid <= 0) {
             $totalPaid = (float) $booking->booking_amount;
+        }
+
+        if ($totalPaid <= 0) {
+            return back()->with('error', "No paid balance available on this booking to reallocate.");
         }
 
         return DB::transaction(function () use ($booking, $totalPaid) {
@@ -367,7 +389,7 @@ class BookingController extends Controller
                     'type'             => 'credit',
                     'source'           => 'booking_reallocation',
                     'booking_id'       => $booking->id,
-                    'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from 60-day expired booking #{$booking->booking_number} to buy another item",
+                    'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from booking #{$booking->booking_number} to Product Credit wallet to buy another item",
                     'transaction_type' => 'reallocation',
                     'status'           => 'available',
                     'available_at'     => now(),

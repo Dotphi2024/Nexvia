@@ -35,11 +35,17 @@
                 @endif
             </div>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('booking.receipt', $booking->booking_number) }}" target="_blank" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3">
                 <iconify-icon icon="solar:printer-bold" class="fs-18"></iconify-icon>
                 <span>Print / View Digital Receipt</span>
             </a>
+            @if($booking->can_download_challan)
+                <a href="{{ route('booking.challan', $booking->booking_number) }}" target="_blank" class="btn btn-outline-success d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold">
+                    <iconify-icon icon="solar:document-bold" class="fs-18"></iconify-icon>
+                    <span>Delivery Challan (DC)</span>
+                </a>
+            @endif
             @if((float)$booking->balance_amount > 0)
                 <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#recordBalanceModal">
                     <iconify-icon icon="solar:wallet-money-bold" class="fs-18"></iconify-icon>
@@ -230,47 +236,83 @@
 
             <!-- Delivery & DSP Tracking Card -->
             <div class="card border-0 rounded-4 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-2">
                         <iconify-icon icon="solar:delivery-bold" class="text-primary fs-20"></iconify-icon>
-                        <h5 class="card-title mb-0 fw-bold text-dark">Authorized DSP & Delivery Tracking</h5>
+                        <h5 class="card-title mb-0 fw-bold text-dark">Authorized DSP & Delivery Challan (DC) Tracking</h5>
                     </div>
-                    @if($booking->delivery)
-                        <span class="badge bg-primary-subtle text-primary font-monospace fs-12 fw-bold">
-                            {{ $booking->delivery->tracking_number }}
-                        </span>
-                    @endif
+                    <div class="d-flex align-items-center gap-2">
+                        @if($booking->delivery)
+                            <span class="badge bg-primary-subtle text-primary font-monospace fs-12 fw-bold">
+                                {{ $booking->delivery->tracking_number }}
+                            </span>
+                        @endif
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal">
+                            <iconify-icon icon="solar:pen-bold" class="fs-14"></iconify-icon>
+                            <span>Edit DC / Delivery</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     @if($booking->delivery)
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4 col-sm-6">
                                 <span class="text-muted micro d-block text-uppercase fw-bold">Tracking Number</span>
                                 <span class="font-monospace fw-bold text-primary fs-14">{{ $booking->delivery->tracking_number }}</span>
                                 <a href="{{ url('/deliveries/' . $booking->delivery->tracking_number) }}" target="_blank" class="d-block micro text-decoration-none mt-1">
                                     <iconify-icon icon="solar:link-circle-bold" class="align-middle"></iconify-icon> Customer Live Tracking Page
                                 </a>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4 col-sm-6">
+                                <span class="text-muted micro d-block text-uppercase fw-bold">Digital Delivery Challan (DC)</span>
+                                @if($booking->delivery_challan_number || $booking->delivery->challan_number)
+                                    <span class="badge bg-success-subtle text-success font-monospace fs-13 fw-bold">
+                                        {{ $booking->delivery_challan_number ?: $booking->delivery->challan_number }}
+                                    </span>
+                                    <a href="{{ route('booking.challan', $booking->booking_number) }}" target="_blank" class="d-block micro text-success text-decoration-none mt-1">
+                                        <iconify-icon icon="solar:printer-bold" class="align-middle"></iconify-icon> View Printable Challan
+                                    </a>
+                                @else
+                                    <span class="badge bg-warning-subtle text-warning fs-12">Pending 100% Full Payment</span>
+                                @endif
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <span class="text-muted micro d-block text-uppercase fw-bold">Tax Invoice Reference</span>
+                                <strong class="font-monospace text-dark fs-13">{{ $booking->invoice_number ?: ($booking->delivery->invoice_number ?: ('INV-' . date('Y') . '-' . strtoupper(substr(md5($booking->booking_number), 0, 6)))) }}</strong>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <span class="text-muted micro d-block text-uppercase fw-bold">Serial / Chassis / IMEI No.</span>
+                                <span class="font-monospace fw-bold text-dark fs-13">{{ $booking->serial_number ?: ($booking->delivery->serial_number ?: 'Assigned on Dispatch') }}</span>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
                                 <span class="text-muted micro d-block text-uppercase fw-bold">Current Delivery Stage</span>
-                                <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-1 fs-13 text-capitalize mt-1">
+                                <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-1 fs-12 text-capitalize mt-1">
                                     {{ str_replace('_', ' ', $booking->delivery->stage) }}
+                                </span>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <span class="text-muted micro d-block text-uppercase fw-bold">PDI / Inspection Status</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fs-12 text-uppercase mt-1">
+                                    <iconify-icon icon="solar:check-circle-bold" class="align-middle me-1"></iconify-icon>
+                                    {{ $booking->delivery->pdi_status ?? 'Passed' }}
                                 </span>
                             </div>
                             <div class="col-md-6">
                                 <span class="text-muted micro d-block text-uppercase fw-bold">Assigned DSP Partner</span>
                                 @if($booking->delivery->dsp)
                                     <strong class="text-dark d-block fs-14">{{ $booking->delivery->dsp->business_name ?? $booking->delivery->dsp->applicant_name }}</strong>
-                                    <span class="text-muted micro">{{ $booking->delivery->dsp->applicant_name }} ({{ $booking->delivery->dsp->mobile }})</span>
+                                    <span class="text-muted micro">Code: <strong class="font-monospace text-dark">{{ $booking->delivery->dsp->application_number ?: ('DSP-MH-' . str_pad($booking->delivery->dsp->id, 4, '0', STR_PAD_LEFT)) }}</strong> • Contact: {{ $booking->delivery->dsp->mobile }}</span>
+                                    <div class="micro text-secondary">Hub: {{ $booking->delivery->dsp->district ?? 'Local Hub' }} (PIN: {{ $booking->delivery->dsp->premises_pincode }})</div>
                                 @else
-                                    <span class="text-muted small">Auto-assigned / Central Warehouse</span>
+                                    <span class="text-muted small">Auto-assigned / Central Logistics Hub</span>
                                 @endif
                             </div>
                             <div class="col-md-6">
                                 <span class="text-muted micro d-block text-uppercase fw-bold">Delivery Timestamp</span>
-                                <span class="text-dark small">
-                                    {{ $booking->delivery->delivered_at ? \Carbon\Carbon::parse($booking->delivery->delivered_at)->format('d M, Y H:i') : 'In Pipeline' }}
+                                <span class="text-dark small d-block">
+                                    {{ $booking->delivery->delivered_at ? \Carbon\Carbon::parse($booking->delivery->delivered_at)->format('d M, Y H:i') : 'In Pipeline / Out for Dispatch' }}
                                 </span>
+                                <span class="micro text-muted">Delivery OTP: <strong class="font-monospace text-primary">{{ $booking->delivery->delivery_otp ?: 'Assigned at Dispatch' }}</strong></span>
                             </div>
                         </div>
                     @else
@@ -509,5 +551,85 @@
     </div>
 </div>
 @endif
+
+<!-- Modal: Edit Delivery & Challan Information -->
+<div class="modal fade" id="editDeliveryModal" tabindex="-1" aria-labelledby="editDeliveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-dark" id="editDeliveryModalLabel">
+                    <iconify-icon icon="solar:pen-bold" class="text-primary me-1 align-middle"></iconify-icon>
+                    Update Delivery & Challan Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('admin.bookings.update_delivery', $booking->id) }}" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Product Serial No. / Chassis / IMEI</label>
+                        <input type="text" name="serial_number" class="form-control font-monospace fw-bold" 
+                               value="{{ $booking->serial_number ?: ($booking->delivery?->serial_number ?: '') }}" 
+                               placeholder="e.g. NX-EV-2026-CH88491">
+                        <span class="micro text-muted">Serial/Chassis number printed on Digital Delivery Challan (DC)</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Tax Invoice Reference</label>
+                        <input type="text" name="invoice_number" class="form-control font-monospace" 
+                               value="{{ $booking->invoice_number ?: ($booking->delivery?->invoice_number ?: '') }}" 
+                               placeholder="e.g. INV-2026-004812">
+                        <span class="micro text-muted">Official GST Tax Invoice Reference number</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Assigned DSP Partner</label>
+                        <select name="dsp_id" class="form-select">
+                            <option value="">-- Central Hub / Auto Match --</option>
+                            @foreach($dsps ?? [] as $d)
+                                <option value="{{ $d->id }}" {{ ($booking->dsp_id == $d->id || ($booking->delivery && $booking->delivery->dsp_id == $d->id)) ? 'selected' : '' }}>
+                                    {{ $d->business_name ?: $d->applicant_name }} ({{ $d->district ?? 'Hub' }} - {{ $d->premises_pincode }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark">Delivery Stage</label>
+                            <select name="delivery_stage" class="form-select">
+                                <option value="order_confirmed" {{ ($booking->delivery?->stage === 'order_confirmed') ? 'selected' : '' }}>Order Confirmed</option>
+                                <option value="processing" {{ ($booking->delivery?->stage === 'processing') ? 'selected' : '' }}>Processing / Packed</option>
+                                <option value="dispatched" {{ ($booking->delivery?->stage === 'dispatched') ? 'selected' : '' }}>Dispatched to DSP</option>
+                                <option value="out_for_delivery" {{ ($booking->delivery?->stage === 'out_for_delivery') ? 'selected' : '' }}>Out for Delivery</option>
+                                <option value="delivered" {{ ($booking->delivery?->stage === 'delivered') ? 'selected' : '' }}>Delivered & Verified</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark">PDI Status</label>
+                            <select name="pdi_status" class="form-select">
+                                <option value="passed" {{ ($booking->delivery?->pdi_status === 'passed') ? 'selected' : '' }}>Passed / Verified</option>
+                                <option value="pending" {{ ($booking->delivery?->pdi_status === 'pending') ? 'selected' : '' }}>Pending Inspection</option>
+                                <option value="in_progress" {{ ($booking->delivery?->pdi_status === 'in_progress') ? 'selected' : '' }}>In Progress</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold text-dark">Handover Delivery OTP</label>
+                        <input type="text" name="delivery_otp" class="form-control font-monospace" 
+                               value="{{ $booking->delivery?->delivery_otp ?? '' }}" 
+                               placeholder="e.g. 849201">
+                        <span class="micro text-muted">Customer verification OTP required by DSP during physical handover</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Save DC Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @endsection

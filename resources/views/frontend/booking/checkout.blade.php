@@ -283,7 +283,34 @@ function togglePaymentMode(mode) {
     }
 }
 
-document.getElementById('submitPayBtn').addEventListener('click', function(e) {
+const baseAmount = parseFloat("{{ $paymentType === 'booking_20' ? $product->booking_amount : $product->mrp }}");
+const userWalletBal = parseFloat("{{ Auth::guard('web')->check() ? ($user->wallet_balance ?? 0) : 0 }}");
+const walletCheckbox = document.getElementById('walletCheck');
+const submitPayBtn = document.getElementById('submitPayBtn');
+
+function getNetPayable() {
+    if (walletCheckbox && walletCheckbox.checked && userWalletBal > 0) {
+        return Math.max(0, baseAmount - userWalletBal);
+    }
+    return baseAmount;
+}
+
+function updatePayButtonState() {
+    const net = getNetPayable();
+    if (net === 0 && walletCheckbox && walletCheckbox.checked) {
+        submitPayBtn.innerHTML = '<iconify-icon icon="solar:wallet-money-bold" class="me-1 align-middle fs-5"></iconify-icon> Confirm Booking with Product Credit (₹0 Cash)';
+        submitPayBtn.className = 'btn btn-success btn-lg w-100 py-3 shadow fw-bold';
+    } else {
+        submitPayBtn.innerHTML = 'Pay Now ₹' + Number(net).toLocaleString('en-IN');
+        submitPayBtn.className = 'btn btn-nexvia-primary btn-lg w-100 py-3 shadow';
+    }
+}
+
+if (walletCheckbox) {
+    walletCheckbox.addEventListener('change', updatePayButtonState);
+}
+
+submitPayBtn.addEventListener('click', function(e) {
     e.preventDefault();
 
     const form = this.closest('form');
@@ -293,20 +320,23 @@ document.getElementById('submitPayBtn').addEventListener('click', function(e) {
     }
 
     const selectedChannel = document.querySelector('input[name="payment_channel"]:checked')?.value || 'online';
+    const netAmountPayable = getNetPayable();
 
-    if (selectedChannel === 'qr') {
+    // If paying with QR or if 100% covered by product credit wallet (₹0 cash)
+    if (selectedChannel === 'qr' || netAmountPayable <= 0) {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Confirming Booking...';
         form.submit();
         return;
     }
 
-    // Razorpay Online Flow
+    // Razorpay Online Flow for remaining cash
     const btn = this;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Initializing Secure Payment...';
 
     const customerName = form.querySelector('input[name="customer_name"]').value;
     const customerPhone = form.querySelector('input[name="customer_phone"]').value;
-    const amountPayable = "{{ $paymentType === 'booking_20' ? $product->booking_amount : $product->mrp }}";
     const productId = "{{ $product->id }}";
     const paymentType = "{{ $paymentType }}";
 
@@ -317,7 +347,7 @@ document.getElementById('submitPayBtn').addEventListener('click', function(e) {
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         },
         body: JSON.stringify({
-            amountPayable: amountPayable,
+            amountPayable: netAmountPayable,
             productId: productId,
             paymentType: paymentType,
             name: customerName,
@@ -329,7 +359,7 @@ document.getElementById('submitPayBtn').addEventListener('click', function(e) {
         if (!data.status || !data.order) {
             alert(data.message || 'Unable to create payment order. Please try again.');
             btn.disabled = false;
-            btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+            updatePayButtonState();
             return;
         }
 
@@ -358,7 +388,7 @@ document.getElementById('submitPayBtn').addEventListener('click', function(e) {
             "modal": {
                 "ondismiss": function() {
                     btn.disabled = false;
-                    btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+                    updatePayButtonState();
                 }
             }
         };
@@ -367,7 +397,7 @@ document.getElementById('submitPayBtn').addEventListener('click', function(e) {
         rzp.on('payment.failed', function (response){
             alert("Payment failed: " + response.error.description);
             btn.disabled = false;
-            btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+            updatePayButtonState();
         });
         rzp.open();
     })
@@ -375,7 +405,7 @@ document.getElementById('submitPayBtn').addEventListener('click', function(e) {
         console.error('Payment Error:', err);
         alert('Payment gateway initialization failed. Please try again.');
         btn.disabled = false;
-        btn.innerHTML = 'Pay Now ₹' + Number(amountPayable).toLocaleString('en-IN');
+        updatePayButtonState();
     });
 });
 

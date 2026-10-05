@@ -289,9 +289,10 @@ class BookingAdminController extends Controller
                 $referralService->activateSelfDealer($user, $booking);
             }
 
-            // Auto-approve pending referrals if full payment is received
+            // Auto-approve pending referrals and generate Digital Delivery Challan (DC) if full payment is received
             if ($booking->payment_status === 'fully_paid' || in_array($booking->booking_status, ['delivered', 'completed'])) {
                 $referralService->autoApprovePendingReferralsForBooking($booking);
+                app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
             }
 
             return redirect()->route('admin.bookings.show', $booking->id)
@@ -313,7 +314,9 @@ class BookingAdminController extends Controller
             'transfers.toUser'
         ])->findOrFail($id);
 
-        return view('admin.bookings.show', compact('booking'));
+        $dsps = DspApplication::where('status', 'approved')->orderBy('business_name')->get();
+
+        return view('admin.bookings.show', compact('booking', 'dsps'));
     }
 
     /**
@@ -380,6 +383,9 @@ class BookingAdminController extends Controller
             if ($approvedCount > 0) {
                 $autoApprovedMsg = " ({$approvedCount} referral commission(s) auto-approved!)";
             }
+
+            // Generate Digital Delivery Challan (DC) automatically
+            app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
         }
 
         $booking->save();
@@ -450,13 +456,14 @@ class BookingAdminController extends Controller
 
         $referralService = app(ReferralCommissionService::class);
 
-        // Auto-approve pending referrals if booking is fully paid or completed/delivered
+        // Auto-approve pending referrals and generate DC if booking is fully paid or completed/delivered
         $approvedMsg = '';
         if ($booking->payment_status === 'fully_paid' || in_array($booking->booking_status, ['delivered', 'completed'])) {
             $approvedCount = $referralService->autoApprovePendingReferralsForBooking($booking);
             if ($approvedCount > 0) {
                 $approvedMsg = " ({$approvedCount} referral credit(s) auto-approved)";
             }
+            app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
         }
 
         // If booking was cancelled by Admin, reverse any active or pending referrals
@@ -483,4 +490,61 @@ class BookingAdminController extends Controller
 
         return back()->with('success', 'Booking status updated successfully!' . $approvedMsg);
     }
+
+    /**
+     * Update delivery tracking, serial/chassis number, invoice number, and DSP assignment
+     */
+    public function updateDeliveryInfo(Request $request, $id)
+    {
+        $booking = Booking::with('delivery')->findOrFail($id);
+
+        $request->validate([
+            'serial_number'   => 'nullable|string|max:100',
+            'invoice_number'  => 'nullable|string|max:100',
+            'dsp_id'          => 'nullable|exists:dsp_applications,id',
+            'delivery_stage'  => 'nullable|string|max:50',
+            'pdi_status'      => 'nullable|string|max:50',
+            'delivery_otp'    => 'nullable|string|max:10',
+        ]);
+
+        if ($request->filled('serial_number')) {
+            $booking->serial_number = trim($request->serial_number);
+        }
+        if ($request->filled('invoice_number')) {
+            $booking->invoice_number = trim($request->invoice_number);
+        }
+        if ($request->filled('dsp_id')) {
+            $booking->dsp_id = $request->dsp_id;
+        }
+        $booking->save();
+
+        if ($booking->delivery) {
+            $deliveryUpdate = [];
+            if ($request->filled('serial_number')) {
+                $deliveryUpdate['serial_number'] = trim($request->serial_number);
+            }
+            if ($request->filled('invoice_number')) {
+                $deliveryUpdate['invoice_number'] = trim($request->invoice_number);
+            }
+            if ($request->filled('dsp_id')) {
+                $deliveryUpdate['dsp_id'] = $request->dsp_id;
+            }
+            if ($request->filled('delivery_stage')) {
+                $deliveryUpdate['stage'] = $request->delivery_stage;
+                if ($request->delivery_stage === 'delivered' && !$booking->delivery->delivered_at) {
+                    $deliveryUpdate['delivered_at'] = now();
+                }
+            }
+            if ($request->filled('pdi_status')) {
+                $deliveryUpdate['pdi_status'] = $request->pdi_status;
+            }
+            if ($request->filled('delivery_otp')) {
+                $deliveryUpdate['delivery_otp'] = trim($request->delivery_otp);
+            }
+            $booking->delivery->update($deliveryUpdate);
+        }
+
+        return back()->with('success', 'Delivery tracking & Challan dispatch details updated successfully.');
+    }
 }
+

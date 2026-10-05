@@ -191,6 +191,11 @@ class CheckoutApiController extends Controller
 
             $grandTotal = round($subtotalMrp + $deliveryFee, 2);
 
+            $customer = $this->resolveCustomer($request);
+            $walletBalance = $customer ? (float) ($customer->wallet_balance ?? 0) : 0.0;
+            $walletDeduction = min($walletBalance, $totalToken);
+            $netPayableAfterWallet = max(0.0, round($totalToken - $walletDeduction, 2));
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Checkout amounts calculated successfully.',
@@ -205,6 +210,12 @@ class CheckoutApiController extends Controller
                         'balance_amount'         => round($totalBalance, 2),
                         'delivery_fee'           => $deliveryFee,
                         'grand_total'            => $grandTotal,
+                    ],
+                    'wallet' => [
+                        'available_credit_balance' => $walletBalance,
+                        'applied_discount'         => $walletDeduction,
+                        'net_token_payable'        => $netPayableAfterWallet,
+                        'has_sufficient_credit'    => ($walletBalance >= $totalToken),
                     ],
                     'taxes' => [
                         'tax_rate_percentage'    => $overallTaxRate,
@@ -244,6 +255,7 @@ class CheckoutApiController extends Controller
                     ],
                     'payable_breakdown' => [
                         'payable_now'            => round($totalToken, 2),
+                        'payable_now_with_wallet'=> $netPayableAfterWallet,
                         'payable_later'          => round($totalBalance, 2),
                         'total_payable'          => $grandTotal,
                     ],

@@ -42,6 +42,10 @@ class Booking extends Model
         'city',
         'state',
         'qr_code_hash',
+        'delivery_challan_number',
+        'serial_number',
+        'invoice_number',
+        'challan_generated_at',
         'cancellation_reason',
         'cancelled_at',
         'payment_receipt',
@@ -56,6 +60,7 @@ class Booking extends Model
         'is_offline' => 'boolean',
         'booking_date' => 'date',
         'balance_due_date' => 'date',
+        'challan_generated_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'mrp' => 'decimal:2',
         'booking_amount' => 'decimal:2',
@@ -124,12 +129,36 @@ class Booking extends Model
 
     public function getCanReallocatePaidAmountAttribute()
     {
-        return $this->is_expired_60_days && $this->payment_status !== 'fully_paid' && $this->booking_status !== 'reallocated';
+        return $this->booking_status !== 'reallocated' 
+            && $this->booking_status !== 'cancelled' 
+            && (float) $this->filled_amount > 0;
     }
 
     public function getFilledAmountAttribute()
     {
-        return max(0, round((float) $this->mrp - (float) $this->balance_amount, 2));
+        if ($this->payment_status === 'fully_paid') {
+            return (float) $this->mrp;
+        }
+
+        $paid = (float) $this->mrp - (float) $this->balance_amount;
+        if ($paid <= 0) {
+            $paid = (float) $this->booking_amount;
+        }
+
+        return max(0, round($paid, 2));
+    }
+
+    public function getCanDownloadChallanAttribute(): bool
+    {
+        return $this->payment_status === 'fully_paid' && (float)$this->balance_amount <= 0;
+    }
+
+    public function getChallanStatusAttribute(): string
+    {
+        if ($this->can_download_challan) {
+            return 'generated';
+        }
+        return 'pending_full_payment';
     }
 }
 

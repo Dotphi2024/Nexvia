@@ -150,6 +150,10 @@ class BookingApiController extends Controller
                 'booking_status'          => $booking->booking_status,
                 'transfer_status'         => $booking->transfer_status,
                 'transfer_eligible'       => $booking->transfer_status === 'original' && $booking->payment_status !== 'fully_paid',
+                'delivery_challan_number' => $booking->delivery_challan_number,
+                'challan_generated_at'    => $booking->challan_generated_at ? $booking->challan_generated_at->toIso8601String() : null,
+                'can_download_challan'    => $booking->can_download_challan,
+                'challan_status'          => $booking->challan_status,
                 'non_refundable_accepted' => $booking->non_refundable_accepted,
                 'customer_name'           => $booking->customer_name,
                 'customer_phone'          => $booking->customer_phone,
@@ -378,8 +382,9 @@ class BookingApiController extends Controller
                     ?? ($bodyJson['token_amount'] ?? null);
 
                 $bookingPct = (float) ($product->booking_percentage ?: 20.00);
-                $bookingAmount = !empty($tokenInput) ? (float) $tokenInput : round($totalMRP * ($bookingPct / 100), 2);
-                $balanceAmount = round($totalMRP - $bookingAmount, 2);
+                $requiredTokenAmount = !empty($tokenInput) ? (float) $tokenInput : round($totalMRP * ($bookingPct / 100), 2);
+                $bookingAmount = $requiredTokenAmount;
+                $balanceAmount = round($totalMRP - $requiredTokenAmount, 2);
                 $paymentStatus = 'paid'; // 20% confirmed token paid
                 $bookingStatus = 'booked';
             }
@@ -388,6 +393,40 @@ class BookingApiController extends Controller
             $balanceDueDate = now()->addDays(60);
             $bookingNumber = 'NEX-' . date('Y') . '-' . rand(100000, 999999);
             $qrHash = md5($bookingNumber . $user->id . time());
+
+            // Apply Product Credit Wallet redemption if requested
+            $appliedWalletDiscount = 0.00;
+            $useWallet = $request->boolean('use_wallet')
+                || $request->boolean('use_credits')
+                || ($bodyJson['use_wallet'] ?? false)
+                || ($bodyJson['use_credits'] ?? false);
+
+            if ($useWallet && $user && (float) $user->wallet_balance > 0) {
+                $appliedWalletDiscount = min((float) $user->wallet_balance, $bookingAmount);
+                $netCashPaid = max(0.00, round($bookingAmount - $appliedWalletDiscount, 2));
+
+                // Deduct wallet balance
+                $user->decrement('wallet_balance', $appliedWalletDiscount);
+                
+                // Sync with SelfDealerWallet
+                $dealerWallet = \App\Models\SelfDealerWallet::where('user_id', $user->id)->first();
+                if ($dealerWallet) {
+                    $dealerWallet->redeemPoints($appliedWalletDiscount);
+                }
+
+                // Record Debit Transaction
+                WalletTransaction::create([
+                    'user_id'          => $user->id,
+                    'amount'           => $appliedWalletDiscount,
+                    'type'             => 'debit',
+                    'source'           => 'booking_redemption',
+                    'description'      => "Redeemed Product Credit (₹" . number_format($appliedWalletDiscount, 2) . ") for Booking #{$bookingNumber}",
+                    'transaction_type' => 'redemption',
+                    'status'           => 'available',
+                ]);
+            } else {
+                $netCashPaid = $bookingAmount;
+            }
 
             $nonRefundableAccepted = (bool) (
                 $request->input('non_refundable_accepted')
@@ -471,9 +510,10 @@ class BookingApiController extends Controller
                 $activatedSelfDealer = $referralService->activateSelfDealer($user, $booking);
             }
 
-            // 9. Auto-approve pending referrals if full payment was completed upfront
+            // 9. Auto-approve pending referrals and generate Digital Delivery Challan (DC) if full payment was completed upfront
             if ($paymentStatus === 'fully_paid') {
                 $referralService->autoApprovePendingReferralsForBooking($booking);
+                app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
             }
 
             // 10. Send booking confirmation email via SMTP
@@ -494,6 +534,9 @@ class BookingApiController extends Controller
                 'booking' => [
                     'id'                      => $booking->id,
                     'booking_number'          => $booking->booking_number,
+                    'delivery_challan_number' => $booking->delivery_challan_number,
+                    'can_download_challan'    => $booking->can_download_challan,
+                    'challan_status'          => $booking->challan_status,
                     'product'                 => [
                         'id'                  => $product->id,
                         'name'                => $product->name,
@@ -511,6 +554,7 @@ class BookingApiController extends Controller
                         'balance_amount_due'  => (float) $booking->balance_amount,
                         'token_percentage'    => 20.0,
                         'balance_percentage'  => 80.0,
+                        'applied_wallet_discount' => $appliedWalletDiscount,
                         'currency'            => 'INR',
                     ],
                     'timeline'                => [
@@ -537,6 +581,9 @@ class BookingApiController extends Controller
                         'transfer_status'     => $booking->transfer_status,
                         'transfer_eligible'   => true,
                         'non_refundable'      => $booking->non_refundable_accepted,
+                        'delivery_challan_number' => $booking->delivery_challan_number,
+                        'challan_status'      => $booking->challan_status,
+                        'can_download_challan'=> $booking->can_download_challan,
                     ],
                     'qr_code_hash'            => $booking->qr_code_hash,
                     'created_at'              => $booking->created_at->toIso8601String(),
@@ -578,15 +625,14 @@ class BookingApiController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $user = $request->user('customer');
+        $user = $this->resolveCustomer($request);
         if (!$user) {
             return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
         }
 
-        $booking = Booking::where('id', $id)
-            ->where('user_id', $user->id)
-            ->with('product')
-            ->first();
+        $booking = is_numeric($id)
+            ? Booking::where('id', $id)->where('user_id', $user->id)->with('product', 'dsp', 'delivery')->first()
+            : Booking::where('booking_number', $id)->where('user_id', $user->id)->with('product', 'dsp', 'delivery')->first();
 
         if (!$booking) {
             return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
@@ -597,6 +643,11 @@ class BookingApiController extends Controller
             'data'   => [
                 'id'                      => $booking->id,
                 'booking_number'          => $booking->booking_number,
+                'delivery_challan_number' => $booking->delivery_challan_number,
+                'challan_generated_at'    => $booking->challan_generated_at ? $booking->challan_generated_at->toIso8601String() : null,
+                'can_download_challan'    => $booking->can_download_challan,
+                'challan_status'          => $booking->challan_status,
+                'delivery_challan_url'    => $booking->can_download_challan ? url("/booking/challan/{$booking->booking_number}") : null,
                 'customer_name'           => $booking->customer_name,
                 'customer_phone'          => $booking->customer_phone,
                 'product_name'            => $booking->product_name,
@@ -608,9 +659,9 @@ class BookingApiController extends Controller
                 'balance_due_date'        => $booking->balance_due_date->format('Y-m-d'),
                 'days_remaining'          => $booking->days_remaining,
                 'is_overdue'              => $booking->is_overdue,
-                'is_expired_60_days'      => ($booking->days_remaining <= 0) || \Carbon\Carbon::parse($booking->balance_due_date)->isPast(),
-                'can_reallocate_paid_amount' => (($booking->days_remaining <= 0) || \Carbon\Carbon::parse($booking->balance_due_date)->isPast()) && ($booking->payment_status !== 'fully_paid') && ($booking->booking_status !== 'reallocated'),
-                'filled_amount'           => max(0.00, round(((float)$booking->mrp) - ((float)$booking->balance_amount), 2)),
+                'is_expired_60_days'      => $booking->is_expired_60_days,
+                'can_reallocate_paid_amount' => $booking->can_reallocate_paid_amount,
+                'filled_amount'           => $booking->filled_amount,
                 'cancellation_allowed'    => false,
                 'payment_type'            => $booking->payment_type,
                 'payment_status'          => $booking->payment_status,
@@ -622,6 +673,17 @@ class BookingApiController extends Controller
                 'pincode'                 => $booking->pincode,
                 'qr_code_hash'            => $booking->qr_code_hash,
                 'non_refundable_accepted' => $booking->non_refundable_accepted,
+                'dsp_partner'             => $booking->dsp ? [
+                    'id'                  => $booking->dsp->id,
+                    'business_name'       => $booking->dsp->business_name ?: $booking->dsp->applicant_name,
+                    'phone'               => $booking->dsp->phone,
+                    'district'            => $booking->dsp->district,
+                ] : null,
+                'delivery'                => $booking->delivery ? [
+                    'tracking_number'     => $booking->delivery->tracking_number,
+                    'stage'               => $booking->delivery->stage,
+                    'challan_number'      => $booking->delivery->challan_number,
+                ] : null,
                 'upi_qr'                  => [
                     'enabled'       => true,
                     'account_name'  => 'DLS AGRO INFRAVENTURE PRIVATE LIMITED',
@@ -632,6 +694,44 @@ class BookingApiController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * GET /api/customer/bookings/{id}/challan or /api/bookings/{id}/challan
+     * Retrieve Digital Delivery Challan (DC) details for 100% fully paid bookings.
+     */
+    public function challan(Request $request, $id)
+    {
+        $user = $this->resolveCustomer($request);
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $booking = is_numeric($id)
+            ? Booking::with(['product', 'user', 'dsp', 'delivery'])->where('id', $id)->where('user_id', $user->id)->first()
+            : Booking::with(['product', 'user', 'dsp', 'delivery'])->where('booking_number', $id)->where('user_id', $user->id)->first();
+
+        if (!$booking) {
+            return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
+        }
+
+        $challanPayload = app(\App\Services\DeliveryChallanService::class)->getChallanPayload($booking);
+
+        if (!$challanPayload['is_eligible']) {
+            return response()->json([
+                'status'         => false,
+                'is_eligible'    => false,
+                'challan_status' => 'pending_full_payment',
+                'message'        => 'Digital Delivery Challan (DC) will be automatically generated once 100% full payment is confirmed.',
+                'balance_due'    => (float) $booking->balance_amount,
+            ], 422);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Digital Delivery Challan (DC) retrieved successfully.',
+            'data'    => $challanPayload,
+        ], 200);
     }
 
     /**
@@ -764,6 +864,12 @@ class BookingApiController extends Controller
         $referralService = app(\App\Services\ReferralCommissionService::class);
         $autoApprovedCount = $referralService->autoApprovePendingReferralsForBooking($booking);
 
+        // Generate Digital Delivery Challan (DC) automatically when 100% full payment is confirmed
+        if ($isFullyPaid) {
+            app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
+            $booking->refresh();
+        }
+
         // Enforce activation stake rule if wallet points were used
         $stakeResult = ['cancelled' => false];
         if ($creditApplied > 0) {
@@ -771,6 +877,9 @@ class BookingApiController extends Controller
         }
 
         $message = 'Balance payment completed successfully.';
+        if ($isFullyPaid) {
+            $message .= " 100% Full Payment confirmed. Digital Delivery Challan (DC #{$booking->delivery_challan_number}) generated automatically.";
+        }
         if ($autoApprovedCount > 0) {
             $message .= " {$autoApprovedCount} pending credit/referral reward(s) have been auto-approved to available balance.";
         }
@@ -787,6 +896,10 @@ class BookingApiController extends Controller
                 'cash_paid'               => (float)$remainingCashToPay,
                 'balance_amount'          => (float)$booking->balance_amount,
                 'payment_status'          => $booking->payment_status,
+                'delivery_challan_number' => $booking->delivery_challan_number,
+                'can_download_challan'    => $booking->can_download_challan,
+                'challan_status'          => $booking->challan_status,
+                'delivery_challan_url'    => $booking->can_download_challan ? url("/booking/challan/{$booking->booking_number}") : null,
                 'referrals_auto_approved' => $autoApprovedCount,
                 'wallet_balance_remain'   => (float)($user->wallet_balance ?? 0),
                 'self_dealer_cancelled'   => $stakeResult['cancelled'],
@@ -946,13 +1059,6 @@ class BookingApiController extends Controller
             return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
         }
 
-        if ($booking->payment_status === 'fully_paid') {
-            return response()->json([
-                'status'  => false,
-                'message' => 'This booking is already fully paid and cannot be reallocated.',
-            ], 422);
-        }
-
         if ($booking->booking_status === 'reallocated') {
             return response()->json([
                 'status'  => false,
@@ -960,17 +1066,17 @@ class BookingApiController extends Controller
             ], 422);
         }
 
-        $isExpired = ($booking->days_remaining <= 0) || Carbon::parse($booking->balance_due_date)->isPast();
-        if (!$isExpired) {
-            return response()->json([
-                'status'  => false,
-                'message' => "Reallocation is available only after the 60-day settlement period expires ({$booking->days_remaining} days remaining).",
-            ], 422);
-        }
-
-        $totalPaid = max(0.00, round(((float)$booking->mrp) - ((float)$booking->balance_amount), 2));
+        // Calculate total amount paid/filled so far (20% deposit + any partial/EMI balance payments)
+        $totalPaid = $booking->filled_amount;
         if ($totalPaid <= 0) {
             $totalPaid = (float) $booking->booking_amount;
+        }
+
+        if ($totalPaid <= 0) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'No paid balance available on this booking to reallocate.',
+            ], 422);
         }
 
         return DB::transaction(function () use ($booking, $user, $totalPaid) {
@@ -986,7 +1092,7 @@ class BookingApiController extends Controller
                 'type'             => 'credit',
                 'source'           => 'booking_reallocation',
                 'booking_id'       => $booking->id,
-                'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from 60-day expired booking #{$booking->booking_number} to buy another item",
+                'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from booking #{$booking->booking_number} to Product Credit wallet to buy another item",
                 'transaction_type' => 'reallocation',
                 'status'           => 'available',
                 'available_at'     => now(),
