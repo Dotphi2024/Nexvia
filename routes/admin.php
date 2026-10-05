@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CategoryAdminController;
+use App\Http\Controllers\Admin\SubcategoryAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\DlsFarmCategoryAdminController;
 use App\Http\Controllers\Admin\DlsFarmProductAdminController;
@@ -23,6 +24,14 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::put('/categories/{id}', [CategoryAdminController::class, 'update'])->name('admin.categories.update');
     Route::post('/categories/{id}/update', [CategoryAdminController::class, 'update'])->name('admin.categories.update.post');
     Route::delete('/categories/{id}', [CategoryAdminController::class, 'destroy'])->name('admin.categories.destroy');
+
+    // Subcategory Management
+    Route::get('/subcategories', [SubcategoryAdminController::class, 'index'])->name('admin.subcategories.index');
+    Route::post('/subcategories', [SubcategoryAdminController::class, 'store'])->name('admin.subcategories.store');
+    Route::put('/subcategories/{id}', [SubcategoryAdminController::class, 'update'])->name('admin.subcategories.update');
+    Route::post('/subcategories/{id}/update', [SubcategoryAdminController::class, 'update'])->name('admin.subcategories.update.post');
+    Route::delete('/subcategories/{id}', [SubcategoryAdminController::class, 'destroy'])->name('admin.subcategories.destroy');
+    Route::get('/subcategories/by-category', [SubcategoryAdminController::class, 'byCategory'])->name('admin.subcategories.by-category');
 
     // Product Management
     Route::get('/products', [ProductAdminController::class, 'index'])->name('admin.products.index');

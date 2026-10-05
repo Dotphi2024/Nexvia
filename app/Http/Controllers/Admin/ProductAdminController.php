@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Subcategory;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,14 +15,19 @@ class ProductAdminController extends Controller
     {
         $filter = $request->query('filter', 'all');
         $categoryId = $request->query('category_id');
+        $subcategoryId = $request->query('subcategory_id');
         $search = trim((string)$request->query('q'));
 
         $query = Product::whereHas('category', function ($q) {
             $q->where('type', '!=', 'dls_farm_equipment');
-        })->with('category');
+        })->with(['category', 'subcategory']);
 
         if (!empty($categoryId)) {
             $query->where('category_id', $categoryId);
+        }
+
+        if (!empty($subcategoryId)) {
+            $query->where('subcategory_id', $subcategoryId);
         }
 
         if (!empty($search)) {
@@ -42,6 +48,9 @@ class ProductAdminController extends Controller
 
         $products = $query->latest()->paginate(15)->withQueryString();
         $categories = Category::where('type', '!=', 'dls_farm_equipment')->orderBy('name')->get();
+        $subcategories = !empty($categoryId)
+            ? Subcategory::where('category_id', $categoryId)->where('is_active', true)->orderBy('name')->get()
+            : Subcategory::where('is_active', true)->orderBy('name')->get();
 
         $baseCountQuery = Product::whereHas('category', function ($q) {
             $q->where('type', '!=', 'dls_farm_equipment');
@@ -51,28 +60,30 @@ class ProductAdminController extends Controller
         $trendingCount = (clone $baseCountQuery)->where('is_featured', true)->count();
         $inactiveCount = (clone $baseCountQuery)->where('status', 'inactive')->count();
 
-        return view('admin.products.index', compact('products', 'categories', 'filter', 'categoryId', 'search', 'totalCount', 'trendingCount', 'inactiveCount'));
+        return view('admin.products.index', compact('products', 'categories', 'subcategories', 'filter', 'categoryId', 'subcategoryId', 'search', 'totalCount', 'trendingCount', 'inactiveCount'));
     }
 
     public function create()
     {
-        $categories = Category::where('type', '!=', 'dls_farm_equipment')->orderBy('name')->get();
-        return view('admin.products.create', compact('categories'));
+        $categories = Category::where('type', '!=', 'dls_farm_equipment')->with('subcategories')->orderBy('name')->get();
+        $subcategories = Subcategory::where('is_active', true)->orderBy('name')->get();
+        return view('admin.products.create', compact('categories', 'subcategories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255',
-            'model_code' => 'nullable|string|max:100',
-            'sku' => 'nullable|string|max:100',
-            'mrp' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'video_url' => 'nullable|url',
-            'offer_text' => 'nullable|string|max:255',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'gallery.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'category_id'    => 'required|exists:categories,id',
+            'subcategory_id' => 'nullable|exists:subcategories,id',
+            'name'           => 'required|string|max:255',
+            'model_code'     => 'nullable|string|max:100',
+            'sku'            => 'nullable|string|max:100',
+            'mrp'            => 'required|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'video_url'      => 'nullable|url',
+            'offer_text'     => 'nullable|string|max:255',
+            'main_image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'gallery.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         $mrp = $request->mrp;
@@ -107,6 +118,7 @@ class ProductAdminController extends Controller
 
         Product::create([
             'category_id' => $request->category_id,
+            'subcategory_id' => $request->subcategory_id,
             'name' => $request->name,
             'overview' => $overview,
             'model_code' => $request->model_code,
@@ -138,9 +150,10 @@ class ProductAdminController extends Controller
 
     public function edit($id)
     {
-        $product = Product::findOrFail($id);
-        $categories = Category::where('type', '!=', 'dls_farm_equipment')->orderBy('name')->get();
-        return view('admin.products.edit', compact('product', 'categories'));
+        $product = Product::with('subcategory')->findOrFail($id);
+        $categories = Category::where('type', '!=', 'dls_farm_equipment')->with('subcategories')->orderBy('name')->get();
+        $subcategories = Subcategory::where('category_id', $product->category_id)->where('is_active', true)->orderBy('name')->get();
+        return view('admin.products.edit', compact('product', 'categories', 'subcategories'));
     }
 
     public function update(Request $request, $id)
@@ -148,11 +161,12 @@ class ProductAdminController extends Controller
         $product = Product::findOrFail($id);
 
         $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255',
-            'mrp' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'video_url' => 'nullable|url',
+            'category_id'    => 'required|exists:categories,id',
+            'subcategory_id' => 'nullable|exists:subcategories,id',
+            'name'           => 'required|string|max:255',
+            'mrp'            => 'required|numeric|min:0',
+            'stock'          => 'required|integer|min:0',
+            'video_url'      => 'nullable|url',
         ]);
 
         $mrp = $request->mrp;
@@ -191,6 +205,7 @@ class ProductAdminController extends Controller
 
         $product->update([
             'category_id' => $request->category_id,
+            'subcategory_id' => $request->subcategory_id,
             'name' => $request->name,
             'overview' => $overview,
             'model_code' => $request->model_code,

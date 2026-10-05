@@ -3072,3 +3072,165 @@ Upon successful OTP verification:
 2. **Start Date:** Begins on the exact physical delivery date (`delivered_at`).
 3. **Coverage Duration:** Configured according to product specs (default 3 years / 36 months).
 4. **Certificate:** Warranty PDF certificate is generated linked to customer's dashboard.
+
+---
+
+## 18. Subcategories Module APIs
+
+Category & Subcategory Hierarchy:
+```text
+[Main Category] (e.g. Electric Scooters, Home Entertainment, DLS Farm Equipments)
+      │
+      ├───► [Subcategories] (e.g. High-Speed, Low-Speed, Commuter, 4K Smart TVs, Tillers)
+      │           │
+      │           └───► [Products] (e.g. NEXVIA Falcon EV, NEXVIA 55" 4K Smart TV)
+```
+
+---
+
+### 18.1 List All Subcategories
+
+Fetch all active subcategories with their parent category details and active products count.
+
+- **Method:** `GET` / `POST`
+- **URL:** `/api/subcategories` or `/api/customer/subcategories`
+- **Query / Body Parameters (Optional):**
+  - `category_id` (integer | slug) — Filter by parent category.
+  - `type` (`electric_mobility` | `electronics` | `dls_farm_equipment` | `standard`) — Filter by category type.
+  - `search` (string) — Search subcategory name or slug.
+
+#### Success Response (`200 OK`):
+```json
+{
+  "status": true,
+  "total": 12,
+  "subcategories": [
+    {
+      "id": 1,
+      "name": "High-Speed Scooters",
+      "slug": "high-speed-scooters",
+      "image": "https://backend.nexviadls.com/uploads/subcategories/subcat_1.webp",
+      "description": "Official High-Speed Scooters lineup by NEXVIA DLS",
+      "sort_order": 1,
+      "products_count": 4,
+      "category": {
+        "id": 1,
+        "name": "Electric Scooters",
+        "slug": "electric-scooters",
+        "type": "electric_mobility",
+        "referral_category_code": "EV"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 18.2 List Subcategories by Parent Category
+
+- **Method:** `GET` / `POST`
+- **URL:** `/api/categories/{categoryIdOrSlug}/subcategories`
+
+#### Success Response (`200 OK`):
+```json
+{
+  "status": true,
+  "category": {
+    "id": 1,
+    "name": "Home Entertainment",
+    "slug": "home-entertainment",
+    "type": "electronics",
+    "referral_category_code": "ENT"
+  },
+  "total": 2,
+  "subcategories": [
+    {
+      "id": 1,
+      "name": "Ultra HD 4K Smart TVs",
+      "slug": "ultra-hd-4k-smart-tvs",
+      "image": "https://backend.nexviadls.com/uploads/subcategories/tv.webp",
+      "description": "Official 4K and QLED smart televisions",
+      "sort_order": 1,
+      "products_count": 4,
+      "category_id": 1
+    }
+  ]
+}
+```
+
+---
+
+### 18.3 Get Single Subcategory Details & Products
+
+- **Method:** `GET` / `POST`
+- **URL:** `/api/subcategories/{subcategoryIdOrSlug}`
+
+#### Success Response (`200 OK`):
+```json
+{
+  "status": true,
+  "subcategory": {
+    "id": 2,
+    "name": "Premium Home Entertainment Series",
+    "slug": "premium-home-entertainment-series",
+    "image": "https://backend.nexviadls.com/images/no-image.png",
+    "description": "Official Premium Home Entertainment Series lineup by NEXVIA DLS",
+    "sort_order": 2,
+    "products_count": 7,
+    "category": {
+      "id": 1,
+      "name": "Home Entertainment",
+      "slug": "home-entertainment",
+      "type": "electronics",
+      "referral_category_code": "ENT"
+    },
+    "products": [
+      {
+        "id": 1,
+        "name": "NEXVIA 43” Smart LED TV",
+        "slug": "nexvia-43-inch-smart-led-tv",
+        "model_code": "NEX-TV-43",
+        "sku": "NEX-TV-43-2026",
+        "mrp": 24999.00,
+        "booking_percentage": 20.00,
+        "booking_amount": 4999.80,
+        "balance_amount": 19999.20,
+        "main_image": "https://backend.nexviadls.com/uploads/products/tv43.webp",
+        "is_featured": true,
+        "stock": 45,
+        "status": "active"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 18.4 Filter Products by Subcategory
+
+- **Method:** `GET` / `POST`
+- **URL:** `/api/products?subcategory_id=2` or `/api/products/search?subcategory_id=2`
+
+In all product list/search responses, each product contains its `subcategory` object:
+```json
+{
+  "id": 1,
+  "name": "NEXVIA 43” Smart LED TV",
+  "category": {
+    "id": 1,
+    "name": "Home Entertainment",
+    "slug": "home-entertainment"
+  },
+  "subcategory": {
+    "id": 2,
+    "name": "Premium Home Entertainment Series",
+    "slug": "premium-home-entertainment-series",
+    "image": "https://backend.nexviadls.com/images/no-image.png"
+  },
+  "mrp": 24999.00,
+  "booking_amount": 4999.80,
+  "balance_amount": 19999.20
+}
+```

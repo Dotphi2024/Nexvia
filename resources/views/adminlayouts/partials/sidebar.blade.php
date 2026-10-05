@@ -55,6 +55,15 @@
                </li>
 
                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.subcategories.*') ? 'active' : '' }}" href="{{ route('admin.subcategories.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:layers-minimalistic-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Subcategories</span>
+                    </a>
+               </li>
+
+               <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}">
                          <span class="nav-icon">
                               <iconify-icon icon="solar:box-minimalistic-outline"></iconify-icon>

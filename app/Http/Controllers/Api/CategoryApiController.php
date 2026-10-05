@@ -71,7 +71,12 @@ class CategoryApiController extends Controller
             $stageConfigs = ReferralStageConfig::orderBy('stage_number')->get()->keyBy('stage_number');
             $defaultRates = [1 => 10.00, 2 => 12.00, 3 => 15.00, 4 => 18.00, 5 => 20.00];
 
-            $query = Category::withCount(['products' => function ($q) {
+            $query = Category::with(['subcategories' => function ($sq) {
+                $sq->where('is_active', true)->withCount(['products' => function ($pq) {
+                    $pq->where('status', 'active');
+                }])->orderBy('sort_order', 'asc');
+            }])
+            ->withCount(['products' => function ($q) {
                 $q->where('status', 'active');
             }])->where('is_active', true);
 
@@ -138,6 +143,18 @@ class CategoryApiController extends Controller
                         ];
                     }
 
+                    $subcategoriesList = $cat->subcategories ? $cat->subcategories->map(function ($sub) {
+                        return [
+                            'id'             => $sub->id,
+                            'name'           => $sub->name,
+                            'slug'           => $sub->slug,
+                            'image'          => \App\Helpers\ImageHelper::resolve($sub->image),
+                            'description'    => $sub->description,
+                            'sort_order'     => (int)$sub->sort_order,
+                            'products_count' => (int)($sub->products_count ?? 0),
+                        ];
+                    })->values() : [];
+
                     return [
                         'id'                     => $cat->id,
                         'name'                   => $cat->name,
@@ -175,6 +192,7 @@ class CategoryApiController extends Controller
                         'imageUrl'               => $imageUrl,
                         'icon'                   => $cat->icon,
                         'products_count'         => $cat->products_count,
+                        'subcategories'          => $subcategoriesList,
                     ];
                 });
 
@@ -205,6 +223,11 @@ class CategoryApiController extends Controller
 
             $category = Category::withCount(['products' => function ($q) {
                 $q->where('status', 'active');
+            }])
+            ->with(['subcategories' => function ($sq) {
+                $sq->where('is_active', true)->withCount(['products' => function ($pq) {
+                    $pq->where('status', 'active');
+                }])->orderBy('sort_order', 'asc');
             }])
             ->with(['products' => function ($q) {
                 $q->where('status', 'active')->limit(12);
@@ -321,6 +344,17 @@ class CategoryApiController extends Controller
                     'imageUrl'               => $imageUrl,
                     'icon'                   => $category->icon,
                     'products_count'         => $category->products_count,
+                    'subcategories'          => $category->subcategories ? $category->subcategories->map(function ($sub) {
+                        return [
+                            'id'             => $sub->id,
+                            'name'           => $sub->name,
+                            'slug'           => $sub->slug,
+                            'image'          => \App\Helpers\ImageHelper::resolve($sub->image),
+                            'description'    => $sub->description,
+                            'sort_order'     => (int)$sub->sort_order,
+                            'products_count' => (int)($sub->products_count ?? 0),
+                        ];
+                    })->values() : [],
                     'products'               => $formattedProducts,
                 ],
             ], 200);

@@ -35,11 +35,11 @@
                         @csrf
                         @method('PUT')
 
-                        <!-- Category & Title -->
+                        <!-- Category, Subcategory & Title -->
                         <div class="row g-3 mb-3">
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Category *</label>
-                                <select name="category_id" class="form-select" required>
+                                <select name="category_id" id="category_select" class="form-select" required>
                                     @foreach($categories as $cat)
                                         <option value="{{ $cat->id }}" {{ $product->category_id == $cat->id ? 'selected' : '' }}>
                                             {{ $cat->name }} ({{ ucfirst(str_replace('_', ' ', $cat->type)) }})
@@ -47,7 +47,18 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-7">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-dark">Subcategory <span class="text-muted small fw-normal">(Optional)</span></label>
+                                <select name="subcategory_id" id="subcategory_select" class="form-select">
+                                    <option value="">-- No Subcategory / General --</option>
+                                    @foreach($subcategories as $sub)
+                                        <option value="{{ $sub->id }}" {{ (old('subcategory_id', $product->subcategory_id) == $sub->id) ? 'selected' : '' }}>
+                                            {{ $sub->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Product Name *</label>
                                 <input type="text" name="name" class="form-control" value="{{ old('name', $product->name) }}" required>
                             </div>
@@ -377,7 +388,39 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.querySelectorAll('input').forEach(i => i.value = '');
             }
         }
-    });
+    // Dynamic Subcategory Loader based on selected Category
+    const categorySelect = document.getElementById('category_select');
+    const subcategorySelect = document.getElementById('subcategory_select');
+
+    if (categorySelect && subcategorySelect) {
+        categorySelect.addEventListener('change', function() {
+            const catId = this.value;
+            subcategorySelect.innerHTML = '<option value="">Loading subcategories...</option>';
+
+            if (!catId) {
+                subcategorySelect.innerHTML = '<option value="">-- No Subcategory / Select Category First --</option>';
+                return;
+            }
+
+            fetch(`{{ route('admin.subcategories.by-category') }}?category_id=${catId}`)
+                .then(res => res.json())
+                .then(data => {
+                    subcategorySelect.innerHTML = '<option value="">-- None / General Category --</option>';
+                    if (data.status && data.subcategories && data.subcategories.length > 0) {
+                        data.subcategories.forEach(sub => {
+                            const opt = document.createElement('option');
+                            opt.value = sub.id;
+                            opt.textContent = sub.name;
+                            subcategorySelect.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching subcategories:', err);
+                    subcategorySelect.innerHTML = '<option value="">-- None / General Category --</option>';
+                });
+        });
+    }
 });
 </script>
 @endsection
