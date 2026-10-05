@@ -246,6 +246,30 @@
                         </div>
                     </div>
 
+                    @if($booking->can_download_challan)
+                        <!-- Digital Delivery Challan (DC) Banner -->
+                        <div class="card border-2 border-success bg-success-subtle p-3 mb-4 rounded-4 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="p-2 bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                                        <iconify-icon icon="solar:document-bold" class="fs-3"></iconify-icon>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <h6 class="fw-bold text-dark mb-0">Digital Delivery Challan (DC) Generated</h6>
+                                            <span class="badge bg-success font-monospace">#{{ $booking->delivery_challan_number }}</span>
+                                        </div>
+                                        <span class="small text-muted">100% Full Payment confirmed. Delivery Challan generated for product dispatch & unboxing.</span>
+                                    </div>
+                                </div>
+                                <a href="{{ route('booking.challan', $booking->booking_number) }}" target="_blank" class="btn btn-success fw-bold px-4 shadow-sm">
+                                    <iconify-icon icon="solar:printer-bold" class="me-1 align-middle fs-5"></iconify-icon>
+                                    View / Print Delivery Challan (DC)
+                                </a>
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- Action Buttons -->
                     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                         <a href="{{ \Illuminate\Support\Facades\Route::has('customer.dashboard') ? route('customer.dashboard') : url('/') }}" class="btn btn-outline-secondary">
@@ -253,6 +277,13 @@
                         </a>
 
                         <div class="d-flex flex-wrap gap-2">
+                            @if($booking->can_download_challan)
+                                <a href="{{ route('booking.challan', $booking->booking_number) }}" target="_blank" class="btn btn-success fw-bold px-3 shadow-sm">
+                                    <iconify-icon icon="solar:document-bold" class="me-1 align-middle fs-5"></iconify-icon>
+                                    Delivery Challan (DC)
+                                </a>
+                            @endif
+
                             @if($booking->can_reallocate_paid_amount)
                                 <form action="{{ route('booking.reallocate', $booking->booking_number) }}" method="POST" onsubmit="return confirm('Transfer your paid amount of ₹{{ number_format($booking->filled_amount, 2) }} into Product Credit to buy another item?');" class="d-inline">
                                     @csrf

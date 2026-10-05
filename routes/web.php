@@ -66,6 +66,7 @@ Route::prefix('dsp')->middleware('auth:dsp')->group(function () {
 Route::get('/checkout/{slug}', [\App\Http\Controllers\Frontend\BookingController::class, 'checkout'])->name('booking.checkout');
 Route::post('/checkout/{slug}', [\App\Http\Controllers\Frontend\BookingController::class, 'processCheckout'])->name('booking.process');
 Route::get('/booking/receipt/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'receipt'])->name('booking.receipt');
+Route::get('/booking/challan/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'challan'])->name('booking.challan');
 Route::post('/booking/pay-balance/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'payBalance'])->name('booking.pay.balance');
 Route::post('/booking/reallocate/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'reallocateToAnotherItem'])->name('booking.reallocate');
 Route::post('/booking/select-dsp/{bookingNumber}', [\App\Http\Controllers\Frontend\BookingController::class, 'selectDsp'])->name('booking.select.dsp');

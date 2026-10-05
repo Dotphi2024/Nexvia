@@ -86,6 +86,13 @@
     - [14.3 Verify Payment & Cryptographic Signature](#143-verify-payment--cryptographic-signature)
     - [14.4 Razorpay Webhook Event Listener](#144-razorpay-webhook-event-listener)
     - [14.5 Mobile & Web SDK Client Integration Code](#145-mobile--web-sdk-client-integration-code)
+15. [Digital Delivery Challan (DC) Automatic Generation (100% Full Payment Engine)](#15-digital-delivery-challan-dc-automatic-generation-100-full-payment-engine)
+    - [15.1 Challan Generation Rule & Architecture](#151-challan-generation-rule--architecture)
+    - [15.2 Get Digital Delivery Challan Payload (API)](#152-get-digital-delivery-challan-payload-api)
+    - [15.3 Digital Delivery Challan Web & Print Route](#153-digital-delivery-challan-web--print-route)
+16. [Stored Paid Amount / Product Credit Reallocation & Purchasing Other Items](#16-stored-paid-amount--product-credit-reallocation--purchasing-other-items)
+    - [16.1 Reallocate Paid Amount to Product Credit Wallet](#161-reallocate-paid-amount-to-product-credit-wallet)
+    - [16.2 Book or Buy New Catalog Item Using Wallet Credits](#162-book-or-buy-new-catalog-item-using-wallet-credits)
 
 ---
 
@@ -2759,3 +2766,195 @@ async function startPayment(productId, amount) {
 }
 </script>
 ```
+
+---
+
+## 15. Digital Delivery Challan (DC) Automatic Generation (100% Full Payment Engine)
+
+### 15.1 Challan Generation Rule & Architecture
+
+> 🔒 **Strict Business Logic Rule:**
+> **Digital Delivery Challan (DC)** is **strictly and automatically generated ONLY when 100% full payment is confirmed** (`payment_status === 'fully_paid'` and `balance_amount <= 0.00`).
+>
+> If a booking is in 20% deposit state (`payment_status === 'paid'` or `partial_paid`), the challan status remains `pending_full_payment`, and delivery challan issuance is blocked until the remaining 80% balance is cleared.
+
+#### Trigger Scenarios for DC Generation:
+1. **Upfront 100% Full Payment at Checkout:** Created immediately via API/Web (`payment_type: 'full_payment'`).
+2. **Online 80% Balance Settlement:** When full remaining balance is paid via Razorpay online payment (`/api/payments/verify` or `/api/customer/bookings/{id}/pay-balance`).
+3. **EMI or Flexible Balance Completion:** When the final installment settles the balance to `₹0.00`.
+4. **Counter / Showroom Offline Full Payment:** When showroom cashier records full balance payment at counter (`admin.bookings.record_balance`).
+
+---
+
+### 15.2 Get Digital Delivery Challan Payload (API)
+
+Fetch the complete, authenticated Digital Delivery Challan payload with security hash, DSP allocation, customer consignee details, and dispatch status.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/customer/bookings/{id}/challan` or `/api/bookings/{id}/challan` (where `{id}` can be booking ID `12` or booking number `NEX-2026-ABC123`)
+- **Headers:** 
+  - `Authorization: Bearer <token>` or `token: <token>`
+
+#### Success Response (`200 OK` — When 100% Fully Paid):
+```json
+{
+  "status": true,
+  "message": "Digital Delivery Challan (DC) retrieved successfully.",
+  "data": {
+    "status": true,
+    "is_eligible": true,
+    "challan_number": "DC-2026-B87A9F",
+    "challan_status": "generated",
+    "issued_at": "2026-10-05 15:40:00",
+    "booking_number": "NEX-2026-B44686",
+    "customer": {
+      "name": "Rahul Sharma",
+      "phone": "9876543210",
+      "shipping_address": "Flat 402, Green Avenue, FC Road",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411001"
+    },
+    "product": {
+      "id": 1,
+      "name": "NEXVIA 43” Smart LED TV",
+      "model_code": "NEX-ENT-43TV",
+      "selected_color": "Midnight Black",
+      "quantity": 1,
+      "mrp": 29999.00
+    },
+    "payment": {
+      "total_amount": 29999.00,
+      "amount_paid": 29999.00,
+      "balance_remaining": 0.00,
+      "payment_status": "100% FULLY PAID",
+      "payment_type": "booking_20",
+      "payment_ref": "pay_9876543210abcdef"
+    },
+    "dsp_partner": {
+      "id": 3,
+      "business_name": "Apex Auto DSP Hub",
+      "phone": "9822001122",
+      "district": "Pune",
+      "pincode": "411001"
+    },
+    "delivery": {
+      "tracking_number": "TRK-58921034",
+      "stage": "processing",
+      "delivery_otp": null
+    },
+    "verification_qr_hash": "e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9"
+  }
+}
+```
+
+#### Ineligible Response (`422 Unprocessable Entity` — When Balance is Still Due):
+```json
+{
+  "status": false,
+  "is_eligible": false,
+  "challan_status": "pending_full_payment",
+  "message": "Digital Delivery Challan (DC) will be automatically generated once 100% full payment is confirmed.",
+  "balance_due": 23999.20
+}
+```
+
+---
+
+### 15.3 Digital Delivery Challan Web & Print Route
+
+- **URL:** `GET /booking/challan/{bookingNumber}`
+- **Web Interface:** Responsive, printable HTML Delivery Challan with pre-delivery inspection instructions, DSP handover section, digital verification seal, and printer styling (`window.print()`).
+
+---
+
+## 16. Stored Paid Amount / Product Credit Reallocation & Purchasing Other Items
+
+Customers who have paid token deposit (20%) or partial amounts are **never locked into a product** if they change their mind. Their total paid funds (`filled_amount`) can be converted into **Product Credits** to purchase any other item in the catalog.
+
+### 16.1 Reallocate Paid Amount to Product Credit Wallet
+
+Transfers 100% of accumulated paid amounts on a booking into the customer's Product Credit wallet balance.
+
+- **Method:** `POST`
+- **URL:** `/api/customer/bookings/{id}/reallocate` or `/api/bookings/{id}/reallocate`
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Success Response (`200 OK`):
+```json
+{
+  "status": true,
+  "message": "Your paid amount of ₹5,999.80 has been transferred to your Product Credit wallet. You can now use it to purchase another catalog item.",
+  "data": {
+    "booking_number": "NEX-2026-B44686",
+    "booking_status": "reallocated",
+    "reallocated_amount": 5999.80,
+    "wallet_balance": 10499.80
+  }
+}
+```
+
+---
+
+### 16.2 Book or Buy New Catalog Item Using Wallet Credits
+
+When creating a new booking or multi-item checkout, specify `use_wallet: true` or `apply_wallet: true` to deduct from available Product Credit wallet balance.
+
+- **Method:** `POST`
+- **URL:** `/api/customer/bookings` or `/api/bookings`
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body:
+```json
+{
+  "product_id": 4,
+  "payment_type": "booking_20",
+  "selected_color": "Ocean Blue",
+  "quantity": 1,
+  "use_wallet": true,
+  "shipping_address": "Flat 402, Green Avenue, FC Road",
+  "city": "Pune",
+  "state": "Maharashtra",
+  "pincode": "411001"
+}
+```
+
+#### Success Response (`201 Created`):
+```json
+{
+  "status": true,
+  "message": "New confirmed Flexi-Booking entry created successfully.",
+  "booking": {
+    "booking_number": "NEX-2026-C89123",
+    "product": {
+      "id": 4,
+      "name": "NEXVIA Falcon EV",
+      "model_code": "NEX-FALCON"
+    },
+    "financials": {
+      "total_mrp": 89999.00,
+      "token_amount_paid": 17999.80,
+      "applied_wallet_discount": 5999.80,
+      "net_cash_paid": 12000.00,
+      "balance_amount_due": 71999.20,
+      "currency": "INR"
+    }
+  }
+}
+```
+
+---
+
+### 16.3 100% Full Payment Reward → Buy Product B with 20% Stored Credit (₹0 Cash Checkout)
+
+When a customer pays **100% Full Payment on Product A**, they receive a **20% Product Credit / Self Dealer Reward** into their wallet. They can immediately use this credit to book **Product B with 20% deposit without paying any cash out of pocket**!
+
+#### Example Walkthrough:
+1. **Customer completes 100% payment on Product A (₹25,000):**
+   - Delivery Challan (DC) is automatically generated.
+   - 20% Reward Credit (**₹5,000**) is credited to Customer's Product Credit Wallet.
+2. **Customer decides to book Product B (₹25,000):**
+   - 20% Token Deposit required for Product B: **₹5,000**.
+   - Applied Stored Product Credit from Product A: **-₹5,000**.
+   - **Net Cash Payable at Checkout:** **₹0.00 (FREE Token Booking)**.
+   - Product B is confirmed, and customer gets another 60 days to settle Product B's remaining balance!

@@ -105,9 +105,16 @@
                             @endif
 
                             <div class="d-flex justify-content-between align-items-center pt-2 mt-auto border-top gap-2 flex-wrap">
-                                <a href="{{ route('booking.receipt', $booking->booking_number) }}" class="btn btn-outline-primary btn-sm fw-semibold">
-                                    View Digital Receipt
-                                </a>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('booking.receipt', $booking->booking_number) }}" class="btn btn-outline-primary btn-sm fw-semibold">
+                                        View Digital Receipt
+                                    </a>
+                                    @if($booking->can_download_challan)
+                                        <a href="{{ route('booking.challan', $booking->booking_number) }}" target="_blank" class="btn btn-outline-success btn-sm fw-bold">
+                                            <iconify-icon icon="solar:document-bold" class="me-1 align-middle"></iconify-icon> Delivery Challan (DC)
+                                        </a>
+                                    @endif
+                                </div>
 
                                 @if($booking->can_reallocate_paid_amount)
                                     <form action="{{ route('booking.reallocate', $booking->booking_number) }}" method="POST" onsubmit="return confirm('Transfer your paid amount of ₹{{ number_format($booking->filled_amount, 2) }} into Product Credit to purchase another item?');" class="d-inline">

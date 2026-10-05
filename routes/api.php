@@ -366,6 +366,7 @@ Route::prefix('customer')->group(function () {
         Route::get('/bookings',                           [BookingApiController::class, 'index']);
         Route::post('/bookings',                          [BookingApiController::class, 'store']);
         Route::get('/bookings/{id}',                      [BookingApiController::class, 'show']);
+        Route::match(['get', 'post'], '/bookings/{id}/challan', [BookingApiController::class, 'challan']);
         Route::post('/bookings/{id}/pay-balance',         [BookingApiController::class, 'payBalance']);
         Route::post('/bookings/{id}/reallocate',          [BookingApiController::class, 'reallocate']);
         Route::post('/bookings/{id}/select-dsp',          [BookingApiController::class, 'selectDsp']);
@@ -482,6 +483,8 @@ Route::post('/booking',                                 [BookingApiController::c
 Route::get('/bookings',                                 [BookingApiController::class, 'index']);
 Route::get('/booking',                                  [BookingApiController::class, 'index']);
 Route::get('/bookings/{id}',                            [BookingApiController::class, 'show']);
+Route::match(['get', 'post'], '/bookings/{id}/challan', [BookingApiController::class, 'challan']);
+Route::match(['get', 'post'], '/booking/{id}/challan',  [BookingApiController::class, 'challan']);
 Route::post('/bookings/{id}/reallocate',                   [BookingApiController::class, 'reallocate']);
 Route::post('/booking/{id}/reallocate',                    [BookingApiController::class, 'reallocate']);
 Route::post('/bookings/{id}/select-dsp',                   [BookingApiController::class, 'selectDsp']);

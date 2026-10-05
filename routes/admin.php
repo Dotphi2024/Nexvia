@@ -70,6 +70,7 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::post('/bookings', [BookingAdminController::class, 'store'])->name('admin.bookings.store');
     Route::get('/bookings/{id}', [BookingAdminController::class, 'show'])->name('admin.bookings.show');
     Route::post('/bookings/{id}/status', [BookingAdminController::class, 'updateStatus'])->name('admin.bookings.update.status');
+    Route::post('/bookings/{id}/delivery-info', [BookingAdminController::class, 'updateDeliveryInfo'])->name('admin.bookings.update_delivery');
     Route::post('/bookings/{id}/record-balance', [BookingAdminController::class, 'recordBalancePayment'])->name('admin.bookings.record_balance');
     Route::get('/transfers-audit', [BookingAdminController::class, 'transfers'])->name('admin.transfers.audit');
     Route::post('/transfers/{id}/approve', [BookingAdminController::class, 'approveTransfer'])->name('admin.transfers.approve');
