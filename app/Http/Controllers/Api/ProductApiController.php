@@ -319,10 +319,12 @@ class ProductApiController extends Controller
                     'in_stock'           => $inStock,
                     'stock_status'       => $inStock ? 'In Stock' : 'Out of Stock',
 
-                    // Media & Gallery
+                    // Media & Gallery (Multiple Images)
                     'main_image'         => $mainImageUrl,
                     'imageUrl'           => $mainImageUrl,
                     'gallery'            => $galleryUrls,
+                    'images'             => $galleryUrls,
+                    'gallery_images'     => $galleryUrls,
                     'video_url'          => $product->video_url,
 
                     // Features & Specifications
