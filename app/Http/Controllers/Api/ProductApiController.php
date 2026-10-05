@@ -37,6 +37,23 @@ class ProductApiController extends Controller
                 ?? ($bodyJson['cat'] ?? null)
                 ?? ($bodyJson['category'] ?? null);
 
+            $subcategoryInput = $request->query('subcategory_id')
+                ?? $request->query('sub_category_id')
+                ?? $request->query('subcategoryId')
+                ?? $request->query('subcat_id')
+                ?? $request->query('subcat')
+                ?? $request->query('subcategory')
+                ?? $request->input('subcategory_id')
+                ?? $request->input('sub_category_id')
+                ?? $request->input('subcategoryId')
+                ?? $request->input('subcat_id')
+                ?? $request->input('subcat')
+                ?? $request->input('subcategory')
+                ?? ($bodyJson['subcategory_id'] ?? null)
+                ?? ($bodyJson['sub_category_id'] ?? null)
+                ?? ($bodyJson['subcat_id'] ?? null)
+                ?? ($bodyJson['subcategory'] ?? null);
+
             $search = $request->input('search')
                 ?? ($bodyJson['search'] ?? null);
 
@@ -49,7 +66,7 @@ class ProductApiController extends Controller
             $perPage = (int) ($request->input('limit') ?? $request->input('per_page') ?? ($bodyJson['limit'] ?? null) ?? ($bodyJson['per_page'] ?? 10));
             $perPage = max(1, min(100, $perPage));
 
-            $query = Product::with('category')->where('status', 'active');
+            $query = Product::with(['category', 'subcategory'])->where('status', 'active');
 
             // 0. Filter by Type (e.g. dls_farm_equipment / dls_agro vs standard)
             $typeInput = $request->query('type')
@@ -81,6 +98,18 @@ class ProductApiController extends Controller
                 } else {
                     $query->whereHas('category', function ($q) use ($categoryInput) {
                         $q->where('slug', $categoryInput)->orWhere('name', 'like', "%{$categoryInput}%");
+                    });
+                }
+            }
+
+            // 1.5 Filter by Subcategory (accepts subcategory_id or slug)
+            if (!empty($subcategoryInput)) {
+                $subcategoryInput = trim($subcategoryInput);
+                if (is_numeric($subcategoryInput)) {
+                    $query->where('subcategory_id', $subcategoryInput);
+                } else {
+                    $query->whereHas('subcategory', function ($q) use ($subcategoryInput) {
+                        $q->where('slug', $subcategoryInput)->orWhere('name', 'like', "%{$subcategoryInput}%");
                     });
                 }
             }
@@ -142,6 +171,12 @@ class ProductApiController extends Controller
                         'referral_category_code' => $product->category->referral_category_code,
                         'category_code'          => $product->category->referral_category_code,
                         'referral_code'          => $product->category->referral_category_code,
+                    ] : null,
+                    'subcategory'        => $product->subcategory ? [
+                        'id'                     => $product->subcategory->id,
+                        'name'                   => $product->subcategory->name,
+                        'slug'                   => $product->subcategory->slug,
+                        'image'                  => \App\Helpers\ImageHelper::resolve($product->subcategory->image),
                     ] : null,
                     'mrp'                => (float) $product->mrp,
                     'booking_percentage' => (float) ($product->booking_percentage ?? 20.00),
@@ -205,7 +240,7 @@ class ProductApiController extends Controller
         try {
             $slugOrId = trim($slugOrId);
 
-            $product = Product::with('category')
+            $product = Product::with(['category', 'subcategory'])
                 ->where('status', 'active')
                 ->where(function ($q) use ($slugOrId) {
                     if (is_numeric($slugOrId)) {
@@ -283,6 +318,14 @@ class ProductApiController extends Controller
                         'referral_category_code' => $product->category->referral_category_code,
                         'category_code'          => $product->category->referral_category_code,
                         'referral_code'          => $product->category->referral_category_code,
+                    ] : null,
+
+                    // Subcategory Information
+                    'subcategory'        => $product->subcategory ? [
+                        'id'                     => $product->subcategory->id,
+                        'name'                   => $product->subcategory->name,
+                        'slug'                   => $product->subcategory->slug,
+                        'image'                  => \App\Helpers\ImageHelper::resolve($product->subcategory->image),
                     ] : null,
 
                     // Pricing Details & 20% Booking Structure
@@ -439,6 +482,27 @@ class ProductApiController extends Controller
                 ?? ''
             ));
 
+            // 3.5 Subcategory Filter
+            $subcategoryInput = trim((string) (
+                $request->query('subcategory_id')
+                ?? $request->query('sub_category_id')
+                ?? $request->query('subcategoryId')
+                ?? $request->query('subcat_id')
+                ?? $request->query('subcat')
+                ?? $request->query('subcategory')
+                ?? $request->input('subcategory_id')
+                ?? $request->input('sub_category_id')
+                ?? $request->input('subcategoryId')
+                ?? $request->input('subcat_id')
+                ?? $request->input('subcat')
+                ?? $request->input('subcategory')
+                ?? ($trimmedJson['subcategory_id'] ?? null)
+                ?? ($trimmedJson['sub_category_id'] ?? null)
+                ?? ($trimmedJson['subcat_id'] ?? null)
+                ?? ($trimmedJson['subcategory'] ?? null)
+                ?? ''
+            ));
+
             // 4. Model code & SKU & Slug
             $modelCode = trim((string) ($request->input('model_code') ?? $request->input('model') ?? ($trimmedJson['model_code'] ?? null) ?? ($trimmedJson['model'] ?? null) ?? ''));
             $sku = trim((string) ($request->input('sku') ?? ($trimmedJson['sku'] ?? null) ?? ''));
@@ -474,7 +538,7 @@ class ProductApiController extends Controller
             $perPage = max(1, min(100, $perPage));
 
             // Start base query
-            $query = Product::with('category')->where('status', 'active');
+            $query = Product::with(['category', 'subcategory'])->where('status', 'active');
 
             // Apply: Direct ID filter
             if (!empty($productId) && is_numeric($productId)) {
@@ -521,6 +585,18 @@ class ProductApiController extends Controller
                         $q->where('slug', $categoryInput)
                           ->orWhere('referral_category_code', strtoupper($categoryInput))
                           ->orWhere('name', 'like', "%{$categoryInput}%");
+                    });
+                }
+            }
+
+            // Apply: Subcategory Filter (Accepts numeric ID or subcategory slug)
+            if (!empty($subcategoryInput)) {
+                if (is_numeric($subcategoryInput)) {
+                    $query->where('subcategory_id', $subcategoryInput);
+                } else {
+                    $query->whereHas('subcategory', function ($q) use ($subcategoryInput) {
+                        $q->where('slug', $subcategoryInput)
+                          ->orWhere('name', 'like', "%{$subcategoryInput}%");
                     });
                 }
             }
@@ -623,6 +699,12 @@ class ProductApiController extends Controller
                         'category_code'          => $product->category->referral_category_code,
                         'referral_code'          => $product->category->referral_category_code,
                     ] : null,
+                    'subcategory'             => $product->subcategory ? [
+                        'id'                     => $product->subcategory->id,
+                        'name'                   => $product->subcategory->name,
+                        'slug'                   => $product->subcategory->slug,
+                        'image'                  => \App\Helpers\ImageHelper::resolve($product->subcategory->image),
+                    ] : null,
                     'mrp'                     => $mrp,
                     'booking_percentage'      => $bookingPct,
                     'booking_amount'          => $bookingAmount,
@@ -716,7 +798,7 @@ class ProductApiController extends Controller
 
             $limit = max(1, min(100, $limit));
 
-            $query = Product::with('category')->where('status', 'active');
+            $query = Product::with(['category', 'subcategory'])->where('status', 'active');
 
             // Optional category filter (e.g. ?category=tv or ?category=1)
             $categoryInput = $request->input('category') ?? $request->input('category_id') ?? ($bodyJson['category'] ?? null);
@@ -772,6 +854,12 @@ class ProductApiController extends Controller
                         'referral_category_code' => $product->category->referral_category_code,
                         'category_code'          => $product->category->referral_category_code,
                         'referral_code'          => $product->category->referral_category_code,
+                    ] : null,
+                    'subcategory'             => $product->subcategory ? [
+                        'id'                     => $product->subcategory->id,
+                        'name'                   => $product->subcategory->name,
+                        'slug'                   => $product->subcategory->slug,
+                        'image'                  => \App\Helpers\ImageHelper::resolve($product->subcategory->image),
                     ] : null,
                     'mrp'                     => $mrp,
                     'booking_percentage'      => $bookingPct,

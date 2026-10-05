@@ -53,7 +53,7 @@
                     @if(!empty($filter) && $filter !== 'all')
                         <input type="hidden" name="filter" value="{{ $filter }}">
                     @endif
-                    <select name="category_id" class="form-select form-select-sm" style="min-width: 170px;" onchange="this.form.submit()">
+                    <select name="category_id" class="form-select form-select-sm" style="min-width: 150px;" onchange="this.form.submit()">
                         <option value="">All Categories</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat->id }}" {{ (string)($categoryId ?? '') === (string)$cat->id ? 'selected' : '' }}>
@@ -62,6 +62,17 @@
                         @endforeach
                     </select>
 
+                    @if(!empty($subcategories) && count($subcategories) > 0)
+                        <select name="subcategory_id" class="form-select form-select-sm" style="min-width: 150px;" onchange="this.form.submit()">
+                            <option value="">All Subcategories</option>
+                            @foreach($subcategories as $sub)
+                                <option value="{{ $sub->id }}" {{ (string)($subcategoryId ?? '') === (string)$sub->id ? 'selected' : '' }}>
+                                    {{ $sub->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
+
                     <div class="input-group input-group-sm" style="max-width: 220px;">
                         <input type="text" name="q" value="{{ $search ?? '' }}" class="form-control" placeholder="Search product...">
                         <button class="btn btn-outline-secondary" type="submit">
@@ -69,7 +80,7 @@
                         </button>
                     </div>
 
-                    @if(!empty($categoryId) || !empty($search))
+                    @if(!empty($categoryId) || !empty($subcategoryId) || !empty($search))
                         <a href="{{ route('admin.products.index', ['filter' => $filter ?? 'all']) }}" class="btn btn-sm btn-light text-muted" title="Clear search">
                             <i class="bx bx-x"></i>
                         </a>
@@ -88,7 +99,7 @@
                         <tr>
                             <th style="width: 50px;">Image</th>
                             <th>Product Information</th>
-                            <th>Category</th>
+                            <th>Category / Subcategory</th>
                             <th>Price & 20% Token</th>
                             <th>Stock</th>
                             <th class="text-center">Featured</th>
@@ -124,11 +135,20 @@
                                     </div>
                                 </td>
 
-                                <!-- Category -->
+                                <!-- Category / Subcategory -->
                                 <td>
-                                    <span class="badge bg-light text-secondary border font-monospace fs-11">
-                                        {{ $product->category->name ?? 'Uncategorized' }}
-                                    </span>
+                                    <div>
+                                        <span class="badge bg-light text-secondary border font-monospace fs-11">
+                                            {{ $product->category->name ?? 'Uncategorized' }}
+                                        </span>
+                                    </div>
+                                    @if($product->subcategory)
+                                        <div class="mt-1">
+                                            <span class="badge bg-primary-subtle text-primary micro">
+                                                <i class="bx bx-subdirectory-right me-1"></i>{{ $product->subcategory->name }}
+                                            </span>
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <!-- Pricing & 20% Booking -->

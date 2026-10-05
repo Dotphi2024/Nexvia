@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CustomerAuthController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\CategoryApiController;
+use App\Http\Controllers\Api\SubcategoryApiController;
 use App\Http\Controllers\Api\ProductApiController;
 use App\Http\Controllers\Api\BookingApiController;
 use App\Http\Controllers\Api\ReferralWalletApiController;
@@ -226,10 +227,22 @@ Route::match(['get', 'post'], '/contact-us',            [PageApiController::clas
 Route::match(['get', 'post'], '/pages',                 [PageApiController::class, 'index']);
 Route::match(['get', 'post'], '/pages/{slugOrId}',      [PageApiController::class, 'show']);
 
-// Categories & Products Public APIs
-Route::get('/categories',           [CategoryApiController::class, 'index']);
-Route::post('/categories',          [CategoryApiController::class, 'index']);
-Route::get('/categories/{idOrSlug}',[CategoryApiController::class, 'show']);
+// Categories & Subcategories & Products Public APIs
+Route::get('/categories',                          [CategoryApiController::class, 'index']);
+Route::post('/categories',                         [CategoryApiController::class, 'index']);
+Route::get('/categories/{idOrSlug}',               [CategoryApiController::class, 'show']);
+Route::get('/categories/{idOrSlug}/subcategories',  [SubcategoryApiController::class, 'byCategory']);
+Route::post('/categories/{idOrSlug}/subcategories', [SubcategoryApiController::class, 'byCategory']);
+
+Route::get('/subcategories',                       [SubcategoryApiController::class, 'index']);
+Route::post('/subcategories',                      [SubcategoryApiController::class, 'index']);
+Route::get('/subcategories/{idOrSlug}',            [SubcategoryApiController::class, 'show']);
+Route::post('/subcategories/{idOrSlug}',           [SubcategoryApiController::class, 'show']);
+
+Route::get('/customer/subcategories',              [SubcategoryApiController::class, 'index']);
+Route::post('/customer/subcategories',             [SubcategoryApiController::class, 'index']);
+Route::get('/customer/subcategories/{idOrSlug}',   [SubcategoryApiController::class, 'show']);
+Route::post('/customer/subcategories/{idOrSlug}',  [SubcategoryApiController::class, 'show']);
 Route::get('/products/trending',     [ProductApiController::class, 'trending']);
 Route::post('/products/trending',    [ProductApiController::class, 'trending']);
 Route::get('/products/search',       [ProductApiController::class, 'search']);

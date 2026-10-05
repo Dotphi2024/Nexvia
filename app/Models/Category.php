@@ -28,6 +28,11 @@ class Category extends Model
         'referral_eligible'     => 'boolean',
     ];
 
+    public function subcategories()
+    {
+        return $this->hasMany(Subcategory::class)->orderBy('sort_order');
+    }
+
     public function products()
     {
         return $this->hasMany(Product::class);
