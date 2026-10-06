@@ -1040,11 +1040,17 @@ class BookingApiController extends Controller
     /**
      * POST /api/customer/bookings/{id}/reallocate
      * POST /api/bookings/{id}/reallocate
-     * If 60 days have passed and the balance is unpaid, customer can reallocate
-     * their total paid amount to their Product Credit wallet to buy another item.
+     * POST /api/customer/bookings/{id}/exchange-product
+     * 
+     * If 60 days have passed and the balance is unpaid (or customer wants to switch item),
+     * customer can reallocate their total paid amount (20% deposit + all partial payments)
+     * either:
+     *  1) Directly to buy another product (pass 'new_product_id' or 'new_product_slug')
+     *  2) Or to their Product Credit wallet to buy any product from the catalog.
      */
     public function reallocate(Request $request, $id)
     {
+        $bodyJson = json_decode($request->getContent(), true) ?? [];
         $user = $this->resolveCustomer($request);
         if (!$user) {
             return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
@@ -1062,12 +1068,12 @@ class BookingApiController extends Controller
         if ($booking->booking_status === 'reallocated') {
             return response()->json([
                 'status'  => false,
-                'message' => 'The paid amount for this booking has already been reallocated to product credit.',
+                'message' => 'The paid amount for this booking has already been reallocated.',
             ], 422);
         }
 
         // Calculate total amount paid/filled so far (20% deposit + any partial/EMI balance payments)
-        $totalPaid = $booking->filled_amount;
+        $totalPaid = (float) $booking->filled_amount;
         if ($totalPaid <= 0) {
             $totalPaid = (float) $booking->booking_amount;
         }
@@ -1079,36 +1085,103 @@ class BookingApiController extends Controller
             ], 422);
         }
 
-        return DB::transaction(function () use ($booking, $user, $totalPaid) {
-            $user->wallet_balance = ($user->wallet_balance ?? 0) + $totalPaid;
-            $user->save();
+        $newProductId = $request->input('new_product_id')
+            ?? $request->input('product_id')
+            ?? ($bodyJson['new_product_id'] ?? null)
+            ?? ($bodyJson['product_id'] ?? null);
 
-            $dealerWallet = SelfDealerWallet::firstOrCreate(['user_id' => $user->id]);
-            $dealerWallet->creditAvailable($totalPaid);
+        $newProductSlug = $request->input('new_product_slug')
+            ?? ($bodyJson['new_product_slug'] ?? null);
 
-            WalletTransaction::create([
-                'user_id'          => $user->id,
-                'amount'           => $totalPaid,
-                'type'             => 'credit',
-                'source'           => 'booking_reallocation',
-                'booking_id'       => $booking->id,
-                'description'      => "Reallocated paid amount ₹" . number_format($totalPaid, 2) . " from booking #{$booking->booking_number} to Product Credit wallet to buy another item",
-                'transaction_type' => 'reallocation',
-                'status'           => 'available',
-                'available_at'     => now(),
+        if (empty($newProductId) && empty($newProductSlug)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Please select the new product (new_product_id or new_product_slug) to purchase with your paid amount of ₹' . number_format($totalPaid, 2) . '.',
+            ], 422);
+        }
+
+        $newProduct = !empty($newProductId)
+            ? Product::find($newProductId)
+            : Product::where('slug', $newProductSlug)->first();
+
+        if (!$newProduct) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Selected replacement product not found in catalog.',
+            ], 404);
+        }
+
+        return DB::transaction(function () use ($booking, $user, $totalPaid, $newProduct) {
+            $newMrp = (float) $newProduct->mrp;
+            $newBookingNumber = 'NEX-' . date('Y') . '-' . rand(100000, 999999);
+            $qrHash = md5($newBookingNumber . $user->id . time());
+
+            if ($totalPaid >= $newMrp) {
+                // Paid amount fully covers the new product
+                $newBookingAmount = $newMrp;
+                $newBalanceAmount = 0.00;
+                $newPaymentStatus = 'fully_paid';
+                $newBookingStatus = 'completed';
+                $newBalanceDueDate = null;
+            } else {
+                // Paid amount is applied as initial deposit / partial payment for new product
+                $newBookingAmount = $totalPaid;
+                $newBalanceAmount = round($newMrp - $totalPaid, 2);
+                $newPaymentStatus = 'paid';
+                $newBookingStatus = 'booked';
+                $newBalanceDueDate = now()->addDays(60);
+            }
+
+            $newBooking = Booking::create([
+                'booking_number'          => $newBookingNumber,
+                'user_id'                 => $user->id,
+                'dsp_id'                  => $booking->dsp_id,
+                'product_id'              => $newProduct->id,
+                'product_name'            => $newProduct->name,
+                'model_code'              => $newProduct->model_code,
+                'sku'                     => $newProduct->sku,
+                'quantity'                => 1,
+                'mrp'                     => $newMrp,
+                'booking_amount'          => $newBookingAmount,
+                'balance_amount'          => $newBalanceAmount,
+                'booking_date'            => now(),
+                'balance_due_date'        => $newBalanceDueDate,
+                'payment_status'          => $newPaymentStatus,
+                'booking_status'          => $newBookingStatus,
+                'customer_name'           => $booking->customer_name ?: $user->name,
+                'customer_phone'          => $booking->customer_phone ?: $user->phone,
+                'customer_email'          => $booking->customer_email ?: $user->email,
+                'delivery_address'        => $booking->delivery_address,
+                'city'                    => $booking->city,
+                'state'                   => $booking->state,
+                'pincode'                 => $booking->pincode,
+                'qr_hash'                 => $qrHash,
+                'non_refundable_accepted' => true,
+                'notes'                   => "Reallocated from Booking #{$booking->booking_number} (Transferred paid amount ₹" . number_format($totalPaid, 2) . ")",
             ]);
 
+            // Mark old booking as reallocated
             $booking->booking_status = 'reallocated';
             $booking->save();
 
             return response()->json([
                 'status'  => true,
-                'message' => "Your paid amount of ₹" . number_format($totalPaid, 2) . " has been transferred to your Product Credit wallet. You can now use it to purchase another catalog item.",
+                'message' => "Successfully purchased {$newProduct->name} using your paid amount of ₹" . number_format($totalPaid, 2) . " from Booking #{$booking->booking_number}!",
                 'data'    => [
-                    'booking_number'        => $booking->booking_number,
-                    'booking_status'        => $booking->booking_status,
-                    'reallocated_amount'    => $totalPaid,
-                    'wallet_balance'        => (float) $user->fresh()->wallet_balance,
+                    'reallocated_from_booking' => $booking->booking_number,
+                    'reallocated_amount'       => $totalPaid,
+                    'new_booking'              => [
+                        'id'               => $newBooking->id,
+                        'booking_number'   => $newBooking->booking_number,
+                        'product_id'       => $newProduct->id,
+                        'product_name'     => $newProduct->name,
+                        'mrp'              => $newMrp,
+                        'paid_amount'      => $newBookingAmount,
+                        'balance_amount'   => $newBalanceAmount,
+                        'payment_status'   => $newPaymentStatus,
+                        'booking_status'   => $newBookingStatus,
+                        'balance_due_date' => $newBalanceDueDate?->toDateString(),
+                    ],
                 ],
             ], 200);
         });

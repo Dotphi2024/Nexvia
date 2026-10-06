@@ -395,6 +395,7 @@ Route::prefix('customer')->group(function () {
         Route::match(['get', 'post'], '/bookings/{id}/challan', [BookingApiController::class, 'challan']);
         Route::post('/bookings/{id}/pay-balance',         [BookingApiController::class, 'payBalance']);
         Route::post('/bookings/{id}/reallocate',          [BookingApiController::class, 'reallocate']);
+        Route::post('/bookings/{id}/exchange-product',    [BookingApiController::class, 'reallocate']);
         Route::post('/bookings/{id}/select-dsp',          [BookingApiController::class, 'selectDsp']);
         Route::post('/bookings/{id}/cancel',              [BookingApiController::class, 'cancel']);
         Route::post('/bookings/{id}/transfer',            [BookingApiController::class, 'initiateTransfer']);
@@ -513,6 +514,8 @@ Route::match(['get', 'post'], '/bookings/{id}/challan', [BookingApiController::c
 Route::match(['get', 'post'], '/booking/{id}/challan',  [BookingApiController::class, 'challan']);
 Route::post('/bookings/{id}/reallocate',                   [BookingApiController::class, 'reallocate']);
 Route::post('/booking/{id}/reallocate',                    [BookingApiController::class, 'reallocate']);
+Route::post('/bookings/{id}/exchange-product',             [BookingApiController::class, 'reallocate']);
+Route::post('/booking/{id}/exchange-product',              [BookingApiController::class, 'reallocate']);
 Route::post('/bookings/{id}/select-dsp',                   [BookingApiController::class, 'selectDsp']);
 Route::post('/booking/{id}/select-dsp',                    [BookingApiController::class, 'selectDsp']);
 Route::post('/bookings/{id}/cancel',                     [BookingApiController::class, 'cancel']);
