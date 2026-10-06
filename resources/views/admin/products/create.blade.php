@@ -373,6 +373,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.querySelectorAll('input').forEach(i => i.value = '');
             }
         }
+    });
+
     // Dynamic Subcategory Loader based on selected Category
     const categorySelect = document.getElementById('category_select');
     const subcategorySelect = document.getElementById('subcategory_select');

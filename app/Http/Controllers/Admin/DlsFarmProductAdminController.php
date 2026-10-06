@@ -174,7 +174,10 @@ class DlsFarmProductAdminController extends Controller
     {
         $product = Product::findOrFail($id);
         $categories = Category::where('type', self::TYPE)->orderBy('name')->get();
-        $subcategories = Subcategory::where('category_id', $product->category_id)->orderBy('name')->get();
+        $selectedCategoryId = old('category_id', $product->category_id);
+        $subcategories = $selectedCategoryId
+            ? Subcategory::where('category_id', $selectedCategoryId)->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get()
+            : collect();
 
         return view('admin.dls_farm_equipments.products.edit', compact('product', 'categories', 'subcategories'));
     }

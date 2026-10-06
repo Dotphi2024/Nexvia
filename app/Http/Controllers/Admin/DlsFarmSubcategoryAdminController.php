@@ -156,10 +156,9 @@ class DlsFarmSubcategoryAdminController extends Controller
         }
 
         $subcategories = Subcategory::where('category_id', $categoryId)
-            ->where('is_active', true)
             ->orderBy('sort_order', 'asc')
             ->orderBy('name', 'asc')
-            ->get(['id', 'name', 'slug', 'image', 'sort_order']);
+            ->get(['id', 'name', 'slug', 'image', 'sort_order', 'is_active']);
 
         return response()->json([
             'status'        => true,

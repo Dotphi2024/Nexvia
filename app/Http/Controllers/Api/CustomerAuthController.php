@@ -24,9 +24,8 @@ class CustomerAuthController extends Controller
     /**
      * POST /api/customer/register
      *
-     * Accepts: name, phone, email (optional), password, password_confirmation
-     * Just creates the account and returns success.
-     * OTP is sent only at login time.
+     * Accepts: name (or fullName), phone, password, password_confirmation (optional), email (optional)
+     * Creates account with required password, removes OTP requirement, and returns auth token.
      */
     public function register(Request $request)
     {
@@ -36,28 +35,29 @@ class CustomerAuthController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'fullName'       => 'nullable|string|max:255',
-            'name'           => 'required|string|max:255',
-            'phone'          => 'required|digits:10|unique:users,phone',
-            'email'          => 'nullable|email|max:255|unique:users,email',
-            'password'       => 'nullable|string',
-            'otp'            => 'required|digits:6',
-            'fcm_token'      => 'nullable|string',
-            'referral_code'  => 'nullable|string',
-            'referred_by'    => 'nullable|string',
-            'pincode'        => 'nullable|string|max:10',
-            'city'           => 'nullable|string|max:100',
-            'state'          => 'nullable|string|max:100',
-            'terms_accepted' => 'nullable|boolean',
-            'terms_version'  => 'nullable|string|max:20',
+            'fullName'              => 'nullable|string|max:255',
+            'name'                  => 'required|string|max:255',
+            'phone'                 => 'required|digits:10|unique:users,phone',
+            'email'                 => 'nullable|email|max:255|unique:users,email',
+            'password'              => 'required|string|min:6',
+            'password_confirmation' => 'nullable|string|same:password',
+            'fcm_token'             => 'nullable|string',
+            'referral_code'         => 'nullable|string',
+            'referred_by'           => 'nullable|string',
+            'pincode'               => 'nullable|string|max:10',
+            'city'                  => 'nullable|string|max:100',
+            'state'                 => 'nullable|string|max:100',
+            'terms_accepted'        => 'nullable|boolean',
+            'terms_version'         => 'nullable|string|max:20',
         ], [
-            'otp.required'   => 'Verification OTP is required to register.',
-            'otp.digits'     => 'OTP must be exactly 6 digits.',
-            'name.required'  => 'Full name (fullName) is required.',
-            'phone.required' => 'Phone number is required.',
-            'phone.digits'   => 'Phone number must be exactly 10 digits.',
-            'phone.unique'   => 'This phone number is already registered.',
-            'email.unique'   => 'This email is already registered.',
+            'name.required'              => 'Full name is required.',
+            'phone.required'             => 'Phone number is required.',
+            'phone.digits'               => 'Phone number must be exactly 10 digits.',
+            'phone.unique'               => 'This phone number is already registered.',
+            'email.unique'               => 'This email is already registered.',
+            'password.required'          => 'Password is required to register.',
+            'password.min'               => 'Password must be at least 6 characters long.',
+            'password_confirmation.same' => 'Password confirmation does not match.',
         ]);
 
         if ($validator->fails()) {
@@ -68,32 +68,8 @@ class CustomerAuthController extends Controller
             ], 422);
         }
 
-        // Verify registration OTP
-        $phone = trim($request->phone);
-        $cachedData = Cache::get('reg_otp_' . $phone);
-        $submittedOtp = trim((string)$request->otp);
-
-        $validOtp = false;
-        if ($cachedData) {
-            $expectedOtp = is_array($cachedData) ? ($cachedData['otp'] ?? null) : $cachedData;
-            if ($expectedOtp && (string)$expectedOtp === $submittedOtp) {
-                $validOtp = true;
-                Cache::forget('reg_otp_' . $phone);
-            }
-        }
-        if (!$validOtp && config('app.debug') && $submittedOtp === '123456') {
-            $validOtp = true; // allow debug testing
-        }
-
-        if (!$validOtp) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Invalid or expired OTP. Please click Resend OTP and try again.',
-            ], 422);
-        }
-
         try {
-            $password = $request->input('password') ?: trim($request->phone);
+            $password = $request->input('password');
 
             // 1. Check if registered using a referral code
             $referredById = null;
@@ -203,8 +179,8 @@ class CustomerAuthController extends Controller
 
     /**
      * POST /api/auth/login or /api/customer/login
-     * Password-less login.
-     * Accepts: phone (or email, emailOrPhone, mobile)
+     * Password-based direct login (OTP removed).
+     * Accepts: phone (or email, emailOrPhone, mobile) & password
      */
     public function login(Request $request)
     {
@@ -229,10 +205,19 @@ class CustomerAuthController extends Controller
             ($trimmedJson['login'] ?? null) ?? ''
         );
 
+        $password = $request->input('password') ?? ($trimmedJson['password'] ?? null);
+
         if (empty($loginInput)) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Phone number or email is required.',
+            ], 422);
+        }
+
+        if (empty($password)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Password is required.',
             ], 422);
         }
 
@@ -257,10 +242,13 @@ class CustomerAuthController extends Controller
                 ], 403);
             }
 
-            // Optional: If password is provided and not empty, and developer wishes to verify it
-            // if ($request->filled('password') && !Hash::check($request->password, $customer->password)) {
-            //     return response()->json(['status' => false, 'message' => 'Invalid password.'], 401);
-            // }
+            // Password verification
+            if (!Hash::check($password, $customer->password)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Invalid password credentials.',
+                ], 401);
+            }
 
             // Save FCM token if passed during login
             $fcmToken = $request->input('fcm_token') ?? ($trimmedJson['fcm_token'] ?? null);
@@ -268,46 +256,6 @@ class CustomerAuthController extends Controller
                 $customer->fcm_token = $fcmToken;
                 $customer->save();
             }
-
-            // OTP Verification for Login
-            $submittedOtp = trim((string)($request->input('otp') ?? $request->input('otpCode') ?? ($trimmedJson['otp'] ?? ($trimmedJson['otpCode'] ?? ''))));
-
-            if (empty($submittedOtp)) {
-                // Generate and send OTP to registered mobile and email
-                $newOtp = $customer->generateOtp();
-                $this->sendOtpWhatsApp($customer->phone, $newOtp, $customer->name);
-                if (!empty($customer->email)) {
-                    try {
-                        Mail::to($customer->email)->send(new OtpMail($customer->name, $newOtp, 'login'));
-                    } catch (\Throwable $e) {
-                        \Log::warning("Customer OTP email failed: " . $e->getMessage());
-                    }
-                }
-
-                return response()->json([
-                    'status'    => true,
-                    'otp_sent'  => true,
-                    'message'   => 'OTP sent to your registered mobile and email. Please enter the OTP to complete login.',
-                    'phone'     => $customer->phone,
-                    'email'     => $customer->email,
-                    'otp_debug' => config('app.debug') ? $newOtp : null,
-                ], 200);
-            }
-
-            // Verify submitted OTP
-            $validOtp = $customer->isOtpValid($submittedOtp);
-            if (!$validOtp && config('app.debug') && $submittedOtp === '123456') {
-                $validOtp = true;
-            }
-
-            if (!$validOtp) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Invalid or expired OTP. Please try again.',
-                ], 422);
-            }
-
-            $customer->markPhoneVerified();
 
             // Generate authentication token and return customer data directly
             $token = $customer->generateApiToken();

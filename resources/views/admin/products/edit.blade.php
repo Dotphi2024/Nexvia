@@ -40,8 +40,9 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold text-dark">Category *</label>
                                 <select name="category_id" id="category_select" class="form-select" required>
+                                    <option value="">-- Select Category --</option>
                                     @foreach($categories as $cat)
-                                        <option value="{{ $cat->id }}" {{ $product->category_id == $cat->id ? 'selected' : '' }}>
+                                        <option value="{{ $cat->id }}" {{ (old('category_id', $product->category_id) == $cat->id) ? 'selected' : '' }}>
                                             {{ $cat->name }} ({{ ucfirst(str_replace('_', ' ', $cat->type)) }})
                                         </option>
                                     @endforeach
@@ -388,6 +389,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.querySelectorAll('input').forEach(i => i.value = '');
             }
         }
+    });
+
     // Dynamic Subcategory Loader based on selected Category
     const categorySelect = document.getElementById('category_select');
     const subcategorySelect = document.getElementById('subcategory_select');
@@ -405,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch(`{{ route('admin.subcategories.by-category') }}?category_id=${catId}`)
                 .then(res => res.json())
                 .then(data => {
-                    subcategorySelect.innerHTML = '<option value="">-- None / General Category --</option>';
+                    subcategorySelect.innerHTML = '<option value="">-- No Subcategory / General --</option>';
                     if (data.status && data.subcategories && data.subcategories.length > 0) {
                         data.subcategories.forEach(sub => {
                             const opt = document.createElement('option');
@@ -417,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .catch(err => {
                     console.error('Error fetching subcategories:', err);
-                    subcategorySelect.innerHTML = '<option value="">-- None / General Category --</option>';
+                    subcategorySelect.innerHTML = '<option value="">-- No Subcategory / General --</option>';
                 });
         });
     }

@@ -152,7 +152,11 @@ class ProductAdminController extends Controller
     {
         $product = Product::with('subcategory')->findOrFail($id);
         $categories = Category::where('type', '!=', 'dls_farm_equipment')->with('subcategories')->orderBy('name')->get();
-        $subcategories = Subcategory::where('category_id', $product->category_id)->where('is_active', true)->orderBy('name')->get();
+        $selectedCategoryId = old('category_id', $product->category_id);
+        $subcategories = $selectedCategoryId
+            ? Subcategory::where('category_id', $selectedCategoryId)->orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get()
+            : collect();
+
         return view('admin.products.edit', compact('product', 'categories', 'subcategories'));
     }
 
