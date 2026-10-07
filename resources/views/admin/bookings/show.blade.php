@@ -312,7 +312,7 @@
                                 <span class="text-dark small d-block">
                                     {{ $booking->delivery->delivered_at ? \Carbon\Carbon::parse($booking->delivery->delivered_at)->format('d M, Y H:i') : 'In Pipeline / Out for Dispatch' }}
                                 </span>
-                                <span class="micro text-muted">Delivery OTP: <strong class="font-monospace text-primary">{{ $booking->delivery->delivery_otp ?: 'Assigned at Dispatch' }}</strong></span>
+                                <span class="micro text-muted">Delivery Verification: <strong class="text-success font-monospace">Direct Handover (No OTP Required)</strong></span>
                             </div>
                         </div>
                     @else
@@ -616,11 +616,11 @@
                     </div>
 
                     <div class="mb-0">
-                        <label class="form-label fw-semibold text-dark">Handover Delivery OTP</label>
+                        <label class="form-label fw-semibold text-dark">Handover Delivery OTP <span class="badge bg-light text-muted fw-normal ms-1">Optional — No OTP Required</span></label>
                         <input type="text" name="delivery_otp" class="form-control font-monospace" 
                                value="{{ $booking->delivery?->delivery_otp ?? '' }}" 
-                               placeholder="e.g. 849201">
-                        <span class="micro text-muted">Customer verification OTP required by DSP during physical handover</span>
+                               placeholder="Optional (Direct handover enabled — No OTP required)">
+                        <span class="micro text-muted">Direct delivery handover enabled. Delivery Challan does not require an OTP.</span>
                     </div>
                 </div>
                 <div class="modal-footer border-top py-3 px-4">

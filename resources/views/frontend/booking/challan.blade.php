@@ -87,8 +87,8 @@
                                 <strong class="text-dark font-monospace fs-13">{{ $delivery['tracking_number'] ?? 'TRK-' . rand(10000000, 99999999) }}</strong>
                             </div>
                             <div class="col-6 col-md-3">
-                                <span class="micro text-muted d-block text-uppercase fw-bold">Delivery OTP Required</span>
-                                <strong class="text-success font-monospace fs-13"><iconify-icon icon="solar:shield-check-bold" class="align-middle"></iconify-icon> YES ({{ $delivery['delivery_otp'] ?? '6-DIGIT OTP' }})</strong>
+                                <span class="micro text-muted d-block text-uppercase fw-bold">Delivery Verification</span>
+                                <strong class="text-success font-monospace fs-13"><iconify-icon icon="solar:shield-check-bold" class="align-middle"></iconify-icon> Direct Handover (No OTP Required)</strong>
                             </div>
                         </div>
                     </div>

@@ -80,7 +80,7 @@
                     @else
                         <span class="badge bg-warning text-dark px-3 py-2">
                             <iconify-icon icon="solar:clock-circle-bold" class="align-middle me-1"></iconify-icon>
-                            CREDITED ON OTP DELIVERY
+                            CREDITED ON DELIVERY
                         </span>
                     @endif
                 </div>
@@ -137,7 +137,7 @@
                                 </option>
                             @endif
                             <option value="delivered" {{ ($delivery->stage === 'out_for_delivery') ? 'selected' : '' }}>
-                                ✅ Mark as DELIVERED & Activate Warranty (Customer OTP Required)
+                                ✅ Mark as DELIVERED & Activate Warranty (Direct Delivery / No OTP Required)
                             </option>
                         </select>
                     </div>
@@ -145,15 +145,15 @@
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label fw-bold text-dark small mb-0">
-                                Customer Delivery OTP <span class="text-danger">* (Required for Delivery)</span>
+                                Customer Delivery OTP <span class="text-muted fw-normal">(Optional — Not Required)</span>
                             </label>
-                            <span class="micro text-muted">Customer has this code on their receipt/SMS</span>
+                            <span class="micro text-muted">Direct handover mode enabled</span>
                         </div>
-                        <input type="text" name="delivery_otp" class="form-control form-control-lg font-monospace fw-bold text-primary" 
-                               placeholder="Enter 6-digit Customer OTP (e.g. {{ $delivery->delivery_otp ?: '849201' }})">
+                        <input type="text" name="delivery_otp" class="form-control form-control-lg font-monospace fw-bold text-secondary" 
+                               placeholder="Optional (Order can be delivered directly without OTP)">
                         <div class="micro text-muted mt-1">
                             <iconify-icon icon="solar:shield-check-bold" class="text-success align-middle"></iconify-icon>
-                            Security Rule: Delivery cannot be confirmed and 5% commission will not be credited without valid customer OTP.
+                            Direct Delivery: Customer OTP is optional. Delivery can be confirmed and warranty activated directly upon physical handover.
                         </div>
                     </div>
 

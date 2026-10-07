@@ -1003,8 +1003,9 @@ GET /api/test-email?to=nexviadls@gmail.com
       "delivery": {
         "tracking_number": "TRK-58291048",
         "stage": "processing",
-        "delivery_otp": "492018",
-        "delivery_mode": "Doorstep Territory Direct Delivery"
+        "delivery_otp": null,
+        "otp_required": false,
+        "delivery_mode": "Doorstep Territory Direct Delivery (No OTP Required)"
       },
       "verification_url": "https://backend.nexviadls.com/booking/challan/BK-20260916-7788"
     }

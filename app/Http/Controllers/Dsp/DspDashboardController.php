@@ -218,27 +218,19 @@ class DspDashboardController extends Controller
             return back()->with('success', 'Order status updated to OUT FOR DELIVERY. Keep the customer updated!');
         }
 
-        // Action 3: Delivered (MANDATORY OTP CHECK + AUTO WARRANTY ACTIVATION)
+        // Action 3: Delivered (DIRECT HANDOVER / OPTIONAL OTP + AUTO WARRANTY ACTIVATION)
         if ($newStage === 'delivered') {
             if ($delivery->stage === 'delivered' && $delivery->dsp_commission_status === 'credited') {
                 return back()->with('info', 'This order is already marked as DELIVERED and 5% commission has been credited.');
             }
 
-            // Strict Customer Delivery OTP Check
+            // Customer Delivery OTP Check (Optional — Direct Handover allowed)
             $inputOtp = trim((string)$request->input('delivery_otp'));
             $expectedOtp = (string)($delivery->delivery_otp);
-            if (empty($expectedOtp)) {
-                $expectedOtp = (string)(substr(md5($delivery->tracking_number), 0, 6));
-                $delivery->delivery_otp = $expectedOtp;
-                $delivery->save();
-            }
-
-            if (empty($inputOtp)) {
-                return back()->with('error', 'Customer Delivery OTP is required! OTP verification is strictly mandatory before marking order as delivered.');
-            }
-
-            if ($inputOtp !== $expectedOtp && $inputOtp !== '123456' && $inputOtp !== '888888') {
-                return back()->with('error', 'Invalid Customer Delivery OTP entered. Please verify the 6-digit OTP code provided by the customer.');
+            if (!empty($inputOtp) && !empty($expectedOtp)) {
+                if ($inputOtp !== $expectedOtp && $inputOtp !== '123456' && $inputOtp !== '888888') {
+                    return back()->with('error', 'Invalid Customer Delivery OTP entered. Please check the OTP code or leave blank for direct handover.');
+                }
             }
 
             $delivery->stage = 'delivered';

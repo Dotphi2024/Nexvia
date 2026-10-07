@@ -553,14 +553,6 @@ class DspApiController extends Controller
         $otp = trim((string)($request->input('delivery_otp') ?? $request->input('otp') ?? ($bodyJson['delivery_otp'] ?? null) ?? ($bodyJson['otp'] ?? null)));
         $notes = $request->input('delivery_notes') ?? $request->input('notes') ?? ($bodyJson['delivery_notes'] ?? null) ?? ($bodyJson['notes'] ?? null);
 
-        if (empty($otp)) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Customer Delivery OTP is required. OTP verification is mandatory to complete delivery.',
-                'error'   => 'OTP_REQUIRED',
-            ], 422);
-        }
-
         $servicedPincodes = $dsp->servicedPincodesArray();
 
         $delivery = Delivery::with(['booking.product', 'order'])
@@ -587,21 +579,16 @@ class DspApiController extends Controller
             ]);
         }
 
-        // Expected OTP from Delivery or generate if null
-        $expectedOtp = (string)($delivery->delivery_otp);
-        if (empty($expectedOtp)) {
-            $expectedOtp = (string)($delivery->id ? substr(md5($delivery->tracking_number), 0, 6) : '123456');
-            $delivery->delivery_otp = $expectedOtp;
-            $delivery->save();
-        }
-
-        // Validate OTP Match
-        if ($otp !== $expectedOtp && $otp !== '123456' && $otp !== '888888') {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Invalid Customer Delivery OTP. Please enter the correct 6-digit OTP provided by the customer.',
-                'error'   => 'OTP_MISMATCH',
-            ], 422);
+        // Customer Delivery OTP is optional (Direct Handover supported, no OTP required)
+        if (!empty($otp)) {
+            $expectedOtp = (string)($delivery->delivery_otp);
+            if (!empty($expectedOtp) && $otp !== $expectedOtp && $otp !== '123456' && $otp !== '888888') {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Invalid Customer Delivery OTP. Please enter the correct 6-digit OTP or leave empty for direct delivery.',
+                    'error'   => 'OTP_MISMATCH',
+                ], 422);
+            }
         }
 
         // OTP Verified -> Mark Delivered

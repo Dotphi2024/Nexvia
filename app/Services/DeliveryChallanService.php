@@ -302,13 +302,14 @@ class DeliveryChallanService
                 'pincode'             => $booking->pincode,
             ],
 
-            // Delivery & Logistics Status
+            // Delivery & Logistics Status (No OTP required for Challan generation)
             'delivery'                => [
                 'tracking_number'     => $delivery?->tracking_number,
                 'stage'               => $delivery?->stage ?: 'processing',
                 'pdi_status'          => $delivery?->pdi_status ?: 'Passed / Verified',
-                'delivery_otp'        => $delivery?->delivery_otp ?: rand(100000, 999999),
-                'delivery_mode'       => 'Doorstep Territory Direct Delivery',
+                'delivery_otp'        => null,
+                'otp_required'        => false,
+                'delivery_mode'       => 'Doorstep Territory Direct Delivery (No OTP Required)',
             ],
 
             // Security & Verification Hash

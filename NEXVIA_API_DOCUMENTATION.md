@@ -110,8 +110,9 @@ Create a new customer account and generate unique referral code and API token.
 {
   "fullName": "Rahul Sharma",
   "phone": "9876543210",
+  "password": "Password@123",
+  "password_confirmation": "Password@123",
   "email": "rahul.sharma@example.com",
-  "password": "optional_secure_password",
   "referral_code": "NEX12345",
   "pincode": "411001",
   "city": "Pune",
@@ -121,6 +122,9 @@ Create a new customer account and generate unique referral code and API token.
   "terms_version": "v1.0"
 }
 ```
+> **Notes**:
+> - `fullName` (or `name`), `phone` (10 digits), and `password` (min: 6 chars) are required.
+> - OTP verification is not required for registration.
 
 #### Success Response (`201 Created`)
 ```json
@@ -158,15 +162,16 @@ Create a new customer account and generate unique referral code and API token.
   "status": false,
   "message": "Validation error",
   "errors": {
-    "phone": ["This phone number is already registered."]
+    "phone": ["This phone number is already registered."],
+    "password": ["Password is required to register."]
   }
 }
 ```
 
 ---
 
-### 1.2 Login Customer (Passwordless / Phone)
-Instant login via registered phone number or email. Returns authentication bearer token.
+### 1.2 Login Customer (Password Authentication)
+Login via registered phone number/email and password. Returns authentication bearer token.
 
 - **Method:** `POST`
 - **URL:** `/api/auth/login` or `/api/customer/login`
@@ -176,6 +181,7 @@ Instant login via registered phone number or email. Returns authentication beare
 ```json
 {
   "phone": "9876543210",
+  "password": "Password@123",
   "fcm_token": "fcm_token_optional"
 }
 ```
@@ -2841,7 +2847,9 @@ Fetch the complete, authenticated Digital Delivery Challan payload with security
     "delivery": {
       "tracking_number": "TRK-58921034",
       "stage": "processing",
-      "delivery_otp": null
+      "delivery_otp": null,
+      "otp_required": false,
+      "delivery_mode": "Doorstep Territory Direct Delivery (No OTP Required)"
     },
     "verification_qr_hash": "e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9"
   }
@@ -2872,24 +2880,42 @@ Fetch the complete, authenticated Digital Delivery Challan payload with security
 
 Customers who have paid token deposit (20%) or partial amounts are **never locked into a product** if they change their mind. Their total paid funds (`filled_amount`) can be converted into **Product Credits** to purchase any other item in the catalog.
 
-### 16.1 Reallocate Paid Amount to Product Credit Wallet
+### 16.1 Reallocate Paid Amount to Purchase Another Product Directly
 
-Transfers 100% of accumulated paid amounts on a booking into the customer's Product Credit wallet balance.
+When 60 days pass and the remaining balance is unpaid, the customer's total paid amount (`filled_amount`) is non-refundable and must be used to directly purchase another product from the catalog.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/bookings/{id}/reallocate` or `/api/bookings/{id}/reallocate`
-- **Headers:** `Authorization: Bearer <token>`
+- **URL:** `/api/customer/bookings/{id}/reallocate` (or `/api/customer/bookings/{id}/exchange-product`, `/api/bookings/{id}/reallocate`)
+- **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+
+#### Request Body:
+```json
+{
+  "new_product_id": 18
+}
+```
+*(Or by slug: `{"new_product_slug": "nexvia-power-sprayer"}`)*
 
 #### Success Response (`200 OK`):
 ```json
 {
   "status": true,
-  "message": "Your paid amount of ₹5,999.80 has been transferred to your Product Credit wallet. You can now use it to purchase another catalog item.",
+  "message": "Successfully purchased NEXVIA Power Sprayer using your paid amount of ₹15,000.00 from Booking #NEX-2026-891234!",
   "data": {
-    "booking_number": "NEX-2026-B44686",
-    "booking_status": "reallocated",
-    "reallocated_amount": 5999.80,
-    "wallet_balance": 10499.80
+    "reallocated_from_booking": "NEX-2026-891234",
+    "reallocated_amount": 15000.0,
+    "new_booking": {
+      "id": 64,
+      "booking_number": "NEX-2026-582190",
+      "product_id": 18,
+      "product_name": "NEXVIA Power Sprayer",
+      "mrp": 15000.0,
+      "paid_amount": 15000.0,
+      "balance_amount": 0.0,
+      "payment_status": "fully_paid",
+      "booking_status": "completed",
+      "balance_due_date": null
+    }
   }
 }
 ```
