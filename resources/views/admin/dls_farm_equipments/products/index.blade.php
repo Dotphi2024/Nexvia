@@ -150,43 +150,6 @@
                                         </div>
                                     @endif
                                 </td>
-                            <th>Pricing (MRP / 20% Booking)</th>
-                            <th>Stock & Badges</th>
-                            <th>Status</th>
-                            <th>Featured</th>
-                            <th class="text-end pe-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($products as $product)
-                            <tr>
-                                <td class="ps-3">
-                                    <img src="{{ \App\Helpers\ImageHelper::resolve($product->main_image) }}" 
-                                         alt="{{ $product->name }}" 
-                                         class="rounded border" 
-                                         width="44" height="44" 
-                                         style="object-fit: cover;"
-                                         onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
-                                </td>
-                                <td>
-                                    <div class="fw-bold text-dark fs-14">{{ $product->name }}</div>
-                                    <div class="text-muted small">
-                                        @if($product->model_code)
-                                            <span class="badge bg-light text-secondary border font-monospace me-1">{{ $product->model_code }}</span>
-                                        @endif
-                                        @if($product->sku)
-                                            <span class="text-muted font-monospace micro">SKU: {{ $product->sku }}</span>
-                                        @endif
-                                    </div>
-                                    @if($product->offer_text)
-                                        <span class="badge bg-danger-subtle text-danger micro mt-1">{{ $product->offer_text }}</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="badge bg-info-subtle text-info border border-info-subtle">
-                                        {{ $product->category->name ?? 'Farm Category' }}
-                                    </span>
-                                </td>
                                 <td>
                                     <div class="fw-bold text-dark fs-14">₹{{ number_format($product->mrp, 2) }}</div>
                                     <div class="text-success small fw-semibold">
