@@ -108,19 +108,47 @@ class DeliveryChallanService
         $qty = max(1, (int) ($booking->quantity ?: 1));
         $unitPrice = round($totalMrp / $qty, 2);
 
-        // Tax Calculation (18% GST Breakdown)
-        $taxableValue = round($totalMrp / 1.18, 2);
-        $cgstAmount = round($taxableValue * 0.09, 2);
-        $sgstAmount = round($taxableValue * 0.09, 2);
-        $totalTax = round($totalMrp - $taxableValue, 2);
+        // Category & Product Classification for GST (5% for DLS Agro vs 18% for others)
+        $category = $booking->product?->category;
+        $catType  = strtolower($category?->type ?? '');
+        $catName  = strtolower($category?->name ?? '');
+        $catSlug  = strtolower($category?->slug ?? '');
+        $prodName = strtolower($booking->product_name ?? '');
 
-        // Determine HSN / SAC Code
-        $catName = strtolower($booking->product?->category?->name ?? '');
-        $hsnCode = '8711.60.90'; // Default: Electric Two-Wheelers
-        if (str_contains($catName, 'solar') || str_contains($catName, 'energy')) {
-            $hsnCode = '8504.40.80';
-        } elseif (str_contains($catName, 'appliance') || str_contains($catName, 'tv') || str_contains($catName, 'electronics')) {
-            $hsnCode = '8528.72.00';
+        $isDlsAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
+            || str_contains($catName, 'farm')
+            || str_contains($catName, 'agro')
+            || str_contains($catSlug, 'farm')
+            || str_contains($catSlug, 'agro')
+            || str_contains($prodName, 'cultivator')
+            || str_contains($prodName, 'tiller')
+            || str_contains($prodName, 'dls agro');
+
+        if ($isDlsAgro) {
+            // 5% GST for DLS Agro Products (2.5% CGST + 2.5% SGST)
+            $gstRatePercent = 5.0;
+            $cgstRate = '2.5%';
+            $sgstRate = '2.5%';
+            $taxableValue = round($totalMrp / 1.05, 2);
+            $cgstAmount = round($taxableValue * 0.025, 2);
+            $sgstAmount = round($taxableValue * 0.025, 2);
+            $totalTax = round($totalMrp - $taxableValue, 2);
+            $hsnCode = '8432.80.90'; // Agricultural Machinery & Farm Equipment
+        } else {
+            // 18% GST for All Other Products (9% CGST + 9% SGST)
+            $gstRatePercent = 18.0;
+            $cgstRate = '9%';
+            $sgstRate = '9%';
+            $taxableValue = round($totalMrp / 1.18, 2);
+            $cgstAmount = round($taxableValue * 0.09, 2);
+            $sgstAmount = round($taxableValue * 0.09, 2);
+            $totalTax = round($totalMrp - $taxableValue, 2);
+            $hsnCode = '8711.60.90'; // Default: Electric Two-Wheelers & EV Mobility
+            if (str_contains($catName, 'solar') || str_contains($catName, 'energy')) {
+                $hsnCode = '8504.40.80';
+            } elseif (str_contains($catName, 'appliance') || str_contains($catName, 'tv') || str_contains($catName, 'electronics')) {
+                $hsnCode = '8528.72.00';
+            }
         }
 
         $warrantyInfo = $booking->product?->warranty_info 
@@ -207,13 +235,16 @@ class DeliveryChallanService
                 'hsn_code'            => $hsnCode,
             ],
 
-            // GST & Tax Breakdown
+            // GST & Tax Breakdown (5% for DLS Agro vs 18% for others)
             'tax_breakdown'           => [
                 'hsn_code'            => $hsnCode,
+                'gst_rate'            => $gstRatePercent . '%',
+                'gst_rate_percent'    => $gstRatePercent,
+                'is_dls_agro'         => $isDlsAgro,
                 'taxable_value'       => $taxableValue,
-                'cgst_rate'           => '9%',
+                'cgst_rate'           => $cgstRate,
                 'cgst_amount'         => $cgstAmount,
-                'sgst_rate'           => '9%',
+                'sgst_rate'           => $sgstRate,
                 'sgst_amount'         => $sgstAmount,
                 'total_tax'           => $totalTax,
                 'grand_total'         => $totalMrp,

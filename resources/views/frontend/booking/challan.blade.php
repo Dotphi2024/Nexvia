@@ -208,23 +208,23 @@
                         <div class="col-md-6">
                             <div class="p-3 border rounded-3 bg-light h-100">
                                 <h6 class="fw-bold text-dark text-uppercase micro tracking-wider mb-2 text-muted">
-                                    <iconify-icon icon="solar:calculator-minimalistic-bold" class="text-primary me-1 align-middle fs-16"></iconify-icon> GST / Tax Summary (18% GST Included)
+                                    <iconify-icon icon="solar:calculator-minimalistic-bold" class="text-primary me-1 align-middle fs-16"></iconify-icon> GST / Tax Summary ({{ $tax['gst_rate'] ?? '18%' }} Included)
                                 </h6>
                                 <div class="d-flex justify-content-between micro py-1 border-bottom">
                                     <span class="text-muted">Taxable Value (Base Price):</span>
-                                    <strong class="font-monospace text-dark">₹{{ number_format($tax['taxable_value'] ?? ($product['total_mrp'] / 1.18), 2) }}</strong>
+                                    <strong class="font-monospace text-dark">₹{{ number_format($tax['taxable_value'] ?? 0, 2) }}</strong>
                                 </div>
                                 <div class="d-flex justify-content-between micro py-1 border-bottom">
                                     <span class="text-muted">CGST ({{ $tax['cgst_rate'] ?? '9%' }}):</span>
-                                    <span class="font-monospace text-dark">₹{{ number_format($tax['cgst_amount'] ?? (($product['total_mrp'] / 1.18) * 0.09), 2) }}</span>
+                                    <span class="font-monospace text-dark">₹{{ number_format($tax['cgst_amount'] ?? 0, 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between micro py-1 border-bottom">
                                     <span class="text-muted">SGST / UTGST ({{ $tax['sgst_rate'] ?? '9%' }}):</span>
-                                    <span class="font-monospace text-dark">₹{{ number_format($tax['sgst_amount'] ?? (($product['total_mrp'] / 1.18) * 0.09), 2) }}</span>
+                                    <span class="font-monospace text-dark">₹{{ number_format($tax['sgst_amount'] ?? 0, 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between micro py-1 border-bottom">
                                     <span class="text-muted">Total GST Tax Amount:</span>
-                                    <span class="font-monospace fw-bold text-dark">₹{{ number_format($tax['total_tax'] ?? (($product['total_mrp'] / 1.18) * 0.18), 2) }}</span>
+                                    <span class="font-monospace fw-bold text-dark">₹{{ number_format($tax['total_tax'] ?? 0, 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between fs-14 fw-bold pt-2 text-dark">
                                     <span>Total Dispatched Value:</span>

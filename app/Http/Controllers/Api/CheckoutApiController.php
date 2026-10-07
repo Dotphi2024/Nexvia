@@ -139,7 +139,15 @@ class CheckoutApiController extends Controller
                 $balancePct = 100.00 - $bookingPct;
                 $balanceAmount = round($itemTotalMrp - $tokenAmount, 2);
 
-                $taxRate = 18.0;
+                // Tax breakdown: 5% for DLS Agro products vs 18% for other products
+                $catType = strtolower($product->category?->type ?? '');
+                $catName = strtolower($product->category?->name ?? '');
+                $isDlsAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
+                    || str_contains($catName, 'farm')
+                    || str_contains($catName, 'agro')
+                    || str_contains(strtolower($product->name), 'cultivator');
+
+                $taxRate = $isDlsAgro ? 5.0 : 18.0;
                 $taxableAmount = round($itemTotalMrp / (1 + ($taxRate / 100)), 2);
                 $itemTax = round($itemTotalMrp - $taxableAmount, 2);
 
@@ -168,6 +176,9 @@ class CheckoutApiController extends Controller
                     'imageUrl'            => $mainImageUrl,
                     'stock'               => (int) $product->stock,
                     'in_stock'            => (int) $product->stock >= $qty,
+                    'tax_rate'            => $taxRate,
+                    'taxable_amount'      => $taxableAmount,
+                    'tax_amount'          => $itemTax,
                 ];
             }
 
@@ -178,14 +189,28 @@ class CheckoutApiController extends Controller
                 ], 404);
             }
 
-            // Overall Tax Calculations (GST 18% inclusive)
-            $overallTaxRate = 18.0;
-            $taxableSubtotal = round($subtotalMrp / (1 + ($overallTaxRate / 100)), 2);
-            $totalTaxAmount  = round($subtotalMrp - $taxableSubtotal, 2);
+            // Overall Tax Calculations (5% for DLS Agro, 18% for others)
+            $taxableSubtotal = 0.0;
+            $totalTaxAmount  = 0.0;
+            $hasDlsAgro = false;
+            $hasOther = false;
+            foreach ($computedItems as $ci) {
+                $itemRate = (float)($ci['tax_rate'] ?? 18.0);
+                if ($itemRate == 5.0) {
+                    $hasDlsAgro = true;
+                } else {
+                    $hasOther = true;
+                }
+                $taxableSubtotal += (float)($ci['taxable_amount'] ?? 0);
+                $totalTaxAmount  += (float)($ci['tax_amount'] ?? 0);
+            }
+            $taxableSubtotal = round($taxableSubtotal, 2);
+            $totalTaxAmount  = round($totalTaxAmount, 2);
             $cgstAmount      = round($totalTaxAmount / 2, 2);
             $sgstAmount      = round($totalTaxAmount / 2, 2);
+            $taxRateDesc = ($hasDlsAgro && $hasOther) ? '5% (Agro) & 18% (Others)' : ($hasDlsAgro ? '5%' : '18%');
 
-            // Free delivery on all EV products & orders above ₹5,000
+            // Free delivery on all products & orders above ₹5,000
             $deliveryFee = 0.0;
             $deliveryStatus = 'FREE';
 
@@ -218,15 +243,13 @@ class CheckoutApiController extends Controller
                         'has_sufficient_credit'    => ($walletBalance >= $totalToken),
                     ],
                     'taxes' => [
-                        'tax_rate_percentage'    => $overallTaxRate,
+                        'tax_rate_description'   => $taxRateDesc,
                         'taxable_amount'         => $taxableSubtotal,
-                        'cgst_percentage'        => 9.0,
                         'cgst_amount'            => $cgstAmount,
-                        'sgst_percentage'        => 9.0,
                         'sgst_amount'            => $sgstAmount,
                         'total_tax'              => $totalTaxAmount,
                         'tax_status'             => 'Inclusive in MRP',
-                        'note'                   => 'All statutory GST (18%) is included within the MRP price.',
+                        'note'                   => 'DLS Agro products calculated at 5% GST; all other items at 18% GST (inclusive in MRP).',
                     ],
                     'delivery' => [
                         'charges'                => $deliveryFee,

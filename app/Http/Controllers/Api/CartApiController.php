@@ -86,8 +86,15 @@ class CartApiController extends Controller
         $mainImageUrl = ImageHelper::resolve($product->main_image);
         $galleryUrls  = ImageHelper::resolveGallery($product->gallery, $product->main_image);
 
-        // Tax breakdown (GST 18% inclusive in MRP)
-        $taxRate = 18.0;
+        // Tax breakdown: 5% for DLS Agro products vs 18% for other products
+        $catType = strtolower($product->category?->type ?? '');
+        $catName = strtolower($product->category?->name ?? '');
+        $isDlsAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
+            || str_contains($catName, 'farm')
+            || str_contains($catName, 'agro')
+            || str_contains(strtolower($product->name), 'cultivator');
+
+        $taxRate = $isDlsAgro ? 5.0 : 18.0;
         $taxableAmount = round($totalMrp / (1 + ($taxRate / 100)), 2);
         $totalTax = round($totalMrp - $taxableAmount, 2);
         $cgst = round($totalTax / 2, 2);
@@ -111,9 +118,12 @@ class CartApiController extends Controller
             'balance_amount'     => $balanceAmount,
             'tax_breakdown'      => [
                 'tax_rate_pct'   => $taxRate,
+                'is_dls_agro'    => $isDlsAgro,
                 'taxable_amount' => $taxableAmount,
-                'cgst_9pct'      => $cgst,
-                'sgst_9pct'      => $sgst,
+                'cgst_amount'    => $cgst,
+                'sgst_amount'    => $sgst,
+                'cgst_pct'       => $taxRate / 2,
+                'sgst_pct'       => $taxRate / 2,
                 'total_tax'      => $totalTax,
             ],
             'category'           => $product->category ? [
@@ -149,13 +159,18 @@ class CartApiController extends Controller
             $totalBalance += (float) $item['balance_amount'];
         }
 
-        $taxRate = 18.0;
-        $taxableAmount = round($subtotalMrp / (1 + ($taxRate / 100)), 2);
-        $totalTax = round($subtotalMrp - $taxableAmount, 2);
-        $cgst = round($totalTax / 2, 2);
-        $sgst = round($totalTax / 2, 2);
+        $taxableAmount = 0.0;
+        $totalTax = 0.0;
+        $cgst = 0.0;
+        $sgst = 0.0;
+        foreach ($formattedItems as $it) {
+            $taxableAmount += (float) ($it['tax_breakdown']['taxable_amount'] ?? 0);
+            $totalTax      += (float) ($it['tax_breakdown']['total_tax'] ?? 0);
+            $cgst          += (float) ($it['tax_breakdown']['cgst_amount'] ?? 0);
+            $sgst          += (float) ($it['tax_breakdown']['sgst_amount'] ?? 0);
+        }
 
-        // Free delivery standard for all EV orders / orders over 5,000
+        // Free delivery standard for all orders
         $deliveryCharge = 0.0;
 
         return [
@@ -167,11 +182,11 @@ class CartApiController extends Controller
             'balance_percentage' => 80.0,
             'total_balance_amount'=> round($totalBalance, 2),
             'taxes'              => [
-                'tax_rate_pct'   => $taxRate,
-                'taxable_amount' => $taxableAmount,
-                'cgst'           => $cgst,
-                'sgst'           => $sgst,
-                'total_tax'      => $totalTax,
+                'taxable_amount' => round($taxableAmount, 2),
+                'cgst'           => round($cgst, 2),
+                'sgst'           => round($sgst, 2),
+                'total_tax'      => round($totalTax, 2),
+                'note'           => 'DLS Agro products calculated at 5% GST; all other items at 18% GST (inclusive in MRP).',
             ],
             'delivery_fee'       => $deliveryCharge,
             'delivery_text'      => 'FREE Delivery',
