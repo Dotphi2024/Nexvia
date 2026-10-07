@@ -65,7 +65,7 @@
 
 ---
 
-### 1.2 Register Customer (Requires OTP)
+### 1.2 Register Customer
 * **Method**: `POST`
 * **URL**: `/api/auth/register` (or `/api/customer/register`)
 * **Auth**: Public
@@ -75,15 +75,18 @@
 {
   "name": "Rahul Sharma",
   "phone": "9876543210",
-  "email": "rahul@example.com",
   "password": "Password@123",
-  "otp": "123456",
+  "password_confirmation": "Password@123",
+  "email": "rahul@example.com",
   "referral_code": "NEXAB12CD",
   "pincode": "411001",
   "city": "Pune",
   "state": "Maharashtra"
 }
 ```
+> **Notes**:
+> - `name`, `phone` (10 digits), and `password` (min: 6 characters) are required.
+> - OTP verification is not required during registration.
 
 #### Response (`201 Created`)
 ```json
@@ -107,39 +110,22 @@
 
 ---
 
-### 1.3 Pure OTP Login (2-Step or Single-Step)
+### 1.3 Password Login (Direct Authentication)
 
-#### Step 1: Request OTP
 * **Method**: `POST`
-* **URL**: `/api/customer/login` (or `/api/auth/send-otp`)
-* **Request Body**:
-```json
-{
-  "phone": "9876543210"
-}
-```
-* **Response (`200 OK`)**:
-```json
-{
-  "status": true,
-  "otp_sent": true,
-  "message": "OTP sent to your registered mobile and email. Please enter the OTP to complete login.",
-  "phone": "9876543210",
-  "email": "rahul@example.com"
-}
-```
+* **URL**: `/api/customer/login` (or `/api/auth/login`)
+* **Auth**: Public
 
-#### Step 2: Submit OTP to Complete Login
-* **Method**: `POST`
-* **URL**: `/api/customer/login` (or `/api/auth/verify-otp`)
-* **Request Body**:
+#### Request Body:
 ```json
 {
   "phone": "9876543210",
-  "otp": "123456"
+  "password": "Password@123"
 }
 ```
-* **Response (`200 OK`)**:
+*(Or with email: `{"email": "rahul@example.com", "password": "Password@123"}`)*
+
+#### Response (`200 OK`):
 ```json
 {
   "status": true,
@@ -151,7 +137,11 @@
     "phone": "9876543210",
     "email": "rahul@example.com",
     "referral_code": "NEX-987654",
+    "referral_url": "http://127.0.0.1:8000/ref/NEX-987654",
     "wallet_balance": 0.00,
+    "city": "Pune",
+    "state": "Maharashtra",
+    "pincode": "411001",
     "status": "active"
   }
 }
@@ -886,38 +876,138 @@ GET /api/test-email?to=nexviadls@gmail.com
 >
 > **Referral Balance Completion Reward**: When the remaining balance reaches ₹0 (`payment_status: "fully_paid"`), the system automatically triggers `award80PercentCategoryCompletionCredit()`, applying the **exact same eligible referral percentage** (from the referrer's stage when the 20% booking deposit was made) to the 80% balance amount and crediting the referrer's wallet!
 
-#### Request Body (Flexible Custom Amount Example)
-```json
-{
-  "payment_mode": "flexible",
-  "custom_amount": 5000.00,
-  "reference_no": "UPI-UTR-9876543210",
-  "use_product_credit": false
-}
-```
+#### Request (Multipart Form-Data or JSON)
+> **Mandatory Proof Rule**: Just like the 20% booking token, every balance/installment payment paid via cash/UPI requires a mandatory payment receipt/proof upload (`payment_receipt` or `payment_proof`). If 100% covered by product credit wallet, proof is optional.
 
-#### Request Body (EMI Mode Example)
-```json
-{
-  "payment_mode": "emi",
-  "emi_tenure": 6,
-  "reference_no": "UPI-UTR-9876543210"
-}
-```
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `payment_mode` | string | Optional | `full` (default), `emi`, or `flexible` |
+| `custom_amount` | numeric | Conditional | Amount to pay when `payment_mode="flexible"` |
+| `emi_tenure` | integer | Conditional | Tenure in months (3, 6, 9, 12) when `payment_mode="emi"` |
+| `use_product_credit` | boolean | Optional | If `true`, deducts available wallet points first |
+| `payment_receipt` | file / string | **Required** | Image (JPG, PNG, WEBP) or PDF proof of payment (up to 5MB) |
+| `reference_no` | string | Optional | Bank UTR / UPI Transaction Reference ID |
+| `notes` | string | Optional | Notes or installment remarks |
 
-#### Response (`200 OK`)
+#### Response (`200 OK`) — Installment In Progress
 ```json
 {
   "status": true,
-  "message": "Payment of ₹5,000.00 recorded successfully towards balance. Remaining balance: ₹35,000.00.",
+  "message": "Balance payment completed successfully.",
   "data": {
     "booking_number": "BK-20260916-7788",
-    "amount_paid_now": 5000.0,
-    "balance_amount": 35000.0,
-    "filled_amount": 15000.0,
-    "payment_status": "partially_paid",
+    "installment_no": 1,
     "payment_mode": "flexible",
-    "days_remaining": 48
+    "amount_paid_now": 5000.00,
+    "credit_applied": 0.00,
+    "cash_paid": 5000.00,
+    "balance_amount_remaining": 35000.00,
+    "is_fully_paid": false,
+    "payment_status": "partial_paid",
+    "latest_receipt_url": "https://backend.nexviadls.com/uploads/payment_receipts/bal_BK-20260916-7788_1728300000_123.jpg",
+    "installments_history": [
+      {
+        "payment_id": "BAL-AB12CD34",
+        "installment_no": 1,
+        "mode": "flexible",
+        "amount": 5000.00,
+        "cash_paid": 5000.00,
+        "credit_applied": 0.00,
+        "remaining_balance": 35000.00,
+        "reference_no": "UPI-UTR-9876543210",
+        "receipt_file": "uploads/payment_receipts/bal_BK-20260916-7788_1728300000_123.jpg",
+        "receipt_url": "https://backend.nexviadls.com/uploads/payment_receipts/bal_BK-20260916-7788_1728300000_123.jpg",
+        "notes": "Installment #1 received",
+        "paid_at": "2026-10-07 16:15:00"
+      }
+    ],
+    "delivery_challan_number": null,
+    "can_download_challan": false,
+    "challan_status": "pending_full_payment",
+    "delivery_challan_url": null,
+    "delivery_challan": null
+  }
+}
+```
+
+#### Response (`200 OK`) — When Final Payment Saturated (100% Fully Paid)
+```json
+{
+  "status": true,
+  "message": "Balance payment completed successfully. 100% Full Payment confirmed. Digital Delivery Challan (DC #DC-2026-X89J2K) generated automatically.",
+  "data": {
+    "booking_number": "BK-20260916-7788",
+    "installment_no": 2,
+    "payment_mode": "flexible",
+    "amount_paid_now": 35000.00,
+    "credit_applied": 0.00,
+    "cash_paid": 35000.00,
+    "balance_amount_remaining": 0.00,
+    "is_fully_paid": true,
+    "payment_status": "fully_paid",
+    "latest_receipt_url": "https://backend.nexviadls.com/uploads/payment_receipts/bal_BK-20260916-7788_final.jpg",
+    "delivery_challan_number": "DC-2026-X89J2K",
+    "can_download_challan": true,
+    "challan_status": "generated",
+    "delivery_challan_url": "https://backend.nexviadls.com/booking/challan/BK-20260916-7788",
+    "delivery_challan": {
+      "status": true,
+      "is_eligible": true,
+      "challan_number": "DC-2026-X89J2K",
+      "issued_at": "2026-10-07 16:20:00",
+      "booking_number": "BK-20260916-7788",
+      "invoice_number": "INV-2026-F9A8B7",
+      "serial_number": "NX-EV-2026-A1B2C3D4",
+      "seller": {
+        "company_name": "DLS AGRO INFRAVENTURE PVT. LTD.",
+        "brand_name": "NEXVIA™",
+        "gstin": "27AABCD1234E1Z5",
+        "hub_address": "NEXVIA Central Mobility Hub, Pune, Maharashtra - 411045"
+      },
+      "customer": {
+        "name": "Ramesh Kumar",
+        "phone": "9876543210",
+        "shipping_address": "Plot 42, Green Valley, Nashik, Maharashtra - 422001"
+      },
+      "product": {
+        "name": "NEXVIA DLS Cultivator Pro",
+        "quantity": 1,
+        "total_mrp": 50000.00,
+        "serial_number": "NX-EV-2026-A1B2C3D4",
+        "hsn_code": "8711.60.90"
+      },
+      "tax_breakdown": {
+        "taxable_value": 42372.88,
+        "cgst_amount": 3813.56,
+        "sgst_amount": 3813.56,
+        "total_tax": 7627.12,
+        "grand_total": 50000.00
+      },
+      "payment": {
+        "total_amount": 50000.00,
+        "amount_paid": 50000.00,
+        "balance_remaining": 0.00,
+        "payment_status": "100% FULLY PAID",
+        "token_20_percent": {
+          "amount": 10000.00,
+          "receipt_url": "https://backend.nexviadls.com/uploads/payment_receipts/bk_20260916_initial.jpg",
+          "paid_at": "2026-09-16"
+        },
+        "balance_80_percent": {
+          "total_balance_paid": 40000.00,
+          "installments_count": 2,
+          "installments": [...]
+        },
+        "all_receipts": [...]
+      },
+      "delivery": {
+        "tracking_number": "TRK-58291048",
+        "stage": "processing",
+        "delivery_otp": "492018",
+        "delivery_mode": "Doorstep Territory Direct Delivery"
+      },
+      "verification_url": "https://backend.nexviadls.com/booking/challan/BK-20260916-7788"
+    }
   }
 }
 ```
@@ -947,36 +1037,47 @@ GET /api/test-email?to=nexviadls@gmail.com
 
 ---
 
-### 7.6 Post-60-Day Balance Reallocation ("Buy Another Item with Paid Amount")
+### 7.6 Post-60-Day Balance Reallocation / Exchange ("Directly Buy Another Product with Paid Amount")
 * **Method**: `POST`
 * **URL**: `/api/customer/bookings/{id}/reallocate`
-* **Aliases**: `/api/bookings/{id}/reallocate`, `/api/booking/{id}/reallocate`, `/booking/reallocate/{bookingNumber}` (Web)
-* **Auth**: Required (`customer.auth`)
+* **Aliases**: `/api/customer/bookings/{id}/exchange-product`, `/api/bookings/{id}/reallocate`, `/api/booking/{id}/exchange-product`
+* **Auth**: Required (`customer.auth` Bearer Token)
 
-> **Eligibility Criteria**:
-> - `is_expired_60_days` must be `true` (`days_remaining <= 0` or `balance_due_date` is past).
-> - `payment_status` must NOT be `fully_paid`.
-> - `booking_status` must NOT already be `reallocated`.
+> **Policy Rule**: In accordance with platform terms, if the remaining 80% balance is not paid within 60 days, the booking deposit/paid amount is non-refundable. The customer is required to directly purchase another product from the catalog using their filled amount.
 >
-> **Action**: Converts the total filled amount (`mrp - balance_amount`, including 20% initial deposit + all partial payments made) into NEXVIA Product Credits credited directly to the customer's wallet. Marks booking as `reallocated`. The customer can use this wallet balance to purchase any other item from the catalog.
+> **Action**: Takes the customer's total filled/paid amount from the old booking and creates a new product booking directly (funds do not get credited to wallet).
+> - If New Product Price $\le$ Paid Amount: The new booking is marked `fully_paid` (`completed`, `balance_amount: 0.00`).
+> - If New Product Price $>$ Paid Amount: The paid amount is applied as deposit/paid amount, setting the remaining balance to `(new_mrp - paid_amount)` with a fresh 60-day balance period.
+> - The old booking is marked as `reallocated`.
 
 #### Request Body
 ```json
-{}
+{
+  "new_product_id": 18
+}
 ```
+*(Or by slug: `{"new_product_slug": "nexvia-power-sprayer"}`)*
 
 #### Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "₹15,000.00 from booking #BK-20260916-7788 has been reallocated to your Product Credits wallet. You can now use it to purchase another catalog product.",
+  "message": "Successfully purchased NEXVIA Power Sprayer using your paid amount of ₹15,000.00 from Booking #NEX-2026-891234!",
   "data": {
-    "booking_id": 88,
-    "booking_number": "BK-20260916-7788",
+    "reallocated_from_booking": "NEX-2026-891234",
     "reallocated_amount": 15000.0,
-    "new_wallet_balance": 15000.0,
-    "booking_status": "reallocated",
-    "product_catalog_url": "/products"
+    "new_booking": {
+      "id": 64,
+      "booking_number": "NEX-2026-582190",
+      "product_id": 18,
+      "product_name": "NEXVIA Power Sprayer",
+      "mrp": 15000.0,
+      "paid_amount": 15000.0,
+      "balance_amount": 0.0,
+      "payment_status": "fully_paid",
+      "booking_status": "completed",
+      "balance_due_date": null
+    }
   }
 }
 ```

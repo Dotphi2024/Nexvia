@@ -236,6 +236,91 @@
                                 </div>
                             </div>
                         </div>
+                    <!-- Payment Milestones & Installments Ledger -->
+                    @php
+                        $paymentInfo = $cd['payment'] ?? [];
+                        $token20 = $paymentInfo['token_20_percent'] ?? [];
+                        $bal80 = $paymentInfo['balance_80_percent'] ?? [];
+                        $installments = $bal80['installments'] ?? [];
+                    @endphp
+                    <div class="card border rounded-3 p-3 mb-4 bg-white shadow-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <h6 class="fw-bold text-dark micro text-uppercase mb-0">
+                                <iconify-icon icon="solar:card-2-bold" class="text-success me-1 align-middle fs-16"></iconify-icon>
+                                Payment Audit Trail (20% Token + 80% Balance Clearance)
+                            </h6>
+                            <span class="badge bg-success-subtle text-success micro fw-bold">100% SATURATED</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle micro mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Milestone / Installment</th>
+                                        <th>Mode</th>
+                                        <th>Reference / UTR</th>
+                                        <th class="text-end">Amount Paid</th>
+                                        <th>Receipt / Proof</th>
+                                        <th class="text-end">Paid On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Milestone 1:</strong> Initial 20% Booking Token</td>
+                                        <td><span class="badge bg-light text-dark border">{{ strtoupper($booking->payment_type ?: 'UPI / Online') }}</span></td>
+                                        <td class="font-monospace text-muted">{{ $booking->offline_payment_ref ?: ('REF-' . substr($booking->booking_number, -6)) }}</td>
+                                        <td class="text-end fw-bold text-dark font-monospace">₹{{ number_format($token20['amount'] ?? $booking->booking_amount, 2) }}</td>
+                                        <td>
+                                            @if(!empty($token20['receipt_url']))
+                                                <a href="{{ $token20['receipt_url'] }}" target="_blank" class="badge bg-primary-subtle text-primary text-decoration-none">View Receipt</a>
+                                            @else
+                                                <span class="text-muted">Verified</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-end text-muted">{{ $token20['paid_at'] ?? ($booking->booking_date ? $booking->booking_date->format('d M, Y') : '-') }}</td>
+                                    </tr>
+                                    @forelse($installments as $ins)
+                                        <tr>
+                                            <td><strong>Installment #{{ $ins['installment_no'] ?? 1 }}:</strong> 80% Balance Part</td>
+                                            <td><span class="badge bg-info-subtle text-info border">{{ strtoupper($ins['mode'] ?? 'PART') }}</span></td>
+                                            <td class="font-monospace text-muted">{{ $ins['reference_no'] ?? '-' }}</td>
+                                            <td class="text-end fw-bold text-success font-monospace">₹{{ number_format($ins['amount'] ?? 0, 2) }}</td>
+                                            <td>
+                                                @if(!empty($ins['receipt_url']))
+                                                    <a href="{{ $ins['receipt_url'] }}" target="_blank" class="badge bg-primary-subtle text-primary text-decoration-none">View Proof</a>
+                                                @else
+                                                    <span class="text-muted">Recorded</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-end text-muted">{{ !empty($ins['paid_at']) ? \Carbon\Carbon::parse($ins['paid_at'])->format('d M, Y H:i') : '-' }}</td>
+                                        </tr>
+                                    @empty
+                                        @if(($product['total_mrp'] ?? 0) > ($booking->booking_amount ?? 0))
+                                            <tr>
+                                                <td><strong>Milestone 2:</strong> Remaining 80% Balance Settlement</td>
+                                                <td><span class="badge bg-success-subtle text-success border">CLEARED</span></td>
+                                                <td class="font-monospace text-muted">{{ $booking->offline_payment_ref ?: 'FULL-SETTLED' }}</td>
+                                                <td class="text-end fw-bold text-success font-monospace">₹{{ number_format(($product['total_mrp'] ?? 0) - ($booking->booking_amount ?? 0), 2) }}</td>
+                                                <td>
+                                                    @if(!empty($booking->payment_receipt))
+                                                        <a href="{{ asset($booking->payment_receipt) }}" target="_blank" class="badge bg-primary-subtle text-primary text-decoration-none">View Proof</a>
+                                                    @else
+                                                        <span class="text-muted">Settled</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-end text-muted">{{ $booking->updated_at ? $booking->updated_at->format('d M, Y') : '-' }}</td>
+                                            </tr>
+                                        @endif
+                                    @endforelse
+                                </tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr>
+                                        <td colspan="3" class="text-uppercase text-dark">Total Paid (100% Fully Settled):</td>
+                                        <td class="text-end text-success font-monospace">₹{{ number_format($product['total_mrp'], 2) }}</td>
+                                        <td colspan="2" class="text-success text-end">Zero Balance Due</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Pre-Delivery Inspection (PDI) Checklist & Verification Seal -->

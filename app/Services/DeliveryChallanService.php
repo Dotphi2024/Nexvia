@@ -128,6 +128,37 @@ class DeliveryChallanService
 
         $dsp = $booking->dsp ?: $delivery?->dsp;
 
+        // Build complete payment receipts and installment ledger
+        $tokenAmount = (float) $booking->booking_amount;
+        $tokenReceipt = $booking->payment_receipt;
+        $tokenReceiptUrl = $tokenReceipt ? (str_starts_with($tokenReceipt, 'http') ? $tokenReceipt : asset($tokenReceipt)) : null;
+
+        $rawHistory = is_array($booking->balance_payments_history) ? $booking->balance_payments_history : [];
+        $installmentsList = [];
+        $allReceiptUrls = [];
+        if ($tokenReceiptUrl) {
+            $allReceiptUrls[] = [
+                'type'        => 'token_20_percent',
+                'title'       => 'Initial 20% Token Booking Receipt',
+                'receipt_url' => $tokenReceiptUrl,
+            ];
+        }
+
+        foreach ($rawHistory as $idx => $item) {
+            $itemReceipt = $item['receipt_file'] ?? null;
+            $itemReceiptUrl = $item['receipt_url'] ?? ($itemReceipt ? (str_starts_with($itemReceipt, 'http') ? $itemReceipt : asset($itemReceipt)) : null);
+            if ($itemReceiptUrl) {
+                $allReceiptUrls[] = [
+                    'type'        => 'installment_80_percent',
+                    'title'       => 'Installment #' . ($item['installment_no'] ?? ($idx + 1)) . ' Receipt',
+                    'receipt_url' => $itemReceiptUrl,
+                    'reference_no'=> $item['reference_no'] ?? null,
+                ];
+            }
+            $item['receipt_url'] = $itemReceiptUrl;
+            $installmentsList[] = $item;
+        }
+
         return [
             'status'                  => true,
             'is_eligible'             => true,
@@ -188,15 +219,27 @@ class DeliveryChallanService
                 'grand_total'         => $totalMrp,
             ],
 
-            // Payment Ledger
+            // Comprehensive Payment & Installments Ledger
             'payment'                 => [
-                'total_amount'        => $totalMrp,
-                'amount_paid'         => $totalMrp,
-                'balance_remaining'   => 0.00,
-                'payment_status'      => '100% FULLY PAID',
-                'payment_type'        => $booking->payment_type,
-                'payment_ref'         => $booking->offline_payment_ref ?: ('TXN-' . strtoupper(substr(md5($booking->booking_number), 0, 8))),
-                'payment_confirmed_at'=> $issueDate,
+                'total_amount'            => $totalMrp,
+                'amount_paid'             => $totalMrp,
+                'balance_remaining'       => 0.00,
+                'payment_status'          => '100% FULLY PAID',
+                'payment_type'            => $booking->payment_type,
+                'payment_ref'             => $booking->offline_payment_ref ?: ('TXN-' . strtoupper(substr(md5($booking->booking_number), 0, 8))),
+                'payment_confirmed_at'    => $issueDate,
+                'token_20_percent'        => [
+                    'amount'       => $tokenAmount,
+                    'receipt_file' => $tokenReceipt,
+                    'receipt_url'  => $tokenReceiptUrl,
+                    'paid_at'      => $booking->booking_date ? $booking->booking_date->format('Y-m-d') : null,
+                ],
+                'balance_80_percent'      => [
+                    'total_balance_paid' => round($totalMrp - $tokenAmount, 2),
+                    'installments_count' => count($installmentsList),
+                    'installments'       => $installmentsList,
+                ],
+                'all_receipts'            => $allReceiptUrls,
             ],
 
             // Warranty Details

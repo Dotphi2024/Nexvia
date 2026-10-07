@@ -784,6 +784,56 @@ class BookingApiController extends Controller
 
         $remainingCashToPay = max(0, $balanceDue - $creditApplied);
 
+        // Mandatory Payment Proof / Receipt Upload when paying via UPI / cash
+        $hasReceiptFile = $request->hasFile('payment_receipt')
+            || $request->hasFile('payment_proof')
+            || $request->hasFile('receipt');
+
+        $hasReceiptInput = !empty($request->input('payment_receipt'))
+            || !empty($request->input('payment_proof'))
+            || !empty($request->input('receipt'));
+
+        if ($remainingCashToPay > 0 && !$hasReceiptFile && !$hasReceiptInput) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Payment receipt or proof of payment is mandatory for every balance / installment payment.',
+                'errors'  => [
+                    'payment_receipt' => ['Please upload your payment screenshot/receipt (JPG, PNG, WEBP, PDF up to 5MB) or provide payment_proof.'],
+                ],
+            ], 422);
+        }
+
+        // Upload and save receipt if file provided
+        $balanceReceiptPath = null;
+        $rFile = $request->file('payment_receipt')
+            ?: ($request->file('payment_proof') ?: $request->file('receipt'));
+
+        if ($rFile) {
+            $ext = strtolower($rFile->getClientOriginalExtension() ?: 'jpg');
+            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+            if (!in_array($ext, $allowed)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Invalid file format for payment receipt. Allowed formats: JPG, PNG, WEBP, PDF.',
+                ], 422);
+            }
+            if ($rFile->getSize() > 5 * 1024 * 1024) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Payment receipt file size exceeds the 5MB limit.',
+                ], 422);
+            }
+            $rName = 'bal_' . $booking->booking_number . '_' . time() . '_' . rand(100, 999) . '.' . $ext;
+            $destination = public_path('uploads/payment_receipts');
+            if (!file_exists($destination)) {
+                mkdir($destination, 0755, true);
+            }
+            $rFile->move($destination, $rName);
+            $balanceReceiptPath = 'uploads/payment_receipts/' . $rName;
+        } elseif ($hasReceiptInput) {
+            $balanceReceiptPath = (string)($request->input('payment_receipt') ?: ($request->input('payment_proof') ?: $request->input('receipt')));
+        }
+
         // Apply product credit if used
         if ($creditApplied > 0) {
             $user->wallet_balance = max(0, ($user->wallet_balance ?? 0) - $creditApplied);
@@ -810,35 +860,34 @@ class BookingApiController extends Controller
         $newBalance = max(0, round($currentBalance - ($creditApplied + $remainingCashToPay), 2));
         $isFullyPaid = ($newBalance <= 0);
 
-        // Optional Receipt Upload for Balance Payment
-        $balanceReceiptPath = null;
-        if ($request->hasFile('payment_receipt')) {
-            $rFile = $request->file('payment_receipt');
-            $rName = 'bal_' . $booking->booking_number . '_' . time() . '.' . $rFile->getClientOriginalExtension();
-            $destination = public_path('uploads/payment_receipts');
-            if (!file_exists($destination)) {
-                mkdir($destination, 0755, true);
-            }
-            $rFile->move($destination, $rName);
-            $balanceReceiptPath = 'uploads/payment_receipts/' . $rName;
+        // Record history entry with receipt and installment number
+        $history = is_array($booking->balance_payments_history) ? $booking->balance_payments_history : [];
+        $installmentNo = count($history) + 1;
+        if ($mode === 'emi' && !empty($booking->emi_installments_paid)) {
+            $installmentNo = ((int)$booking->emi_installments_paid) + 1;
         }
 
-        // Record history entry
-        $history = is_array($booking->balance_payments_history) ? $booking->balance_payments_history : [];
-        $installmentNo = ($mode === 'emi') ? (($booking->emi_installments_paid ?? 0) + 1) : null;
+        $refNo = $request->input('reference_no')
+            ?: ($request->input('utr_number')
+            ?: ($request->input('transaction_id')
+            ?: ('BAL-' . strtoupper(Str::random(10)))));
 
-        $history[] = [
-            'payment_id'     => 'BAL-' . strtoupper(Str::random(8)),
-            'mode'           => $mode,
-            'amount'         => ($creditApplied + $remainingCashToPay),
-            'credit_applied' => $creditApplied,
-            'cash_paid'      => $remainingCashToPay,
-            'tenure_months'  => $tenure,
-            'installment_no' => $installmentNo,
-            'reference_no'   => $request->input('reference_no') ?: ('API-' . rand(10000000, 99999999)),
-            'receipt_file'   => $balanceReceiptPath,
-            'paid_at'        => now()->toDateTimeString(),
+        $historyEntry = [
+            'payment_id'        => 'BAL-' . strtoupper(Str::random(8)),
+            'installment_no'    => $installmentNo,
+            'mode'              => $mode,
+            'amount'            => round($creditApplied + $remainingCashToPay, 2),
+            'credit_applied'    => round($creditApplied, 2),
+            'cash_paid'         => round($remainingCashToPay, 2),
+            'remaining_balance' => $newBalance,
+            'tenure_months'     => $tenure,
+            'reference_no'      => $refNo,
+            'receipt_file'      => $balanceReceiptPath,
+            'receipt_url'       => $balanceReceiptPath ? (str_starts_with($balanceReceiptPath, 'http') ? $balanceReceiptPath : asset($balanceReceiptPath)) : null,
+            'notes'             => $request->input('notes') ?: ($isFullyPaid ? "Final balance installment (#{$installmentNo}) - 100% full payment completed" : "Installment #{$installmentNo} received"),
+            'paid_at'           => now()->toDateTimeString(),
         ];
+        $history[] = $historyEntry;
 
         $updateData = [
             'balance_amount'           => $newBalance,
@@ -865,9 +914,11 @@ class BookingApiController extends Controller
         $autoApprovedCount = $referralService->autoApprovePendingReferralsForBooking($booking);
 
         // Generate Digital Delivery Challan (DC) automatically when 100% full payment is confirmed
+        $challanPayload = null;
         if ($isFullyPaid) {
             app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
             $booking->refresh();
+            $challanPayload = app(\App\Services\DeliveryChallanService::class)->getChallanPayload($booking);
         }
 
         // Enforce activation stake rule if wallet points were used
@@ -892,14 +943,26 @@ class BookingApiController extends Controller
             'message' => $message,
             'data'    => [
                 'booking_number'          => $booking->booking_number,
+                'installment_no'          => $installmentNo,
+                'payment_mode'            => $mode,
+                'amount_paid_now'         => round($creditApplied + $remainingCashToPay, 2),
                 'credit_applied'          => (float)$creditApplied,
                 'cash_paid'               => (float)$remainingCashToPay,
-                'balance_amount'          => (float)$booking->balance_amount,
+                'balance_amount_remaining'=> (float)$booking->balance_amount,
+                'is_fully_paid'           => $isFullyPaid,
                 'payment_status'          => $booking->payment_status,
+                'latest_receipt_url'      => $balanceReceiptPath ? (str_starts_with($balanceReceiptPath, 'http') ? $balanceReceiptPath : asset($balanceReceiptPath)) : null,
+                'installments_history'    => array_map(function($h) {
+                    if (!empty($h['receipt_file']) && empty($h['receipt_url'])) {
+                        $h['receipt_url'] = str_starts_with($h['receipt_file'], 'http') ? $h['receipt_file'] : asset($h['receipt_file']);
+                    }
+                    return $h;
+                }, $history),
                 'delivery_challan_number' => $booking->delivery_challan_number,
                 'can_download_challan'    => $booking->can_download_challan,
                 'challan_status'          => $booking->challan_status,
                 'delivery_challan_url'    => $booking->can_download_challan ? url("/booking/challan/{$booking->booking_number}") : null,
+                'delivery_challan'        => $challanPayload,
                 'referrals_auto_approved' => $autoApprovedCount,
                 'wallet_balance_remain'   => (float)($user->wallet_balance ?? 0),
                 'self_dealer_cancelled'   => $stakeResult['cancelled'],
