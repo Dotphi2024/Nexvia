@@ -43,9 +43,9 @@
         </div>
     @endif
 
-    <!-- 4 KPI Stat Cards for Home Section -->
+    <!-- 5 KPI Stat Cards for Home Section -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
+        <div class="col-xl col-md-4 col-6">
             <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-4 border-primary">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
@@ -58,7 +58,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-xl col-md-4 col-6">
             <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-4 border-success">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
@@ -71,7 +71,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-xl col-md-4 col-6">
             <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-4 border-warning">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
@@ -84,7 +84,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-xl col-md-4 col-6">
             <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-4 border-info">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
@@ -93,6 +93,19 @@
                     </div>
                     <div class="rounded-circle bg-info-subtle text-info p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                         <iconify-icon icon="solar:tag-bold" class="fs-24"></iconify-icon>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl col-md-4 col-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100 border-start border-4 border-success">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted fs-12 text-uppercase fw-semibold">Side Banners</span>
+                        <h3 class="fw-bold text-success mb-0 mt-1">{{ $sideBanners ?? 0 }}</h3>
+                    </div>
+                    <div class="rounded-circle bg-success-subtle text-success p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <iconify-icon icon="solar:sidebar-minimalistic-bold" class="fs-24"></iconify-icon>
                     </div>
                 </div>
             </div>
@@ -140,6 +153,7 @@
                                 <select name="banner_type" class="form-select form-select-sm" required>
                                     <option value="hero" selected>Top Hero Slider (Carousel)</option>
                                     <option value="promo">Middle Promo Banner (Offer Strip)</option>
+                                    <option value="side">Side Banner (Sidebar Promo)</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
@@ -233,6 +247,7 @@
                         <a href="{{ route('admin.banners.index') }}" class="btn btn-sm {{ !request('type') ? 'btn-dark' : 'btn-outline-secondary' }} fs-11 px-2 py-1">All Home Banners</a>
                         <a href="{{ route('admin.banners.index', ['type' => 'hero']) }}" class="btn btn-sm {{ request('type') == 'hero' ? 'btn-primary' : 'btn-outline-secondary' }} fs-11 px-2 py-1">Top Sliders</a>
                         <a href="{{ route('admin.banners.index', ['type' => 'promo']) }}" class="btn btn-sm {{ request('type') == 'promo' ? 'btn-info text-white' : 'btn-outline-secondary' }} fs-11 px-2 py-1">Middle Banners</a>
+                        <a href="{{ route('admin.banners.index', ['type' => 'side']) }}" class="btn btn-sm {{ request('type') == 'side' ? 'btn-success text-white' : 'btn-outline-secondary' }} fs-11 px-2 py-1">Side Banners</a>
                     </div>
                 </div>
 
@@ -292,6 +307,10 @@
                                             @elseif($banner->banner_type == 'promo')
                                                 <span class="badge bg-info-subtle text-info fw-semibold fs-11">
                                                     <iconify-icon icon="solar:tag-bold" class="me-1"></iconify-icon> Middle Promo Banner
+                                                </span>
+                                            @elseif(in_array($banner->banner_type, ['side', 'side_banner']))
+                                                <span class="badge bg-success-subtle text-success fw-semibold fs-11">
+                                                    <iconify-icon icon="solar:sidebar-minimalistic-bold" class="me-1"></iconify-icon> Side Banner
                                                 </span>
                                             @else
                                                 <span class="badge bg-secondary-subtle text-secondary fw-semibold fs-11">

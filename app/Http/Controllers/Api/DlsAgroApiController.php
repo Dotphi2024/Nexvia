@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Subcategory;
 use App\Models\Product;
+use App\Models\Banner;
 use App\Helpers\ImageHelper;
 use Illuminate\Http\Request;
 
@@ -715,5 +716,91 @@ class DlsAgroApiController extends Controller
             'self_dealer_eligible'    => (bool) $product->self_dealer_eligible,
             'created_at'         => $product->created_at ? $product->created_at->toIso8601String() : null,
         ];
+    }
+
+    /**
+     * GET/POST /api/dls-agro/banners (or /api/agro/banners)
+     * Retrieve all active DLS Agro / Farm Equipment banners (Hero Sliders, Middle Promos, Side Banners).
+     * Supports: type/position query filter (hero, promo, side, popup).
+     */
+    public function banners(Request $request)
+    {
+        try {
+            $query = Banner::active()->where('section', self::TYPE)->ordered();
+
+            if ($request->filled('type') || $request->filled('position')) {
+                $pos = $request->input('type') ?? $request->input('position');
+                if ($pos === 'side') {
+                    $query->where(function ($q) {
+                        $q->where('banner_type', 'side')
+                          ->orWhere('banner_type', 'side_banner')
+                          ->orWhere('position', 'side')
+                          ->orWhere('position', 'side_banner');
+                    });
+                } else {
+                    $query->where(function ($q) use ($pos) {
+                        $q->where('banner_type', $pos)
+                          ->orWhere('position', $pos);
+                    });
+                }
+            }
+
+            $allBanners = $query->get()->map(function ($banner) {
+                return [
+                    'id'           => $banner->id,
+                    'title'        => $banner->title,
+                    'subtitle'     => $banner->subtitle,
+                    'badge_text'   => $banner->badge_text,
+                    'position'     => $banner->banner_type,
+                    'banner_type'  => $banner->banner_type,
+                    'section'      => $banner->section ?: self::TYPE,
+                    'target_type'  => $banner->target_type,
+                    'target_id'    => $banner->target_id,
+                    'link_url'     => $banner->link_url,
+                    'button_text'  => $banner->button_text,
+                    'image_url'    => $banner->image_url,
+                    'sort_order'   => (int) $banner->sort_order,
+                    'clicks_count' => (int) $banner->clicks_count,
+                ];
+            });
+
+            // Categorize into Agro layout components
+            $heroSliders  = $allBanners->where('banner_type', 'hero')->values();
+            $promoBanners = $allBanners->where('banner_type', 'promo')->values();
+            $sideBanners  = $allBanners->filter(function ($b) {
+                return in_array($b['banner_type'], ['side', 'side_banner']) || in_array($b['position'], ['side', 'side_banner']);
+            })->values();
+            $popupBanners = $allBanners->where('banner_type', 'popup')->values();
+
+            return response()->json([
+                'status'       => true,
+                'message'      => 'DLS Agro banners retrieved successfully.',
+                'total'        => $allBanners->count(),
+                'agro_section' => [
+                    'hero_sliders'  => $heroSliders,
+                    'promo_banners' => $promoBanners,
+                    'side_banners'  => $sideBanners,
+                    'popup_banners' => $popupBanners,
+                ],
+                'data'         => $allBanners,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to retrieve DLS Agro banners.',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * GET/POST /api/dls-agro/banners/side
+     * Retrieve active side banners for DLS Agro / Farm Equipment category & product pages.
+     */
+    public function sideBanners(Request $request)
+    {
+        $request->merge(['position' => 'side']);
+        return $this->banners($request);
     }
 }

@@ -663,11 +663,30 @@ Fetches hero sliders and middle promo banners configured for the Home Index page
         "sort_order": 2,
         "clicks_count": 89
       }
+    ],
+    "side_banners": [
+      {
+        "id": 3,
+        "title": "Doorstep Logistics & Dispatch",
+        "subtitle": "Guaranteed Territory Delivery",
+        "badge_text": "FAST DISPATCH",
+        "position": "side",
+        "banner_type": "side",
+        "target_type": "booking",
+        "target_id": null,
+        "link_url": null,
+        "button_text": "Book Now",
+        "image_url": "https://your-domain.com/uploads/banners/side_1.jpg",
+        "sort_order": 3,
+        "clicks_count": 45
+      }
     ]
   },
   "data": [ ... ]
 }
 ```
+
+- **Side Banners Direct Endpoint:** `GET /api/banners/side` or `GET /api/home/banners/side`
 
 ---
 
@@ -682,6 +701,80 @@ Increment click analytics when a user taps a banner.
 {
   "status": true,
   "message": "Click recorded."
+}
+```
+
+---
+
+### 3.3 DLS Agro & Farm Equipment Banners
+Fetch active banners specifically for the DLS Agro & Farm Equipment catalog and product pages (hero sliders, middle promo strips, and side promotional banners).
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/banners` or `/api/agro/banners` or `/api/dls-farm/banners`
+- **Side Banners Only:** `/api/dls-agro/banners/side`
+- **Query Parameters:** `?position=hero` or `?position=promo` or `?position=side` (Optional)
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro banners retrieved successfully.",
+  "total": 3,
+  "agro_section": {
+    "hero_sliders": [
+      {
+        "id": 10,
+        "title": "Modern Farm Tillers & Harvesters",
+        "subtitle": "Pay 20% advance booking & pay balance within 60 days",
+        "badge_text": "5% GST BENEFIT",
+        "position": "hero",
+        "banner_type": "hero",
+        "section": "dls_farm_equipment",
+        "target_type": "category",
+        "target_id": 4,
+        "button_text": "Shop Agro Equipment",
+        "image_url": "https://your-domain.com/uploads/banners/agro/agro_1.jpg",
+        "sort_order": 1,
+        "clicks_count": 29
+      }
+    ],
+    "promo_banners": [
+      {
+        "id": 11,
+        "title": "Kisan Credit & Farm Machinery Subsidy",
+        "subtitle": "Govt approved HSN 8432 machinery",
+        "badge_text": "KISAN SPECIAL",
+        "position": "promo",
+        "banner_type": "promo",
+        "section": "dls_farm_equipment",
+        "target_type": "product",
+        "target_id": 12,
+        "button_text": "Book Power Tiller",
+        "image_url": "https://your-domain.com/uploads/banners/agro/agro_2.jpg",
+        "sort_order": 2,
+        "clicks_count": 14
+      }
+    ],
+    "side_banners": [
+      {
+        "id": 12,
+        "title": "Cultivator Special Deal",
+        "subtitle": "In-stock regional farm logistics hub dispatch",
+        "badge_text": "HOT DEAL",
+        "position": "side",
+        "banner_type": "side",
+        "section": "dls_farm_equipment",
+        "target_type": "category",
+        "target_id": 4,
+        "button_text": "Explore Tillers",
+        "image_url": "https://your-domain.com/uploads/banners/agro/agro_side_1.jpg",
+        "sort_order": 3,
+        "clicks_count": 8
+      }
+    ],
+    "popup_banners": []
+  },
+  "data": [ ... ]
 }
 ```
 

@@ -58,7 +58,7 @@
                                 <span class="badge bg-primary text-white micro px-2 py-1 rounded-pill">OFFICIAL DC</span>
                             </div>
                             <div class="small text-dark fw-bold">{{ $seller['company_name'] ?? 'DLS AGRO INFRAVENTURE PVT. LTD.' }}</div>
-                            <div class="micro text-muted">CIN: U01111MH2021PTC368921 • GSTIN: <strong class="text-dark font-monospace">{{ $seller['gstin'] ?? '27AABCD1234E1Z5' }}</strong></div>
+                            <div class="micro text-muted">GSTIN: <strong class="text-dark font-monospace">{{ $seller['gstin'] ?? '27AAGCD7282A2ZQ' }}</strong></div>
                             <div class="micro text-muted">Central Hub: {{ $seller['hub_address'] ?? 'Pune, Maharashtra' }} • Email: support@nexvia.in</div>
                         </div>
                         <div class="col-sm-5 text-sm-end">

@@ -110,6 +110,15 @@
                     </a>
                </li>
 
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.dls_farm_equipments.banners.*') ? 'active' : '' }}" href="{{ route('admin.dls_farm_equipments.banners.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:gallery-wide-outline"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Banners</span>
+                    </a>
+               </li>
+
                <li class="menu-title">Bookings</li>
 
                <li class="nav-item">

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\DlsFarmCategoryAdminController;
 use App\Http\Controllers\Admin\DlsFarmSubcategoryAdminController;
 use App\Http\Controllers\Admin\DlsFarmProductAdminController;
+use App\Http\Controllers\Admin\DlsFarmBannerAdminController;
 use App\Http\Controllers\Admin\BookingAdminController;
 use App\Http\Controllers\Admin\BookingEngineController;
 use App\Http\Controllers\Admin\ServiceRequestController;
@@ -71,6 +72,14 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
         Route::post('/products/{id}/status', [DlsFarmProductAdminController::class, 'toggleStatus'])->name('products.status');
         Route::post('/products/{id}/featured', [DlsFarmProductAdminController::class, 'toggleFeatured'])->name('products.featured');
         Route::delete('/products/{id}', [DlsFarmProductAdminController::class, 'destroy'])->name('products.destroy');
+
+        // Banners & Sliders (Agro Products)
+        Route::get('/banners', [DlsFarmBannerAdminController::class, 'index'])->name('banners.index');
+        Route::post('/banners', [DlsFarmBannerAdminController::class, 'store'])->name('banners.store');
+        Route::get('/banners/{id}/edit', [DlsFarmBannerAdminController::class, 'edit'])->name('banners.edit');
+        Route::put('/banners/{id}', [DlsFarmBannerAdminController::class, 'update'])->name('banners.update');
+        Route::post('/banners/{id}/status', [DlsFarmBannerAdminController::class, 'toggleStatus'])->name('banners.status');
+        Route::delete('/banners/{id}', [DlsFarmBannerAdminController::class, 'destroy'])->name('banners.destroy');
     });
 
     // Banner & Slider Management

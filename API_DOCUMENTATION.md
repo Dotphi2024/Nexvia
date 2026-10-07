@@ -388,27 +388,163 @@ GET /api/test-email?to=nexviadls@gmail.com
 
 ---
 
-### 2.2 Home Section Promotional Banners
+### 2.2 Home Section Promotional Banners (Hero, Middle Promo & Side Banners)
 * **Method**: `GET`
-* **URL**: `/api/home/banners` (or `/api/banners`, `/api/home-banners`)
+* **URL**: `/api/home/banners` (or `/api/banners`, `/api/home-banners`, `/api/customer/banners`)
+* **Query Params**:
+  * `position`: `hero` | `promo` | `side` | `popup` (Optional filter)
+  * `section`: `home` | `dls_farm_equipment` | `all` (Defaults to `home`)
 * **Auth**: Public
 
 #### Response (`200 OK`)
 ```json
 {
   "status": true,
-  "data": [
-    {
-      "id": 1,
-      "title": "Grand Launch Festival",
-      "subtitle": "Book with just 20% down payment",
-      "image_url": "http://127.0.0.1:8000/uploads/banners/banner_1.jpg",
-      "target_url": "/products/nexvia-55-inch-ultra-hd-4k-smart-led-tv",
-      "sort_order": 1
-    }
-  ]
+  "message": "Banners retrieved successfully.",
+  "total": 3,
+  "home_section": {
+    "hero_sliders": [
+      {
+        "id": 1,
+        "title": "Grand Launch Festival",
+        "subtitle": "Book with just 20% down payment",
+        "badge_text": "20% BOOKING",
+        "position": "hero",
+        "banner_type": "hero",
+        "section": "home",
+        "target_type": "product",
+        "target_id": 1,
+        "link_url": null,
+        "button_text": "Shop Now",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/banner_1.jpg",
+        "sort_order": 1,
+        "clicks_count": 42
+      }
+    ],
+    "promo_banners": [
+      {
+        "id": 2,
+        "title": "Save Big on Smart Appliances",
+        "subtitle": "60 Days Balance Clearance",
+        "badge_text": "LIMITED OFFER",
+        "position": "promo",
+        "banner_type": "promo",
+        "section": "home",
+        "target_type": "category",
+        "target_id": 2,
+        "link_url": null,
+        "button_text": "View Category",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/banner_2.jpg",
+        "sort_order": 2,
+        "clicks_count": 18
+      }
+    ],
+    "side_banners": [
+      {
+        "id": 3,
+        "title": "Territory Delivery Advantage",
+        "subtitle": "Direct Home Delivery Across All Pincodes",
+        "badge_text": "FAST DISPATCH",
+        "position": "side",
+        "banner_type": "side",
+        "section": "home",
+        "target_type": "booking",
+        "target_id": null,
+        "link_url": null,
+        "button_text": "Book Now",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/side_1.jpg",
+        "sort_order": 3,
+        "clicks_count": 9
+      }
+    ],
+    "popup_banners": []
+  },
+  "data": [...]
 }
 ```
+
+---
+
+### 2.3 Side Promotional Banners API
+* **Method**: `GET`
+* **URL**: `/api/banners/side` (or `/api/home/banners/side`)
+* **Auth**: Public
+* **Description**: Shortcut endpoint retrieving only active side / vertical promotional banners configured for website and app sidebars.
+
+---
+
+### 2.4 DLS Agro / Farm Equipment Banners API
+* **Method**: `GET` or `POST`
+* **URL**: `/api/dls-agro/banners` (or `/api/agro/banners`, `/api/dls-farm/banners`)
+* **Query Params**:
+  * `position`: `hero` | `promo` | `side` | `popup` (Optional filter)
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro banners retrieved successfully.",
+  "total": 3,
+  "agro_section": {
+    "hero_sliders": [
+      {
+        "id": 5,
+        "title": "Modern Farm Power Tillers & Harvesters",
+        "subtitle": "Book now with 20% advance & 5% GST benefit",
+        "badge_text": "5% GST BENEFIT",
+        "position": "hero",
+        "banner_type": "hero",
+        "section": "dls_farm_equipment",
+        "target_type": "category",
+        "target_id": 4,
+        "button_text": "Shop Agro Equipment",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/agro/agro_1.jpg",
+        "sort_order": 1,
+        "clicks_count": 15
+      }
+    ],
+    "promo_banners": [
+      {
+        "id": 6,
+        "title": "Kisan Credit & Farm Machinery Subsidy",
+        "subtitle": "Govt approved HSN 8432 farm machinery",
+        "badge_text": "KISAN SPECIAL",
+        "position": "promo",
+        "banner_type": "promo",
+        "section": "dls_farm_equipment",
+        "target_type": "product",
+        "target_id": 12,
+        "button_text": "Book Power Tiller",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/agro/agro_2.jpg",
+        "sort_order": 2,
+        "clicks_count": 7
+      }
+    ],
+    "side_banners": [
+      {
+        "id": 7,
+        "title": "Heavy Duty Cultivators in Stock",
+        "subtitle": "Fast doorstep dispatch across all farm hubs",
+        "badge_text": "IN STOCK",
+        "position": "side",
+        "banner_type": "side",
+        "section": "dls_farm_equipment",
+        "target_type": "category",
+        "target_id": 4,
+        "button_text": "Explore Tillers",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/agro/agro_side_1.jpg",
+        "sort_order": 3,
+        "clicks_count": 5
+      }
+    ],
+    "popup_banners": []
+  },
+  "data": [...]
+}
+```
+
+* **Side Banners Direct Endpoint for Agro**: `/api/dls-agro/banners/side` (or `/api/agro/banners/side`)
 
 ---
 
@@ -961,7 +1097,7 @@ GET /api/test-email?to=nexviadls@gmail.com
       "seller": {
         "company_name": "DLS AGRO INFRAVENTURE PVT. LTD.",
         "brand_name": "NEXVIA™",
-        "gstin": "27AABCD1234E1Z5",
+        "gstin": "27AAGCD7282A2ZQ",
         "hub_address": "NEXVIA Central Mobility Hub, Pune, Maharashtra - 411045"
       },
       "customer": {

@@ -261,6 +261,10 @@ Route::match(['get', 'post'], '/dls-agro/subcategories/{idOrSlug}',             
 Route::match(['get', 'post'], '/dls-agro/products',                                     [DlsAgroApiController::class, 'products']);
 Route::match(['get', 'post'], '/dls-agro/products/featured',                            [DlsAgroApiController::class, 'featured']);
 Route::match(['get', 'post'], '/dls-agro/products/{idOrSlug}',                          [DlsAgroApiController::class, 'show']);
+Route::match(['get', 'post'], '/dls-agro/banners',                                     [DlsAgroApiController::class, 'banners']);
+Route::match(['get', 'post'], '/dls-agro/banners/side',                                [DlsAgroApiController::class, 'sideBanners']);
+Route::match(['get', 'post'], '/agro/banners',                                         [DlsAgroApiController::class, 'banners']);
+Route::match(['get', 'post'], '/agro/banners/side',                                    [DlsAgroApiController::class, 'sideBanners']);
 
 Route::match(['get', 'post'], '/dls-farm/categories',                                   [DlsAgroApiController::class, 'categories']);
 Route::match(['get', 'post'], '/dls-farm/categories/{idOrSlug}/subcategories',          [DlsAgroApiController::class, 'subcategoriesByCategory']);
@@ -269,6 +273,8 @@ Route::match(['get', 'post'], '/dls-farm/subcategories/{idOrSlug}',             
 Route::match(['get', 'post'], '/dls-farm/products',                                     [DlsAgroApiController::class, 'products']);
 Route::match(['get', 'post'], '/dls-farm/products/featured',                            [DlsAgroApiController::class, 'featured']);
 Route::match(['get', 'post'], '/dls-farm/products/{idOrSlug}',                          [DlsAgroApiController::class, 'show']);
+Route::match(['get', 'post'], '/dls-farm/banners',                                     [DlsAgroApiController::class, 'banners']);
+Route::match(['get', 'post'], '/dls-farm/banners/side',                                [DlsAgroApiController::class, 'sideBanners']);
 
 // Order Delivery Tracking Public API
 Route::get('/deliveries/{trackingNumber}', [OrderDeliveryApiController::class, 'trackDelivery']);
@@ -311,6 +317,8 @@ Route::post('/dsp/deliveries/{id}/status',     [DspApiController::class, 'update
 Route::get('/home/banners',         [BannerApiController::class, 'index']);
 Route::get('/home-banners',         [BannerApiController::class, 'index']);
 Route::get('/banners',              [BannerApiController::class, 'index']);
+Route::get('/banners/side',         [BannerApiController::class, 'sideBanners']);
+Route::get('/home/banners/side',    [BannerApiController::class, 'sideBanners']);
 Route::get('/customer/banners',     [BannerApiController::class, 'index']);
 Route::post('/banners/{id}/click',  [BannerApiController::class, 'recordClick']);
 

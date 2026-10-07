@@ -15,6 +15,8 @@ class Banner extends Model
         'badge_text',
         'image',
         'banner_type',
+        'section',
+        'position',
         'target_type',
         'target_id',
         'link_url',
@@ -84,5 +86,62 @@ class Banner extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order', 'asc')->orderBy('id', 'desc');
+    }
+
+    /**
+     * Scope filter by section (home vs dls_farm_equipment)
+     */
+    public function scopeSection($query, $section = 'home')
+    {
+        return $query->where(function ($q) use ($section) {
+            $q->where('section', $section);
+            if ($section === 'home') {
+                $q->orWhereNull('section');
+            }
+        });
+    }
+
+    /**
+     * Scope for Home section banners
+     */
+    public function scopeHome($query)
+    {
+        return $this->scopeSection($query, 'home');
+    }
+
+    /**
+     * Scope for DLS Agro / Farm Equipment banners
+     */
+    public function scopeAgro($query)
+    {
+        return $query->where('section', 'dls_farm_equipment');
+    }
+
+    /**
+     * Scope for side promotional banners
+     */
+    public function scopeSide($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('banner_type', 'side')
+              ->orWhere('banner_type', 'side_banner')
+              ->orWhere('position', 'side')
+              ->orWhere('position', 'side_banner');
+        });
+    }
+
+    /**
+     * Scope filter by type/position
+     */
+    public function scopePosition($query, $position)
+    {
+        return $query->where(function ($q) use ($position) {
+            $q->where('banner_type', $position)
+              ->orWhere('position', $position);
+            if ($position === 'side') {
+                $q->orWhere('banner_type', 'side_banner')
+                  ->orWhere('position', 'side_banner');
+            }
+        });
     }
 }

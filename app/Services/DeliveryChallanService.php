@@ -202,8 +202,8 @@ class DeliveryChallanService
             'seller'                  => [
                 'company_name'        => 'DLS AGRO INFRAVENTURE PVT. LTD.',
                 'brand_name'          => 'NEXVIA™',
-                'gstin'               => '27AABCD1234E1Z5',
-                'pan'                 => 'AABCD1234E',
+                'gstin'               => '27AAGCD7282A2ZQ',
+                'pan'                 => 'AAGCD7282A',
                 'state_code'          => '27 (Maharashtra)',
                 'hub_address'         => 'NEXVIA Central Mobility Hub, Pune, Maharashtra - 411045',
                 'support_email'       => 'support@nexvia.in',
