@@ -203,7 +203,7 @@ class ProductApiController extends Controller
                     'self_dealer_benefit'     => [
                         'activates_self_dealer'  => (bool) $product->self_dealer_eligible,
                         'activation_points_pct'  => 20.00,
-                        'activation_points_value'=> ((float) ($product->eligible_referral_value ?: $product->mrp)) * 0.20,
+                        'activation_points_value'=> round(((float) $product->mrp) * 0.20, 2),
                     ],
                     'created_at'         => $product->created_at ? $product->created_at->toIso8601String() : null,
                 ];
@@ -271,8 +271,8 @@ class ProductApiController extends Controller
             $balanceAmount = (float) ($product->balance_amount > 0 ? $product->balance_amount : ($mrp - $bookingAmount));
 
             // Self Dealer & Referral Benefit
-            $eligibleValue = (float) ($product->eligible_referral_value ?: $mrp);
-            $activationPts = $eligibleValue * 0.20;
+            $eligibleValue = (float) $mrp;
+            $activationPts = round($mrp * 0.20, 2);
 
             // Specifications Formatting
             $specsMap = $product->specs ?? [];
@@ -731,7 +731,7 @@ class ProductApiController extends Controller
                     'self_dealer_benefit'     => [
                         'activates_self_dealer'   => (bool) $product->self_dealer_eligible,
                         'activation_points_pct'   => 20.00,
-                        'activation_points_value' => $eligibleVal * 0.20,
+                        'activation_points_value' => round(((float) $product->mrp) * 0.20, 2),
                     ],
                 ];
             });
@@ -887,7 +887,7 @@ class ProductApiController extends Controller
                     'self_dealer_benefit'     => [
                         'activates_self_dealer'   => (bool) $product->self_dealer_eligible,
                         'activation_points_pct'   => 20.00,
-                        'activation_points_value' => $eligibleVal * 0.20,
+                        'activation_points_value' => round(((float) $product->mrp) * 0.20, 2),
                     ],
                     'is_featured'             => (bool) $product->is_featured,
                     'status'                  => $product->status,

@@ -91,7 +91,7 @@ class WishlistApiController extends Controller
             'self_dealer_benefit'     => [
                 'activates_self_dealer'   => (bool) $product->self_dealer_eligible,
                 'activation_points_pct'   => 20.00,
-                'activation_points_value' => $eligibleValue * 0.20,
+                'activation_points_value' => round($mrp * 0.20, 2),
             ],
             'status'                  => $product->status,
         ];

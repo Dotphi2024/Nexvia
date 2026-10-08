@@ -51,10 +51,12 @@ class ReferralCommissionService
             $customer->activation_booking_id    = $booking->id;
             $customer->save();
 
-            // 3. Calculate Activation Points (20% of eligible product value)
+            // 3. Calculate Activation Points (20% of total product booking value / MRP)
             $activationRate   = ReferralStageConfig::getActivationRate(); // from DB, default 20%
-            $eligibleValue    = $product->eligible_referral_value ?? $product->mrp;
-            $activationPoints = $eligibleValue * ($activationRate / 100);
+            $qty              = max(1, (int) ($booking->quantity ?: 1));
+            $bookingMrp       = (float) ($booking->mrp > 0 ? $booking->mrp : (($product->mrp ?: ($product->eligible_referral_value ?: 0)) * $qty));
+            $eligibleValue    = $bookingMrp;
+            $activationPoints = round($eligibleValue * ($activationRate / 100), 2);
 
             // 4. Create Wallet
             $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $customer->id]);
@@ -144,12 +146,12 @@ class ReferralCommissionService
             return null;
         }
 
-        $product = $booking->product;
+        $product = $booking->product ?: \App\Models\Product::find($booking->product_id);
         if (!$product || !$product->referral_eligible) {
             return null;
         }
 
-        $category = Category::find($product->category_id);
+        $category = $product->category ?: Category::find($product->category_id);
         if (!$category || !$category->referral_eligible) {
             return null;
         }
@@ -183,13 +185,31 @@ class ReferralCommissionService
                 ]
             );
 
-            // Referral incentive percentage is taken directly from Referral Config in increasing order per stage
+            // Referral incentive percentage is taken directly from Referral Config in increasing order per stage (Variant A: 10/12/15/18/20%)
             $currentStage  = $progress->current_stage;
             $stageRate     = ReferralStageConfig::getRateForStage($currentStage);
 
-            // Calculation base: calculated on the 20% amount filled while booking by the referred person
-            $eligibleValue = (float) ($booking->booking_amount > 0 ? $booking->booking_amount : ($product->booking_amount ?: ($product->mrp * 0.20)));
-            $pointsEarned  = round($eligibleValue * ($stageRate / 100), 2);
+            $isUpfrontFull = ($booking->payment_status === 'fully_paid' 
+                || in_array(strtolower(trim((string)$booking->payment_type)), ['full_payment', 'full', 'full_booking']) 
+                || (float)$booking->balance_amount <= 0);
+
+            $qty = max(1, (int) ($booking->quantity ?: 1));
+            $bookingMrp = (float) ($booking->mrp > 0 ? $booking->mrp : (($product->mrp ?: 0) * $qty));
+
+            if ($isUpfrontFull) {
+                // For upfront full payment, calculation base is the full purchase MRP
+                $eligibleValue = $bookingMrp;
+                $pointsEarned  = round($eligibleValue * ($stageRate / 100), 2);
+                $noteText      = "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of full booking MRP ₹" . number_format($eligibleValue, 2);
+                $descText      = "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of ₹" . number_format($eligibleValue, 2) . " (Full Payment)";
+            } else {
+                // For flexi-booking, Part 1 calculation base is the 20% booking deposit
+                $twentyPercentDeposit = round($bookingMrp * 0.20, 2);
+                $eligibleValue = (float) ($booking->booking_amount > 0 ? min((float)$booking->booking_amount, $twentyPercentDeposit) : $twentyPercentDeposit);
+                $pointsEarned  = round($eligibleValue * ($stageRate / 100), 2);
+                $noteText      = "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of 20% booking deposit ₹" . number_format($eligibleValue, 2);
+                $descText      = "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of 20% booking deposit ₹" . number_format($eligibleValue, 2);
+            }
 
             $isInstant  = !$fraudResult['flagged'];
             $status     = $isInstant ? 'available' : 'pending';
@@ -214,7 +234,7 @@ class ReferralCommissionService
                 'rule_version'           => 'v1.0',
                 'notes'                  => $fraudResult['flagged']
                     ? "FRAUD FLAG: {$fraudResult['reason']}"
-                    : "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of ₹" . number_format($eligibleValue, 2) . " (20% booking amount)",
+                    : $noteText,
             ]);
 
             $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $referrer->id]);
@@ -245,7 +265,7 @@ class ReferralCommissionService
                 'type'                 => 'credit',
                 'source'               => 'referral_incentive',
                 'booking_id'           => $booking->id,
-                'description'          => "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of 20% booking amount ₹" . number_format($eligibleValue, 2),
+                'description'          => $descText,
                 'transaction_type'     => 'referral_incentive',
                 'status'               => $status,
                 'available_at'         => $approvedAt,
@@ -387,11 +407,19 @@ class ReferralCommissionService
             return null;
         }
 
-        // 5. Eligible referral percentage: exactly the same percentage applied to the 20% booking deposit
+        $qty = max(1, (int) ($booking->quantity ?: 1));
+        $mrpTotal = (float) ($booking->mrp > 0 ? $booking->mrp : (($product->mrp ?: 0) * $qty));
+
+        // Check if initial referral was already awarded on full MRP upfront
         $initialReferral = Referral::where('booking_id', $booking->id)
             ->where('transaction_type', 'referral')
             ->first();
 
+        if ($initialReferral && (float)$initialReferral->eligible_product_value >= $mrpTotal) {
+            return null; // Full commission was already awarded upfront on full purchase MRP
+        }
+
+        // 5. Eligible referral percentage: exactly the same percentage applied to the 20% booking deposit
         if ($initialReferral && (float)$initialReferral->benefit_percentage > 0) {
             $eligibleRate = (float) $initialReferral->benefit_percentage;
             $stage        = $initialReferral->referral_stage;
@@ -403,12 +431,12 @@ class ReferralCommissionService
             $eligibleRate = ReferralStageConfig::getRateForStage($stage);
         }
 
-        // 6. Base amount: 80% balance amount (or MRP - booking deposit)
-        $bookingDeposit = (float) $booking->booking_amount;
-        $mrpTotal       = (float) ($booking->mrp > 0 ? $booking->mrp : ($bookingDeposit * 5));
-        $eightyPercentBase = max(0.00, round($mrpTotal - $bookingDeposit, 2));
+        // 6. Base amount: remaining 80% balance amount (MRP - deposit awarded)
+        $depositBase = $initialReferral ? (float)$initialReferral->eligible_product_value : round($mrpTotal * 0.20, 2);
+        $eightyPercentBase = max(0.00, round($mrpTotal - $depositBase, 2));
+
         if ($eightyPercentBase <= 0) {
-            $eightyPercentBase = round($mrpTotal * 0.80, 2);
+            return null;
         }
 
         // Calculate credit earned using same eligible percentage

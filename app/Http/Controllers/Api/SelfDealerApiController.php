@@ -380,9 +380,9 @@ class SelfDealerApiController extends Controller
     {
         $product = Product::with('category')->findOrFail($id);
 
-        $eligibleValue = (float) ($product->eligible_referral_value ?: $product->mrp);
+        $eligibleValue = (float) $product->mrp;
         $activationRate = ReferralStageConfig::getActivationRate(); // 20%
-        $activationPoints = $eligibleValue * ($activationRate / 100);
+        $activationPoints = round($eligibleValue * ($activationRate / 100), 2);
 
         // Variant A stage rates
         $stageRates = [1 => 10.00, 2 => 12.00, 3 => 15.00, 4 => 18.00, 5 => 20.00];
