@@ -186,9 +186,10 @@ class BookingController extends Controller
             'stage'           => 'order_confirmed',
         ]);
 
+        $referralService = app(\App\Services\ReferralCommissionService::class);
+
         // Referral Commission Processing: Credit Referrer through Referral Config stages (increasing order)
         if ($user && $user->referred_by_id) {
-            $referralService = app(\App\Services\ReferralCommissionService::class);
             $referralService->processReferralBooking($booking);
 
             if ($paymentType === 'full_payment') {
@@ -196,7 +197,13 @@ class BookingController extends Controller
             }
         }
 
+        // Activate or Reactivate Self Dealer status for buyer if product is self-dealer eligible
+        if ($user && $product->self_dealer_eligible && (!$user->is_self_dealer || $user->self_dealer_status !== 'active')) {
+            $referralService->activateSelfDealer($user, $booking);
+        }
+
         if ($paymentType === 'full_payment') {
+            $referralService->autoApprovePendingReferralsForBooking($booking);
             // Automatically generate Digital Delivery Challan (DC) on 100% full payment
             app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
         }

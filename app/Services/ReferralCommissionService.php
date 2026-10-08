@@ -82,6 +82,7 @@ class ReferralCommissionService
                 'type'                 => 'credit',
                 'source'               => 'self_dealer_activation',
                 'booking_id'           => $booking->id,
+                'referral_id'          => $referral->id,
                 'description'          => "Self Dealer Activation Points — {$activationRate}% of ₹" . number_format($eligibleValue, 2),
                 'transaction_type'     => 'activation_points',
                 'status'               => 'pending',

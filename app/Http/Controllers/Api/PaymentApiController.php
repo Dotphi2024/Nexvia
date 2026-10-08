@@ -414,8 +414,12 @@ class PaymentApiController extends Controller
                         'offline_payment_ref'    => $paymentId,
                     ]);
 
+                    $referralService = app(ReferralCommissionService::class);
+                    if ($booking->user && $booking->product?->self_dealer_eligible && (!$booking->user->is_self_dealer || $booking->user->self_dealer_status !== 'active')) {
+                        $referralService->activateSelfDealer($booking->user, $booking);
+                    }
+
                     if ($isFullPayment) {
-                        $referralService = app(ReferralCommissionService::class);
                         $referralService->autoApprovePendingReferralsForBooking($booking);
                         app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
                         $booking->refresh();
