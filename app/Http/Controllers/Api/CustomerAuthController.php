@@ -835,6 +835,18 @@ class CustomerAuthController extends Controller
                 ? asset('customer_pics/' . $customer->profile_pic)
                 : null;
 
+            // Sync with SelfDealerWallet
+            $sdWallet = \App\Models\SelfDealerWallet::firstOrCreate(['user_id' => $customer->id]);
+            $effectiveBalance = max((float)($customer->wallet_balance ?? 0), (float)($sdWallet->available_points ?? 0));
+            $customerData['wallet_balance']             = $effectiveBalance;
+            $customerData['available_incentive_points'] = (float)$sdWallet->available_points;
+            $customerData['wallet'] = [
+                'available_points'           => (float)$sdWallet->available_points,
+                'pending_points'             => (float)$sdWallet->pending_points,
+                'redeemed_points'            => (float)$sdWallet->redeemed_points,
+                'total_earned'               => (float)$sdWallet->total_earned,
+            ];
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Profile fetched successfully.',

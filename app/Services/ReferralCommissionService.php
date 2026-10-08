@@ -57,7 +57,7 @@ class ReferralCommissionService
             $wallet->creditPending($activationPoints);
 
             // 5. Create Referral record for Activation Points (status = pending)
-            Referral::create([
+            $referral = Referral::create([
                 'referrer_id'            => $customer->id,
                 'referee_id'             => $customer->id, // own purchase
                 'booking_id'             => $booking->id,

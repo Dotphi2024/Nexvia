@@ -745,7 +745,9 @@ class BookingApiController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
         }
 
-        $booking = Booking::where('id', $id)->where('user_id', $user->id)->first();
+        $booking = is_numeric($id)
+            ? Booking::where('id', $id)->where('user_id', $user->id)->first()
+            : Booking::where('booking_number', $id)->where('user_id', $user->id)->first();
         if (!$booking) {
             return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
         }
