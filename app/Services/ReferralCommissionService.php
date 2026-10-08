@@ -24,11 +24,15 @@ class ReferralCommissionService
 
     public function activateSelfDealer(Customer $customer, Booking $booking): bool
     {
-        if ($customer->is_self_dealer && $customer->self_dealer_status === 'active') {
-            return false; // Already an active self dealer
+        $hasActivationRecord = Referral::where('referrer_id', $customer->id)
+            ->where('transaction_type', 'activation')
+            ->exists();
+
+        if ($customer->is_self_dealer && $customer->self_dealer_status === 'active' && $hasActivationRecord) {
+            return false; // Already an active self dealer and has received activation points
         }
 
-        $product = $booking->product;
+        $product = $booking->product ?: Product::find($booking->product_id);
         if (!$product || !$product->self_dealer_eligible) {
             return false; // Product not eligible for self dealer program
         }
@@ -54,9 +58,24 @@ class ReferralCommissionService
 
             // 4. Create Wallet
             $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $customer->id]);
-            $wallet->creditPending($activationPoints);
 
-            // 5. Create Referral record for Activation Points (status = pending)
+            $isUpfrontFull = ($booking->payment_status === 'fully_paid' 
+                || in_array(strtolower(trim((string)$booking->payment_type)), ['full_payment', 'full', 'full_booking']) 
+                || (float)$booking->balance_amount <= 0);
+
+            if ($isUpfrontFull) {
+                $wallet->creditAvailable($activationPoints);
+                $initialStatus = 'available';
+                $availableAt   = now();
+                $customer->wallet_balance = ($customer->wallet_balance ?? 0) + $activationPoints;
+                $customer->save();
+            } else {
+                $wallet->creditPending($activationPoints);
+                $initialStatus = 'pending';
+                $availableAt   = null;
+            }
+
+            // 5. Create Referral record for Activation Points
             $referral = Referral::create([
                 'referrer_id'            => $customer->id,
                 'referee_id'             => $customer->id, // own purchase
@@ -67,7 +86,8 @@ class ReferralCommissionService
                 'product_value'          => $product->mrp,
                 'eligible_product_value' => $eligibleValue,
                 'credit_earned'          => $activationPoints,
-                'status'                 => 'pending',
+                'status'                 => $initialStatus,
+                'approved_at'            => $availableAt,
                 'transaction_type'       => 'activation',
                 'cycle_number'           => 1,
                 'referral_stage'         => null,
@@ -85,7 +105,8 @@ class ReferralCommissionService
                 'referral_id'          => $referral->id,
                 'description'          => "Self Dealer Activation Points — {$activationRate}% of ₹" . number_format($eligibleValue, 2),
                 'transaction_type'     => 'activation_points',
-                'status'               => 'pending',
+                'status'               => $initialStatus,
+                'available_at'         => $availableAt,
                 'category_id'          => $product->category_id,
                 'incentive_percentage' => $activationRate,
                 'rule_version'         => 'v1.0',

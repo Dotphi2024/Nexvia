@@ -442,6 +442,11 @@ Route::prefix('customer')->group(function () {
         });
         Route::post('/referral/apply',          [SelfDealerApiController::class, 'applyReferralCode']);
 
+        // Direct Customer Wallet & Transactions Endpoints
+        Route::match(['get', 'post'], '/wallet',               [SelfDealerApiController::class, 'wallet']);
+        Route::match(['get', 'post'], '/wallet/transactions',  [SelfDealerApiController::class, 'transactions']);
+        Route::match(['get', 'post'], '/transactions',         [SelfDealerApiController::class, 'transactions']);
+
         // Wishlist / Favorites Routes (/api/customer/wishlist)
         Route::match(['get', 'post'], '/wishlist/list', [WishlistApiController::class, 'index']);
         Route::get('/wishlist',                         [WishlistApiController::class, 'index']);
@@ -566,4 +571,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/referral/apply',          [SelfDealerApiController::class, 'applyReferralCode']);
     });
 });
+
+// Direct Global Wallet & Transactions Endpoints (Bearer Token Protected)
+Route::match(['get', 'post'], '/wallet',               [SelfDealerApiController::class, 'wallet']);
+Route::match(['get', 'post'], '/wallet/transactions',  [SelfDealerApiController::class, 'transactions']);
+Route::match(['get', 'post'], '/transactions',         [SelfDealerApiController::class, 'transactions']);
 

@@ -215,21 +215,51 @@ class SelfDealerApiController extends Controller
 
         $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $user->id]);
 
+        $recentTransactions = WalletTransaction::with(['category', 'booking'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->take(20)
+            ->get()
+            ->map(function ($tx) {
+                return [
+                    'id'                   => $tx->id,
+                    'transaction_type'     => $tx->transaction_type ?? $tx->source,
+                    'amount'               => (float) $tx->amount,
+                    'type'                 => $tx->type, // credit / debit
+                    'status'               => $tx->status, // pending, available, redeemed, reversed
+                    'description'          => $tx->description,
+                    'booking_number'       => $tx->booking ? $tx->booking->booking_number : null,
+                    'category_name'        => $tx->category ? $tx->category->name : null,
+                    'referral_stage'       => $tx->referral_stage,
+                    'incentive_percentage' => (float) $tx->incentive_percentage,
+                    'cycle_number'         => $tx->cycle_number,
+                    'created_at'           => $tx->created_at ? $tx->created_at->toIso8601String() : null,
+                ];
+            });
+
         return response()->json([
             'status' => true,
             'data'   => [
                 'wallet_title'             => 'MY INCENTIVE POINTS',
                 'available_incentive_points'=> (float) $wallet->available_points,
+                'available_points'         => (float) $wallet->available_points,
+                'wallet_balance'           => (float) $wallet->available_points,
                 'pending_incentive_points'  => (float) $wallet->pending_points,
+                'pending_points'           => (float) $wallet->pending_points,
                 'redeemed_incentive_points' => (float) $wallet->redeemed_points,
+                'redeemed_points'          => (float) $wallet->redeemed_points,
                 'reversed_incentive_points' => (float) $wallet->reversed_points,
                 'lifetime_earned_points'   => (float) $wallet->total_earned,
+                'total_earned'             => (float) $wallet->total_earned,
+                'transactions'             => $recentTransactions,
+                'recent_transactions'      => $recentTransactions,
                 'redemption_rules'         => [
                     'can_redeem_on_booking_balance' => true,
                     'can_withdraw_cash'            => false,
                     'points_currency_ratio'        => '1 Point = ₹1.00 Value',
                 ],
             ],
+            'transactions' => $recentTransactions,
         ]);
     }
 
@@ -268,14 +298,15 @@ class SelfDealerApiController extends Controller
         });
 
         return response()->json([
-            'status'     => true,
-            'pagination' => [
+            'status'       => true,
+            'pagination'   => [
                 'current_page' => $transactions->currentPage(),
                 'last_page'    => $transactions->lastPage(),
                 'per_page'     => $transactions->perPage(),
                 'total'        => $transactions->total(),
             ],
-            'data'       => $formatted,
+            'transactions' => $formatted,
+            'data'         => $formatted,
         ]);
     }
 

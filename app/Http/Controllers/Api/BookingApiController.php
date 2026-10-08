@@ -369,18 +369,25 @@ class BookingApiController extends Controller
                 ?? ($bodyJson['payment_type'] ?? null)
                 ?? ($bodyJson['paymentType'] ?? 'booking_20');
 
-            if ($paymentType === 'full_payment') {
+            $tokenInput = $request->input('tokenAmount')
+                ?? $request->input('token_amount')
+                ?? $request->input('booking_amount')
+                ?? ($bodyJson['tokenAmount'] ?? null)
+                ?? ($bodyJson['token_amount'] ?? null);
+
+            $balanceInput = $request->input('balance_amount') ?? ($bodyJson['balance_amount'] ?? null);
+
+            $isFullPayment = in_array(strtolower(trim((string)$paymentType)), ['full_payment', 'full', 'full_booking', '100', '100%'])
+                || ($balanceInput !== null && (float)$balanceInput <= 0)
+                || ($tokenInput !== null && (float)$tokenInput >= $totalMRP);
+
+            if ($isFullPayment) {
+                $paymentType   = 'full_payment';
                 $bookingAmount = $totalMRP;
                 $balanceAmount = 0.00;
                 $paymentStatus = 'fully_paid';
                 $bookingStatus = 'completed';
             } else {
-                $tokenInput = $request->input('tokenAmount')
-                    ?? $request->input('token_amount')
-                    ?? $request->input('booking_amount')
-                    ?? ($bodyJson['tokenAmount'] ?? null)
-                    ?? ($bodyJson['token_amount'] ?? null);
-
                 $bookingPct = (float) ($product->booking_percentage ?: 20.00);
                 $requiredTokenAmount = !empty($tokenInput) ? (float) $tokenInput : round($totalMRP * ($bookingPct / 100), 2);
                 $bookingAmount = $requiredTokenAmount;
@@ -506,7 +513,10 @@ class BookingApiController extends Controller
 
             // 8. Activate or Reactivate Self Dealer status for buyer if product is self-dealer eligible
             $activatedSelfDealer = false;
-            if ($product->self_dealer_eligible && (!$user->is_self_dealer || $user->self_dealer_status !== 'active')) {
+            $hasActivationTx = WalletTransaction::where('user_id', $user->id)
+                ->where('transaction_type', 'activation_points')
+                ->exists();
+            if ($product->self_dealer_eligible && (!$user->is_self_dealer || $user->self_dealer_status !== 'active' || !$hasActivationTx)) {
                 $activatedSelfDealer = $referralService->activateSelfDealer($user, $booking);
             }
 

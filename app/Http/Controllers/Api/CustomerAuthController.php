@@ -840,12 +840,35 @@ class CustomerAuthController extends Controller
             $effectiveBalance = max((float)($customer->wallet_balance ?? 0), (float)($sdWallet->available_points ?? 0));
             $customerData['wallet_balance']             = $effectiveBalance;
             $customerData['available_incentive_points'] = (float)$sdWallet->available_points;
+
+            $recentTxList = \App\Models\WalletTransaction::with(['booking', 'category'])
+                ->where('user_id', $customer->id)
+                ->latest()
+                ->take(20)
+                ->get()
+                ->map(fn($t) => [
+                    'id'                   => $t->id,
+                    'transaction_type'     => $t->transaction_type ?? $t->source,
+                    'amount'               => (float) $t->amount,
+                    'type'                 => $t->type,
+                    'status'               => $t->status,
+                    'description'          => $t->description,
+                    'booking_number'       => $t->booking?->booking_number,
+                    'category_name'        => $t->category?->name,
+                    'incentive_percentage' => (float) $t->incentive_percentage,
+                    'created_at'           => $t->created_at ? $t->created_at->toIso8601String() : null,
+                ]);
+
             $customerData['wallet'] = [
                 'available_points'           => (float)$sdWallet->available_points,
                 'pending_points'             => (float)$sdWallet->pending_points,
                 'redeemed_points'            => (float)$sdWallet->redeemed_points,
                 'total_earned'               => (float)$sdWallet->total_earned,
+                'transactions'               => $recentTxList,
+                'recent_transactions'        => $recentTxList,
             ];
+            $customerData['transactions']        = $recentTxList;
+            $customerData['recent_transactions'] = $recentTxList;
 
             return response()->json([
                 'status'  => true,

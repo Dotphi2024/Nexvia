@@ -148,7 +148,10 @@ class ReferralWalletApiController extends Controller
                 'category_progress'    => $categoryProgression,
                 'referred_customers'   => $referredCustomers,
                 'wallet_ledger'        => $ledger,
+                'transactions'         => $ledger,
+                'recent_transactions'  => $ledger,
             ],
+            'transactions' => $ledger,
         ]);
     }
 
