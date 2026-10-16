@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\PaymentApiController;
 use App\Http\Controllers\Api\PageApiController;
 use App\Http\Controllers\Api\DspApiController;
 use App\Http\Controllers\Api\DlsAgroApiController;
+use App\Http\Controllers\Api\PopupLeadApiController;
 
 Route::get('/', function () {
     return response()->json(['message' => 'NEXVIA API is running']);
@@ -576,4 +577,14 @@ Route::prefix('v1')->group(function () {
 Route::match(['get', 'post'], '/wallet',               [SelfDealerApiController::class, 'wallet']);
 Route::match(['get', 'post'], '/wallet/transactions',  [SelfDealerApiController::class, 'transactions']);
 Route::match(['get', 'post'], '/transactions',         [SelfDealerApiController::class, 'transactions']);
+
+// =============================================================================
+// WEBSITE TIMED POPUP LEAD CAPTURE & CONFIGURATION APIS
+// =============================================================================
+Route::get('/popup-settings',                           [PopupLeadApiController::class, 'settings']);
+Route::get('/popup-lead/config',                        [PopupLeadApiController::class, 'settings']);
+Route::post('/popup-leads',                             [PopupLeadApiController::class, 'store']);
+Route::post('/popup-lead',                              [PopupLeadApiController::class, 'store']);
+Route::post('/popup-enquiry',                           [PopupLeadApiController::class, 'store']);
+Route::post('/leads/popup',                             [PopupLeadApiController::class, 'store']);
 

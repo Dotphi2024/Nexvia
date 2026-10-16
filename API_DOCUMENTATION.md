@@ -24,6 +24,7 @@
 13. [Authorised Delivery & Service Partner (DSP) Ecosystem](#13-authorised-delivery--service-partner-dsp-ecosystem)
 14. [DLS Agro & Farm Equipment APIs](#14-dls-agro--farm-equipment-apis)
 15. [DSP Service & Problem Requests Management (Attendance, Location Routing & Resolution)](#15-dsp-service--problem-requests-management-attendance-location-routing--resolution)
+16. [Website Timed Popup Lead Capture & Configuration APIs](#16-website-timed-popup-lead-capture--configuration-apis)
 
 ---
 
@@ -3540,5 +3541,63 @@ In all product list/search responses, each product contains its `subcategory` ob
 | `404` | **Not Found** | Requested resource (Product, Booking, User) does not exist. |
 | `422` | **Unprocessable Entity** | Validation failed (e.g. missing fields, invalid referral code, insufficient points). |
 | `500` | **Internal Server Error** | Server-side issue. |
+
+---
+
+## 16. Website Timed Popup Lead Capture & Configuration APIs
+
+### 16.1 Get Active Popup Settings
+* **Method**: `GET`
+* **URL**: `/api/popup-settings` (Alias: `/api/popup-lead/config`)
+* **Auth**: Public
+
+#### Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Popup configuration retrieved successfully",
+  "data": {
+    "is_enabled": true,
+    "delay_seconds": 7,
+    "title": "Get Exclusive Offers & Instant Callback",
+    "subtitle": "Enter your name and mobile number. Our product specialist will call you with exclusive pricing and product details.",
+    "button_text": "Request Callback Now",
+    "success_message": "Thank you! We have received your request and will call you shortly.",
+    "reappear_hours": 24
+  }
+}
+```
+
+---
+
+### 16.2 Submit Popup Lead Enquiry
+* **Method**: `POST`
+* **URL**: `/api/popup-leads` (Aliases: `/api/popup-lead`, `/api/popup-enquiry`, `/api/leads/popup`)
+* **Auth**: Public
+* **Payload**:
+```json
+{
+  "name": "Vikram Patil",
+  "mobile": "9823456789",
+  "email": "vikram@example.com",
+  "notes": "Inquiry about Electric Scooters 20% booking",
+  "source_url": "http://127.0.0.1:8000/products/electric-scooters"
+}
+```
+
+#### Response (`201 Created`)
+```json
+{
+  "status": true,
+  "message": "Thank you! We have received your request. Our specialist will call you shortly.",
+  "data": {
+    "id": 2,
+    "name": "Vikram Patil",
+    "mobile": "9823456789",
+    "status": "pending",
+    "created_at": "2026-10-16 12:15:00"
+  }
+}
+```
 
 

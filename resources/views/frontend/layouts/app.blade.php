@@ -96,6 +96,7 @@
             margin-top: 80px;
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/nexvia-popup-lead.css') }}">
     @yield('styles')
 </head>
 <body>
@@ -222,6 +223,26 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- NEXVIA Timed Frontend Popup Lead Capture (5-10s) -->
+    @php
+        $nexviaPopupSetting = \App\Models\PopupSetting::getSettings();
+    @endphp
+    @if($nexviaPopupSetting->is_enabled)
+        <script>
+            window.NEXVIA_POPUP_CONFIG = {
+                is_enabled: {{ $nexviaPopupSetting->is_enabled ? 'true' : 'false' }},
+                delay_seconds: {{ (int) $nexviaPopupSetting->delay_seconds }},
+                title: @json($nexviaPopupSetting->title),
+                subtitle: @json($nexviaPopupSetting->subtitle),
+                button_text: @json($nexviaPopupSetting->button_text),
+                success_message: @json($nexviaPopupSetting->success_message),
+                reappear_hours: {{ (int) $nexviaPopupSetting->reappear_hours }}
+            };
+        </script>
+        <script src="{{ asset('js/nexvia-popup-lead.js') }}" defer></script>
+    @endif
+
     @yield('styles')
 </body>
 </html>
