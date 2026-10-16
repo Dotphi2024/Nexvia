@@ -93,6 +93,10 @@
 16. [Stored Paid Amount / Product Credit Reallocation & Purchasing Other Items](#16-stored-paid-amount--product-credit-reallocation--purchasing-other-items)
     - [16.1 Reallocate Paid Amount to Product Credit Wallet](#161-reallocate-paid-amount-to-product-credit-wallet)
     - [16.2 Book or Buy New Catalog Item Using Wallet Credits](#162-book-or-buy-new-catalog-item-using-wallet-credits)
+19. [Website Timed Popup Lead Capture APIs](#19-website-timed-popup-lead-capture-apis)
+    - [19.1 Get Popup Configuration & Delay](#191-get-popup-configuration--delay)
+    - [19.2 Submit Popup Lead Enquiry](#192-submit-popup-lead-enquiry)
+    - [19.3 Frontend React / Vanilla JS Quick Integration Guide](#193-frontend-react--vanilla-js-quick-integration-guide)
 
 ---
 
@@ -3403,5 +3407,222 @@ Dedicated endpoints for DLS Farm Equipment subcategories (Solar Water Pumps, Til
   "balance_amount": 100000.00,
   "stock": 10,
   "is_featured": true
+}
+```
+
+---
+
+## 19. Website Timed Popup Lead Capture APIs
+
+These endpoints power the timed lead generation popup that appears after **5 to 10 seconds** on the frontend website. The admin can customize the trigger delay, title, subtitle, button text, and toggle the popup on/off from the Admin Panel.
+
+---
+
+### 19.1 Get Popup Configuration & Delay
+Retrieves the active settings configured by the administrator in the Admin Panel.
+
+- **Method:** `GET`
+- **URL:** `/api/popup-settings` (Alias: `/api/popup-lead/config`)
+- **Auth Required:** No (Public endpoint for frontend)
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Popup configuration retrieved successfully",
+  "data": {
+    "is_enabled": true,
+    "delay_seconds": 7,
+    "title": "Get Exclusive Offers & Instant Callback",
+    "subtitle": "Enter your name and mobile number. Our product specialist will call you with exclusive pricing and product details.",
+    "button_text": "Request Callback Now",
+    "success_message": "Thank you! We have received your request. Our specialist will call you shortly.",
+    "reappear_hours": 24
+  }
+}
+```
+
+---
+
+### 19.2 Submit Popup Lead Enquiry
+Captures customer details (Name, Mobile Number, optional Email/Notes) submitted via the timed popup.
+
+- **Method:** `POST`
+- **URL:** `/api/popup-leads` (Aliases: `/api/popup-lead`, `/api/popup-enquiry`, `/api/leads/popup`)
+- **Content-Type:** `application/json`
+- **Auth Required:** No (Public lead capture)
+
+#### Request Body
+```json
+{
+  "name": "Rahul Sharma",
+  "mobile": "9876543210",
+  "email": "rahul.sharma@example.com",
+  "notes": "Looking for 55-inch LED TV 20% flexi-booking offer",
+  "source_url": "https://nexvia.com/products/nexvia-55-inch-ultra-hd-4k-smart-led-tv"
+}
+```
+
+#### Field Specifications:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | **Yes** | Full name (min: 2, max: 100 chars) |
+| `mobile` | string | **Yes** | 10-digit Indian mobile number (`^[6-9]\d{9}$`) |
+| `email` | string | No | Customer email address |
+| `notes` | string | No | Optional notes or query message |
+| `source_url` | string | No | Current browser page URL where popup was submitted |
+
+#### Success Response (`201 Created`)
+```json
+{
+  "status": true,
+  "message": "Thank you! We have received your request. Our specialist will call you shortly.",
+  "data": {
+    "id": 1,
+    "name": "Rahul Sharma",
+    "mobile": "9876543210",
+    "status": "pending",
+    "created_at": "2026-10-16 12:07:24"
+  }
+}
+```
+
+#### Validation Error (`422 Unprocessable Content`)
+```json
+{
+  "status": false,
+  "message": "Please enter a valid 10-digit mobile number.",
+  "errors": {
+    "mobile": [
+      "Please enter a valid 10-digit mobile number."
+    ]
+  }
+}
+```
+
+---
+
+### 19.3 Frontend React / Vanilla JS Quick Integration Guide
+
+#### A. Direct Script Integration (Any HTML / Blade / Website)
+Add to your page's `<head>` and before `</body>`:
+```html
+<link rel="stylesheet" href="http://127.0.0.1:8000/css/nexvia-popup-lead.css">
+<script src="http://127.0.0.1:8000/js/nexvia-popup-lead.js" defer></script>
+```
+
+#### B. React / Next.js Component (`PopupLeadModal.jsx`)
+```jsx
+import React, { useState, useEffect } from 'react';
+
+export default function PopupLeadModal({ apiBase = 'http://127.0.0.1:8000' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [config, setConfig] = useState(null);
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (localStorage.getItem('nexvia_popup_lead_submitted') === 'true') return;
+
+    const dismissedUntil = localStorage.getItem('nexvia_popup_lead_dismissed_until');
+    if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) return;
+
+    fetch(`${apiBase}/api/popup-settings`)
+      .then(res => res.json())
+      .then(res => {
+        if (res?.data?.is_enabled) {
+          setConfig(res.data);
+          const delaySec = res.data.delay_seconds || 7;
+          const timer = setTimeout(() => setIsOpen(true), delaySec * 1000);
+          return () => clearTimeout(timer);
+        }
+      })
+      .catch(() => {});
+  }, [apiBase]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    const reappearHours = config?.reappear_hours || 24;
+    localStorage.setItem('nexvia_popup_lead_dismissed_until', (Date.now() + (reappearHours * 3600 * 1000)).toString());
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return setError('Please enter your name');
+    if (!/^[6-9]\d{9}$/.test(mobile.trim())) return setError('Please enter a valid 10-digit mobile number');
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return setError('Please enter a valid email address');
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${apiBase}/api/popup-leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          mobile: mobile.trim(),
+          email: email.trim() || undefined,
+          source_url: window.location.href
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        setSubmitted(true);
+        localStorage.setItem('nexvia_popup_lead_submitted', 'true');
+        setTimeout(() => setIsOpen(false), 3000);
+      } else {
+        setError(data.message || 'Submission failed');
+      }
+    } catch (err) {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999 }}>
+      <div style={{ background: '#fff', borderRadius: '20px', padding: '30px', maxWidth: '420px', width: '90%', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+        <button onClick={handleClose} style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '18px' }}>&times;</button>
+        {submitted ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <h3 style={{ color: '#10b981' }}>✓ Request Received!</h3>
+            <p>{config?.success_message || 'Thank you! Our expert will call you shortly.'}</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c3aed', background: '#f3e8ff', padding: '4px 10px', borderRadius: '12px' }}>EXCLUSIVE OFFER</span>
+              <h3 style={{ margin: '8px 0', fontSize: '20px', fontWeight: '800' }}>{config?.title || 'Get Instant Callback'}</h3>
+              <p style={{ fontSize: '13px', color: '#64748b' }}>{config?.subtitle || 'Leave your name and number to get special deals.'}</p>
+            </div>
+            {error && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '10px' }}>{error}</div>}
+            <div style={{ marginBottom: '12px' }}>
+              <input type="text" placeholder="Your Full Name *" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} required />
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <input type="tel" placeholder="10-digit Mobile Number *" value={mobile} maxLength={10} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} required />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <input type="email" placeholder="Email Address (Optional)" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
+            </div>
+            <button type="submit" disabled={loading} style={{ width: '100%', height: '46px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>
+              {loading ? 'Submitting...' : (config?.button_text || 'Request Callback')}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
 }
 ```

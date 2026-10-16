@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\BookingEngineController;
 use App\Http\Controllers\Admin\ServiceRequestController;
 use App\Http\Controllers\Admin\BannerAdminController;
 use App\Http\Controllers\Admin\PageAdminController;
+use App\Http\Controllers\Admin\PopupLeadAdminController;
 
 // AdminPanel Routes
 Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->group(function () {
@@ -166,5 +167,16 @@ Route::prefix('admin')->middleware(['guard.restrict:admin', 'admin.active'])->gr
     Route::prefix('dsp-payouts')->name('admin.dsp.payouts.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\DspPayoutAdminController::class, 'index'])->name('index');
         Route::post('/{id}/status', [\App\Http\Controllers\Admin\DspPayoutAdminController::class, 'updateStatus'])->name('status');
+    });
+
+    // =========================================================================
+    // WEBSITE TIMED POPUP LEADS & CONFIGURATION
+    // =========================================================================
+    Route::prefix('popup-leads')->name('admin.popup_leads.')->group(function () {
+        Route::get('/', [PopupLeadAdminController::class, 'index'])->name('index');
+        Route::post('/settings', [PopupLeadAdminController::class, 'updateSettings'])->name('settings.update');
+        Route::get('/export', [PopupLeadAdminController::class, 'export'])->name('export');
+        Route::post('/{id}/status', [PopupLeadAdminController::class, 'updateStatus'])->name('status');
+        Route::delete('/{id}', [PopupLeadAdminController::class, 'destroy'])->name('destroy');
     });
 });

@@ -218,6 +218,17 @@
                          <span class="nav-text">Pages & Policies</span>
                     </a>
                </li>
+
+               <li class="menu-title">Leads & Enquiries</li>
+
+               <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.popup_leads.*') ? 'active' : '' }}" href="{{ route('admin.popup_leads.index') }}">
+                         <span class="nav-icon">
+                              <iconify-icon icon="solar:chat-round-call-bold-duotone"></iconify-icon>
+                         </span>
+                         <span class="nav-text">Popup Leads</span>
+                    </a>
+               </li>
           </ul>
      </div>
 
