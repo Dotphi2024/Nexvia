@@ -93,6 +93,18 @@ class DlsFarmProductAdminController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->hasFile('gallery')) {
+            $rawFiles = (array)$request->file('gallery');
+            $cleanFiles = array_values(array_filter($rawFiles, function ($f) {
+                return $f && $f->isValid();
+            }));
+            if (empty($cleanFiles)) {
+                $request->files->remove('gallery');
+            } else {
+                $request->files->set('gallery', $cleanFiles);
+            }
+        }
+
         $request->validate([
             'category_id'    => 'required|exists:categories,id',
             'subcategory_id' => 'nullable|exists:subcategories,id',
@@ -122,9 +134,13 @@ class DlsFarmProductAdminController extends Controller
 
         $galleryPaths = [];
         if ($request->hasFile('gallery')) {
-            foreach ($request->file('gallery') as $gFile) {
+            $galleryFiles = (array)$request->file('gallery');
+            foreach ($galleryFiles as $gFile) {
+                if (!$gFile || !$gFile->isValid()) {
+                    continue;
+                }
                 $gFileName = 'farm_prod_g_' . time() . '_' . Str::random(6) . '.' . $gFile->getClientOriginalExtension();
-                $gFile->move(public_path('uploads/products'), $gFileName);
+                $gFile->move(public_path('uploads/products'), $fileName = $gFileName);
                 $galleryPaths[] = 'uploads/products/' . $gFileName;
             }
         }
@@ -186,6 +202,18 @@ class DlsFarmProductAdminController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        if ($request->hasFile('gallery')) {
+            $rawFiles = (array)$request->file('gallery');
+            $cleanFiles = array_values(array_filter($rawFiles, function ($f) {
+                return $f && $f->isValid();
+            }));
+            if (empty($cleanFiles)) {
+                $request->files->remove('gallery');
+            } else {
+                $request->files->set('gallery', $cleanFiles);
+            }
+        }
+
         $request->validate([
             'category_id'    => 'required|exists:categories,id',
             'subcategory_id' => 'nullable|exists:subcategories,id',
@@ -211,9 +239,16 @@ class DlsFarmProductAdminController extends Controller
             $mainImagePath = 'uploads/products/' . $fileName;
         }
 
-        $galleryPaths = is_array($product->gallery) ? $product->gallery : [];
+        $galleryPaths = $request->has('existing_gallery')
+            ? array_values(array_filter((array)$request->input('existing_gallery')))
+            : (is_array($product->gallery) ? $product->gallery : []);
+
         if ($request->hasFile('gallery')) {
-            foreach ($request->file('gallery') as $gFile) {
+            $galleryFiles = (array)$request->file('gallery');
+            foreach ($galleryFiles as $gFile) {
+                if (!$gFile || !$gFile->isValid()) {
+                    continue;
+                }
                 $gFileName = 'farm_prod_g_' . time() . '_' . Str::random(6) . '.' . $gFile->getClientOriginalExtension();
                 $gFile->move(public_path('uploads/products'), $gFileName);
                 $galleryPaths[] = 'uploads/products/' . $gFileName;

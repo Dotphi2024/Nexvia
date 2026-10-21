@@ -72,6 +72,18 @@ class ProductAdminController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->hasFile('gallery')) {
+            $rawFiles = (array)$request->file('gallery');
+            $cleanFiles = array_values(array_filter($rawFiles, function ($f) {
+                return $f && $f->isValid();
+            }));
+            if (empty($cleanFiles)) {
+                $request->files->remove('gallery');
+            } else {
+                $request->files->set('gallery', $cleanFiles);
+            }
+        }
+
         $request->validate([
             'category_id'    => 'required|exists:categories,id',
             'subcategory_id' => 'nullable|exists:subcategories,id',
@@ -101,7 +113,11 @@ class ProductAdminController extends Controller
 
         $galleryPaths = [];
         if ($request->hasFile('gallery')) {
-            foreach ($request->file('gallery') as $gFile) {
+            $galleryFiles = (array)$request->file('gallery');
+            foreach ($galleryFiles as $gFile) {
+                if (!$gFile || !$gFile->isValid()) {
+                    continue;
+                }
                 $gFileName = 'product_g_' . time() . '_' . Str::random(6) . '.' . $gFile->getClientOriginalExtension();
                 $gFile->move(public_path('uploads/products'), $gFileName);
                 $galleryPaths[] = 'uploads/products/' . $gFileName;
@@ -164,6 +180,18 @@ class ProductAdminController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        if ($request->hasFile('gallery')) {
+            $rawFiles = (array)$request->file('gallery');
+            $cleanFiles = array_values(array_filter($rawFiles, function ($f) {
+                return $f && $f->isValid();
+            }));
+            if (empty($cleanFiles)) {
+                $request->files->remove('gallery');
+            } else {
+                $request->files->set('gallery', $cleanFiles);
+            }
+        }
+
         $request->validate([
             'category_id'    => 'required|exists:categories,id',
             'subcategory_id' => 'nullable|exists:subcategories,id',
@@ -171,6 +199,8 @@ class ProductAdminController extends Controller
             'mrp'            => 'required|numeric|min:0',
             'stock'          => 'required|integer|min:0',
             'video_url'      => 'nullable|url',
+            'main_image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'gallery.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         $mrp = $request->mrp;
@@ -187,9 +217,16 @@ class ProductAdminController extends Controller
             $mainImagePath = 'uploads/products/' . $fileName;
         }
 
-        $galleryPaths = $product->gallery ?: [];
+        $galleryPaths = $request->has('existing_gallery')
+            ? array_values(array_filter((array)$request->input('existing_gallery')))
+            : ($product->gallery ?: []);
+
         if ($request->hasFile('gallery')) {
-            foreach ($request->file('gallery') as $gFile) {
+            $galleryFiles = (array)$request->file('gallery');
+            foreach ($galleryFiles as $gFile) {
+                if (!$gFile || !$gFile->isValid()) {
+                    continue;
+                }
                 $gFileName = 'product_g_' . time() . '_' . Str::random(6) . '.' . $gFile->getClientOriginalExtension();
                 $gFile->move(public_path('uploads/products'), $gFileName);
                 $galleryPaths[] = 'uploads/products/' . $gFileName;

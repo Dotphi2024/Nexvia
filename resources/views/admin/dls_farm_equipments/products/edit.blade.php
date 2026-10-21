@@ -194,33 +194,115 @@
                             </div>
                         </div>
 
-                        <!-- Main Image & Gallery -->
-                        <div class="row g-3 mb-3 p-3 bg-light rounded border border-light-subtle">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark">Update Main Image</label>
-                                @if($product->main_image)
-                                    <div class="mb-2">
-                                        <img src="{{ \App\Helpers\ImageHelper::resolve($product->main_image) }}" 
-                                             class="rounded border" width="60" height="60" style="object-fit: cover;"
-                                             onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
-                                    </div>
-                                @endif
-                                <input type="file" name="main_image" class="form-control" accept="image/*">
-                                <span class="micro text-muted">Leave empty to keep existing image.</span>
+                        <!-- PRODUCT IMAGES & GALLERY -->
+                        <div class="card border border-light-subtle shadow-sm mb-4">
+                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <iconify-icon icon="solar:gallery-wide-bold" class="text-primary fs-5"></iconify-icon>
+                                        Equipment Images & Gallery
+                                    </h6>
+                                    <span class="micro text-muted">Manage existing machine photos or add new gallery photos with live previews</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-1" id="addGalleryBtnTop">
+                                    <iconify-icon icon="solar:add-circle-bold" class="fs-6"></iconify-icon>
+                                    + Add Gallery Image
+                                </button>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark">Add to Gallery Images</label>
-                                @if(!empty($product->gallery) && is_array($product->gallery))
-                                    <div class="d-flex gap-2 mb-2 flex-wrap">
-                                        @foreach($product->gallery as $img)
-                                            <img src="{{ \App\Helpers\ImageHelper::resolve($img) }}" 
-                                                 class="rounded border" width="40" height="40" style="object-fit: cover;"
-                                                 onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
-                                        @endforeach
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    <!-- Main Equipment Image -->
+                                    <div class="col-lg-5 col-md-12">
+                                        <div class="p-3 bg-light rounded border border-light-subtle h-100">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label fw-semibold text-dark mb-0">Main Machine Image</label>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Primary Showcase</span>
+                                            </div>
+                                            <span class="micro text-muted d-block mb-3">Leave empty to keep existing image, or upload a new one (JPG, PNG, WEBP - Max 4MB).</span>
+                                            
+                                            @if($product->main_image)
+                                                <div class="mb-3 d-flex align-items-center gap-2 p-2 bg-white rounded border">
+                                                    <img src="{{ \App\Helpers\ImageHelper::resolve($product->main_image) }}" 
+                                                         class="rounded border" width="60" height="60" style="object-fit: cover;"
+                                                         onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
+                                                    <div>
+                                                        <span class="d-block small fw-semibold text-dark">Current Main Image</span>
+                                                        <span class="micro text-muted">Will remain active unless a new file is chosen below</span>
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            <div class="mb-2">
+                                                <input type="file" name="main_image" id="main_image_input" class="form-control" accept="image/*">
+                                            </div>
+
+                                            <!-- Live Preview Container for New Main Image -->
+                                            <div id="mainImagePreviewWrapper" class="d-none">
+                                                <div class="position-relative d-inline-block border rounded p-1 bg-white shadow-sm">
+                                                    <img id="mainImagePreview" src="" alt="Main Preview" class="rounded" style="max-height: 140px; max-width: 100%; object-fit: contain;">
+                                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 rounded-circle d-flex align-items-center justify-content-center" 
+                                                            id="clearMainImageBtn" style="width: 22px; height: 22px;" title="Cancel replacement">
+                                                        <iconify-icon icon="solar:close-circle-bold" class="fs-6"></iconify-icon>
+                                                    </button>
+                                                </div>
+                                                <div class="micro text-muted mt-1" id="mainImageInfo"></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                @endif
-                                <input type="file" name="gallery[]" class="form-control" accept="image/*" multiple>
-                                <span class="micro text-muted">Upload more images to append to gallery.</span>
+
+                                    <!-- Additional Gallery Images with + Options -->
+                                    <div class="col-lg-7 col-md-12">
+                                        <div class="p-3 bg-light rounded border border-light-subtle h-100 d-flex flex-column">
+                                            <!-- Existing Gallery Photos -->
+                                            @if(!empty($product->gallery) && is_array($product->gallery) && count($product->gallery) > 0)
+                                                <div class="mb-3 p-2 bg-white rounded border border-light-subtle">
+                                                    <label class="form-label fw-bold text-dark small mb-1">Existing Gallery Photos ({{ count($product->gallery) }})</label>
+                                                    <span class="micro text-muted d-block mb-2">Click the red <strong>✕</strong> on any image to delete it upon save:</span>
+                                                    <div class="d-flex gap-2 flex-wrap" id="existingGalleryList">
+                                                        @foreach($product->gallery as $idx => $img)
+                                                            <div class="position-relative existing-gallery-item border rounded p-1 bg-light shadow-sm" id="existing_item_{{ $idx }}">
+                                                                <input type="hidden" name="existing_gallery[]" value="{{ $img }}">
+                                                                <img src="{{ \App\Helpers\ImageHelper::resolve($img) }}" 
+                                                                     class="rounded" width="55" height="55" style="object-fit: cover;"
+                                                                     onerror="this.onerror=null;this.src='{{ asset('images/no-image.png') }}';">
+                                                                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 rounded-circle d-flex align-items-center justify-content-center remove-existing-gallery-btn" 
+                                                                        style="width: 20px; height: 20px; transform: translate(30%, -30%);" 
+                                                                        data-target="existing_item_{{ $idx }}" title="Delete this image">
+                                                                    <iconify-icon icon="solar:close-circle-bold" class="fs-6"></iconify-icon>
+                                                                </button>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <div>
+                                                    <label class="form-label fw-semibold text-dark mb-0">Upload New Gallery Images</label>
+                                                    <span class="micro text-muted d-block">Add more photos with the <strong>+ Add Image</strong> button below</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold d-flex align-items-center gap-1" id="addGalleryBtnHeader">
+                                                    <iconify-icon icon="solar:add-circle-bold" class="fs-6"></iconify-icon>
+                                                    + Add Image
+                                                </button>
+                                            </div>
+
+                                            <!-- Dynamic Gallery Rows Container -->
+                                            <div id="galleryContainer" class="d-flex flex-column gap-2 flex-grow-1">
+                                                <!-- Dynamic rows will be inserted here -->
+                                            </div>
+
+                                            <!-- Gallery Footer with Count & Add More Button -->
+                                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-light-subtle">
+                                                <span class="micro text-muted" id="galleryCountBadge">0 new photo slots</span>
+                                                <button type="button" class="btn btn-sm btn-primary fw-semibold d-flex align-items-center gap-1" id="addGalleryBtnBottom">
+                                                    <iconify-icon icon="solar:add-circle-bold" class="fs-6"></iconify-icon>
+                                                    + Add Another Image
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -452,6 +534,214 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     }
+
+    // Dynamic Product Gallery with + Add Image (Edit)
+    const galleryContainer = document.getElementById('galleryContainer');
+    const addGalleryBtnTop = document.getElementById('addGalleryBtnTop');
+    const addGalleryBtnHeader = document.getElementById('addGalleryBtnHeader');
+    const addGalleryBtnBottom = document.getElementById('addGalleryBtnBottom');
+    const galleryCountBadge = document.getElementById('galleryCountBadge');
+    let galleryRowIndex = 0;
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function updateGalleryStats() {
+        if (!galleryContainer) return;
+        const rows = galleryContainer.querySelectorAll('.gallery-row');
+        let filledCount = 0;
+        rows.forEach(r => {
+            const input = r.querySelector('.gallery-file-input');
+            if (input && input.files && input.files.length > 0) {
+                filledCount += input.files.length;
+            }
+        });
+        if (galleryCountBadge) {
+            if (rows.length === 0) {
+                galleryCountBadge.textContent = '0 new photos added';
+            } else if (filledCount === 0) {
+                galleryCountBadge.textContent = `${rows.length} new slot(s) ready (no photos selected)`;
+            } else {
+                galleryCountBadge.innerHTML = `<span class="text-success fw-bold">${filledCount} new photo(s) selected</span>`;
+            }
+        }
+    }
+
+    function createGalleryRow(openFileDialog = false) {
+        if (!galleryContainer) return;
+        galleryRowIndex++;
+        const rowId = `gallery_row_${galleryRowIndex}`;
+        const div = document.createElement('div');
+        div.className = 'gallery-row p-2 bg-white rounded border border-light-subtle shadow-sm';
+        div.id = rowId;
+        div.innerHTML = `
+            <div class="row g-2 align-items-center">
+                <div class="col-auto">
+                    <div class="gallery-thumb-box rounded border bg-light d-flex align-items-center justify-content-center overflow-hidden position-relative" 
+                         style="width: 54px; height: 54px; min-width: 54px;">
+                        <iconify-icon icon="solar:gallery-wide-outline" class="text-muted fs-4 placeholder-icon"></iconify-icon>
+                        <img src="" class="preview-img w-100 h-100 d-none" style="object-fit: cover;" alt="Gallery preview">
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="input-group input-group-sm">
+                        <input type="file" name="gallery[]" class="form-control gallery-file-input" accept="image/*" multiple>
+                        <button type="button" class="btn btn-outline-danger remove-gallery-btn" title="Remove this photo slot">
+                            <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                        </button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-1 px-1">
+                        <span class="micro text-muted file-info-text text-truncate" style="max-width: 250px;">Select photo (or multiple)</span>
+                        <span class="badge bg-light text-muted border border-light-subtle file-size-badge d-none"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        galleryContainer.appendChild(div);
+
+        const fileInput = div.querySelector('.gallery-file-input');
+        const previewImg = div.querySelector('.preview-img');
+        const placeholderIcon = div.querySelector('.placeholder-icon');
+        const fileInfoText = div.querySelector('.file-info-text');
+        const fileSizeBadge = div.querySelector('.file-size-badge');
+
+        fileInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                const firstFile = this.files[0];
+                const totalFiles = this.files.length;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImg.src = e.target.result;
+                    previewImg.classList.remove('d-none');
+                    placeholderIcon.classList.add('d-none');
+                };
+                reader.readAsDataURL(firstFile);
+
+                if (totalFiles === 1) {
+                    fileInfoText.textContent = firstFile.name;
+                    fileSizeBadge.textContent = formatFileSize(firstFile.size);
+                    fileSizeBadge.classList.remove('d-none');
+                } else {
+                    fileInfoText.innerHTML = `<strong>${firstFile.name}</strong> + ${totalFiles - 1} more`;
+                    let totalSize = Array.from(this.files).reduce((acc, f) => acc + f.size, 0);
+                    fileSizeBadge.textContent = `${totalFiles} files (${formatFileSize(totalSize)})`;
+                    fileSizeBadge.classList.remove('d-none');
+                }
+            } else {
+                previewImg.src = '';
+                previewImg.classList.add('d-none');
+                placeholderIcon.classList.remove('d-none');
+                fileInfoText.textContent = 'Select photo (or multiple)';
+                fileSizeBadge.classList.add('d-none');
+            }
+            updateGalleryStats();
+        });
+
+        updateGalleryStats();
+
+        if (openFileDialog) {
+            fileInput.click();
+        }
+    }
+
+    if (galleryContainer) {
+        if (addGalleryBtnTop) {
+            addGalleryBtnTop.addEventListener('click', function () {
+                createGalleryRow(true);
+            });
+        }
+
+        if (addGalleryBtnHeader) {
+            addGalleryBtnHeader.addEventListener('click', function () {
+                createGalleryRow(true);
+            });
+        }
+
+        if (addGalleryBtnBottom) {
+            addGalleryBtnBottom.addEventListener('click', function () {
+                createGalleryRow(true);
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            const removeBtn = e.target.closest('.remove-gallery-btn');
+            if (removeBtn && galleryContainer.contains(removeBtn)) {
+                const row = removeBtn.closest('.gallery-row');
+                row.remove();
+                updateGalleryStats();
+            }
+
+            // Remove existing gallery photo item
+            const removeExistingBtn = e.target.closest('.remove-existing-gallery-btn');
+            if (removeExistingBtn) {
+                const targetId = removeExistingBtn.getAttribute('data-target');
+                const targetElem = document.getElementById(targetId);
+                if (targetElem) {
+                    targetElem.remove();
+                }
+            }
+        });
+    }
+
+    // Main Image Instant Preview
+    const mainImageInput = document.getElementById('main_image_input');
+    const mainImagePreviewWrapper = document.getElementById('mainImagePreviewWrapper');
+    const mainImagePreview = document.getElementById('mainImagePreview');
+    const mainImageInfo = document.getElementById('mainImageInfo');
+    const clearMainImageBtn = document.getElementById('clearMainImageBtn');
+
+    if (mainImageInput && mainImagePreviewWrapper && mainImagePreview) {
+        mainImageInput.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    mainImagePreview.src = e.target.result;
+                    mainImagePreviewWrapper.classList.remove('d-none');
+                    if (mainImageInfo) {
+                        mainImageInfo.textContent = `New: ${file.name} (${formatFileSize(file.size)})`;
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                mainImagePreviewWrapper.classList.add('d-none');
+                mainImagePreview.src = '';
+            }
+        });
+
+        if (clearMainImageBtn) {
+            clearMainImageBtn.addEventListener('click', function () {
+                mainImageInput.value = '';
+                mainImagePreviewWrapper.classList.add('d-none');
+                mainImagePreview.src = '';
+            });
+        }
+    }
+
+    // Form submit protection: disable empty file inputs before submit
+    const productForm = document.querySelector('form[action*="products"]');
+    if (productForm) {
+        productForm.addEventListener('submit', function () {
+            document.querySelectorAll('.gallery-file-input').forEach(input => {
+                if (!input.files || input.files.length === 0) {
+                    input.disabled = true;
+                }
+            });
+        });
+    }
+
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('.gallery-file-input').forEach(input => {
+            input.disabled = false;
+        });
+    });
 });
 </script>
 @endsection
