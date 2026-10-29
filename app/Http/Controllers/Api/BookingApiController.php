@@ -137,9 +137,22 @@ class BookingApiController extends Controller
                 'imageUrl'                => $imageUrl,
                 'main_image'              => $imageUrl,
                 'mrp'                     => (float)$booking->mrp,
+                'total_mrp'               => (float)$booking->mrp,
                 'booking_amount'          => (float)$booking->booking_amount,
                 'token_amount'            => (float)$booking->booking_amount,
+                'initial_advance_paid'    => (float)$booking->booking_amount,
                 'balance_amount'          => (float)$booking->balance_amount,
+                'balance_amount_due'      => (float)$booking->balance_amount,
+                'balance_amount_remaining'=> (float)$booking->balance_amount,
+                'filled_amount'           => (float)$booking->filled_amount,
+                'total_paid'              => (float)$booking->filled_amount,
+                'advance_paid'            => (float)$booking->filled_amount,
+                'paid_amount'             => (float)$booking->filled_amount,
+                'balance_payment_mode'    => $booking->balance_payment_mode,
+                'emi_tenure_months'       => $booking->emi_tenure_months,
+                'emi_monthly_amount'      => (float)($booking->emi_monthly_amount ?? 0),
+                'emi_installments_paid'   => (int)($booking->emi_installments_paid ?? 0),
+                'balance_payments_history'=> $booking->balance_payments_history,
                 'booking_date'            => $booking->booking_date ? $booking->booking_date->format('Y-m-d') : null,
                 'balance_due_date'        => $booking->balance_due_date ? $booking->balance_due_date->format('Y-m-d') : null,
                 'days_remaining'          => $booking->days_remaining,
@@ -663,8 +676,22 @@ class BookingApiController extends Controller
                 'product_name'            => $booking->product_name,
                 'model_code'              => $booking->model_code,
                 'mrp'                     => (float)$booking->mrp,
+                'total_mrp'               => (float)$booking->mrp,
                 'booking_amount'          => (float)$booking->booking_amount,
+                'token_amount'            => (float)$booking->booking_amount,
+                'initial_advance_paid'    => (float)$booking->booking_amount,
                 'balance_amount'          => (float)$booking->balance_amount,
+                'balance_amount_due'      => (float)$booking->balance_amount,
+                'balance_amount_remaining'=> (float)$booking->balance_amount,
+                'filled_amount'           => (float)$booking->filled_amount,
+                'total_paid'              => (float)$booking->filled_amount,
+                'advance_paid'            => (float)$booking->filled_amount,
+                'paid_amount'             => (float)$booking->filled_amount,
+                'balance_payment_mode'    => $booking->balance_payment_mode,
+                'emi_tenure_months'       => $booking->emi_tenure_months,
+                'emi_monthly_amount'      => (float)($booking->emi_monthly_amount ?? 0),
+                'emi_installments_paid'   => (int)($booking->emi_installments_paid ?? 0),
+                'balance_payments_history'=> $booking->balance_payments_history,
                 'booking_date'            => $booking->booking_date->format('Y-m-d'),
                 'balance_due_date'        => $booking->balance_due_date->format('Y-m-d'),
                 'days_remaining'          => $booking->days_remaining,
@@ -773,7 +800,7 @@ class BookingApiController extends Controller
         $emiMonthly = (float)($booking->emi_monthly_amount ?? 0);
 
         if ($mode === 'flexible') {
-            $custom = (float)$request->input('custom_amount', 0);
+            $custom = (float)($request->input('custom_amount') ?: $request->input('amount', 0));
             if ($custom > 0) {
                 $amountToPay = min($custom, $currentBalance);
             }
@@ -782,7 +809,10 @@ class BookingApiController extends Controller
             if ($emiMonthly <= 0 || (int)$booking->emi_tenure_months !== $tenure) {
                 $emiMonthly = round($currentBalance / $tenure, 2);
             }
-            $amountToPay = min($emiMonthly, $currentBalance);
+            $passed = (float)($request->input('custom_amount') ?: $request->input('amount', 0));
+            $amountToPay = ($passed > 0) ? min($passed, $currentBalance) : min($emiMonthly, $currentBalance);
+        } else {
+            $amountToPay = $currentBalance;
         }
 
         $useWalletCredit = (bool)$request->input('use_product_credit', false);
@@ -905,7 +935,7 @@ class BookingApiController extends Controller
             'balance_amount'           => $newBalance,
             'balance_payment_mode'     => $mode,
             'balance_payments_history' => $history,
-            'payment_status'           => $isFullyPaid ? 'fully_paid' : 'partial_paid',
+            'payment_status'           => $isFullyPaid ? 'fully_paid' : 'partially_paid',
             'booking_status'           => $isFullyPaid ? 'balance_paid' : $booking->booking_status,
         ];
 
@@ -920,6 +950,7 @@ class BookingApiController extends Controller
         }
 
         $booking->update($updateData);
+        $booking->refresh();
 
         // Auto-approve any pending referral/activation points linked to this now fully-paid booking
         $referralService = app(\App\Services\ReferralCommissionService::class);
@@ -950,17 +981,81 @@ class BookingApiController extends Controller
             $message .= ' Notice: Your Self-Dealer status has been cancelled because your initial 20% activation credit was consumed. Purchase an eligible product to reactivate.';
         }
 
+        $product = $booking->product;
+        $imageUrl = $product ? \App\Helpers\ImageHelper::resolve($product->main_image) : null;
+        $statusBadge = $isFullyPaid ? 'COMPLETED' : ($booking->booking_status === 'cancelled' ? 'CANCELLED' : ($booking->transfer_status === 'transferred' ? 'TRANSFERRED' : 'ACTIVE'));
+
+        $fullBookingMap = [
+            'id'                      => $booking->id,
+            'booking_number'          => $booking->booking_number,
+            'product_id'              => $booking->product_id,
+            'product_name'            => $booking->product_name,
+            'model_code'              => $booking->model_code,
+            'selected_color'          => $booking->selected_color,
+            'quantity'                => (int)$booking->quantity,
+            'image'                   => $imageUrl,
+            'imageUrl'                => $imageUrl,
+            'main_image'              => $imageUrl,
+            'mrp'                     => (float)$booking->mrp,
+            'total_mrp'               => (float)$booking->mrp,
+            'booking_amount'          => (float)$booking->booking_amount,
+            'token_amount'            => (float)$booking->booking_amount,
+            'initial_advance_paid'    => (float)$booking->booking_amount,
+            'balance_amount'          => (float)$booking->balance_amount,
+            'balance_amount_due'      => (float)$booking->balance_amount,
+            'balance_amount_remaining'=> (float)$booking->balance_amount,
+            'filled_amount'           => (float)$booking->filled_amount,
+            'total_paid'              => (float)$booking->filled_amount,
+            'advance_paid'            => (float)$booking->filled_amount,
+            'paid_amount'             => (float)$booking->filled_amount,
+            'balance_payment_mode'    => $booking->balance_payment_mode,
+            'emi_tenure_months'       => $booking->emi_tenure_months,
+            'emi_monthly_amount'      => (float)($booking->emi_monthly_amount ?? 0),
+            'emi_installments_paid'   => (int)($booking->emi_installments_paid ?? 0),
+            'balance_payments_history'=> $booking->balance_payments_history,
+            'booking_date'            => $booking->booking_date ? $booking->booking_date->format('Y-m-d') : null,
+            'balance_due_date'        => $booking->balance_due_date ? $booking->balance_due_date->format('Y-m-d') : null,
+            'days_remaining'          => $booking->days_remaining,
+            'is_overdue'              => $booking->is_overdue,
+            'status_badge'            => $statusBadge,
+            'payment_type'            => $booking->payment_type,
+            'payment_status'          => $booking->payment_status,
+            'booking_status'          => $booking->booking_status,
+            'transfer_status'         => $booking->transfer_status,
+            'transfer_eligible'       => $booking->transfer_status === 'original' && $booking->payment_status !== 'fully_paid',
+            'delivery_challan_number' => $booking->delivery_challan_number,
+            'challan_generated_at'    => $booking->challan_generated_at ? $booking->challan_generated_at->toIso8601String() : null,
+            'can_download_challan'    => $booking->can_download_challan,
+            'challan_status'          => $booking->challan_status,
+            'non_refundable_accepted' => $booking->non_refundable_accepted,
+            'customer_name'           => $booking->customer_name,
+            'customer_phone'          => $booking->customer_phone,
+            'customer_email'          => $booking->customer_email,
+            'shipping_address'        => $booking->shipping_address,
+            'city'                    => $booking->city,
+            'state'                   => $booking->state,
+            'pincode'                 => $booking->pincode,
+            'qr_code_hash'            => $booking->qr_code_hash,
+            'created_at'              => $booking->created_at ? $booking->created_at->toIso8601String() : null,
+        ];
+
         return response()->json([
             'status'  => true,
             'message' => $message,
-            'data'    => [
-                'booking_number'          => $booking->booking_number,
+            'booking' => $fullBookingMap,
+            'data'    => array_merge($fullBookingMap, [
                 'installment_no'          => $installmentNo,
                 'payment_mode'            => $mode,
                 'amount_paid_now'         => round($creditApplied + $remainingCashToPay, 2),
                 'credit_applied'          => (float)$creditApplied,
                 'cash_paid'               => (float)$remainingCashToPay,
                 'balance_amount_remaining'=> (float)$booking->balance_amount,
+                'balance_amount'          => (float)$booking->balance_amount,
+                'balance_amount_due'      => (float)$booking->balance_amount,
+                'filled_amount'           => (float)$booking->filled_amount,
+                'total_paid'              => (float)$booking->filled_amount,
+                'advance_paid'            => (float)$booking->filled_amount,
+                'paid_amount'             => (float)$booking->filled_amount,
                 'is_fully_paid'           => $isFullyPaid,
                 'payment_status'          => $booking->payment_status,
                 'latest_receipt_url'      => $balanceReceiptPath ? (str_starts_with($balanceReceiptPath, 'http') ? $balanceReceiptPath : asset($balanceReceiptPath)) : null,
@@ -980,7 +1075,7 @@ class BookingApiController extends Controller
                 'self_dealer_cancelled'   => $stakeResult['cancelled'],
                 'self_dealer_status'      => $user->fresh()->self_dealer_status,
                 'is_self_dealer'          => (bool) $user->fresh()->is_self_dealer,
-            ],
+            ]),
         ]);
     }
 
