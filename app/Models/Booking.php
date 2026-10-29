@@ -150,7 +150,8 @@ class Booking extends Model
 
     public function getCanDownloadChallanAttribute(): bool
     {
-        return $this->payment_status === 'fully_paid' && (float)$this->balance_amount <= 0;
+        $isPaid = in_array(strtolower((string)$this->payment_status), ['fully_paid', 'paid', 'completed']) || (float)$this->balance_amount <= 0.01;
+        return $isPaid && ($this->booking_status !== 'cancelled');
     }
 
     public function getChallanStatusAttribute(): string

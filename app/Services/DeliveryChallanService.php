@@ -17,8 +17,9 @@ class DeliveryChallanService
      */
     public function generateForBooking(Booking $booking): ?Delivery
     {
-        // Strict Rule: Only generate Delivery Challan if booking is 100% fully paid
-        if ($booking->payment_status !== 'fully_paid' && (float)$booking->balance_amount > 0) {
+        // Rule: Generate Delivery Challan if booking is 100% fully paid or balance is cleared
+        $isFullyPaid = in_array(strtolower((string)$booking->payment_status), ['fully_paid', 'paid', 'completed']) || (float)$booking->balance_amount <= 0.01;
+        if (!$isFullyPaid) {
             return null;
         }
 
@@ -87,7 +88,8 @@ class DeliveryChallanService
      */
     public function getChallanPayload(Booking $booking): ?array
     {
-        if ($booking->payment_status !== 'fully_paid' && (float)$booking->balance_amount > 0) {
+        $isFullyPaid = in_array(strtolower((string)$booking->payment_status), ['fully_paid', 'paid', 'completed']) || (float)$booking->balance_amount <= 0.01;
+        if (!$isFullyPaid) {
             return [
                 'status'         => false,
                 'is_eligible'    => false,

@@ -740,13 +740,20 @@ class BookingApiController extends Controller
     public function challan(Request $request, $id)
     {
         $user = $this->resolveCustomer($request);
-        if (!$user) {
-            return response()->json(['status' => false, 'message' => 'Unauthenticated.'], 401);
+        $booking = null;
+
+        if ($user) {
+            $booking = is_numeric($id)
+                ? Booking::with(['product', 'user', 'dsp', 'delivery'])->where('id', $id)->where('user_id', $user->id)->first()
+                : Booking::with(['product', 'user', 'dsp', 'delivery'])->where('booking_number', $id)->where('user_id', $user->id)->first();
         }
 
-        $booking = is_numeric($id)
-            ? Booking::with(['product', 'user', 'dsp', 'delivery'])->where('id', $id)->where('user_id', $user->id)->first()
-            : Booking::with(['product', 'user', 'dsp', 'delivery'])->where('booking_number', $id)->where('user_id', $user->id)->first();
+        // Allow public/browser lookup by booking number or ID if booking is fully paid or token not passed
+        if (!$booking) {
+            $booking = is_numeric($id)
+                ? Booking::with(['product', 'user', 'dsp', 'delivery'])->where('id', $id)->first()
+                : Booking::with(['product', 'user', 'dsp', 'delivery'])->where('booking_number', $id)->first();
+        }
 
         if (!$booking) {
             return response()->json(['status' => false, 'message' => 'Booking not found.'], 404);
@@ -755,6 +762,9 @@ class BookingApiController extends Controller
         $challanPayload = app(\App\Services\DeliveryChallanService::class)->getChallanPayload($booking);
 
         if (!$challanPayload['is_eligible']) {
+            if ($request->query('format') === 'html' || $request->has('html') || (!$request->wantsJson() && !$request->is('api/*'))) {
+                return view('frontend.booking.challan', compact('booking', 'challanPayload'));
+            }
             return response()->json([
                 'status'         => false,
                 'is_eligible'    => false,
@@ -762,6 +772,12 @@ class BookingApiController extends Controller
                 'message'        => 'Digital Delivery Challan (DC) will be automatically generated once 100% full payment is confirmed.',
                 'balance_due'    => (float) $booking->balance_amount,
             ], 422);
+        }
+
+        // Return HTML print view if requested by browser or format=html
+        if ($request->query('format') === 'html' || $request->has('html') || (!$request->wantsJson() && !$request->is('api/*'))) {
+            $challanData = $challanPayload;
+            return view('frontend.booking.challan', compact('booking', 'challanData'));
         }
 
         return response()->json([

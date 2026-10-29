@@ -340,9 +340,17 @@ class BookingController extends Controller
      */
     public function challan($bookingNumber)
     {
-        $booking = Booking::with(['product', 'user', 'dsp', 'delivery'])
-            ->where('booking_number', $bookingNumber)
-            ->firstOrFail();
+        $booking = is_numeric($bookingNumber)
+            ? Booking::with(['product', 'user', 'dsp', 'delivery'])->where('id', $bookingNumber)->first()
+            : Booking::with(['product', 'user', 'dsp', 'delivery'])->where('booking_number', $bookingNumber)->first();
+
+        if (!$booking) {
+            $booking = Booking::with(['product', 'user', 'dsp', 'delivery'])->where('booking_number', $bookingNumber)->first();
+        }
+
+        if (!$booking) {
+            abort(404, 'Booking not found');
+        }
 
         $challanData = app(\App\Services\DeliveryChallanService::class)->getChallanPayload($booking);
 
