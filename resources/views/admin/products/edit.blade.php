@@ -215,15 +215,40 @@
                                                 <label class="form-label fw-semibold text-dark mb-0">Main Product Image</label>
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Primary Showcase</span>
                                             </div>
-                                            <span class="micro text-muted d-block mb-3">Leave empty to keep existing image, or upload a new one (JPG, PNG, WEBP - Max 4MB).</span>
+                                            <span class="micro text-muted d-block mb-3">
+                                                @if($product->main_image)
+                                                    Leave empty to keep existing image, remove it to leave blank, or upload a new one (JPG, PNG, WEBP - Max 4MB).
+                                                @else
+                                                    Upload a showcase photo or leave empty to keep blank (JPG, PNG, WEBP - Max 4MB).
+                                                @endif
+                                            </span>
+
+                                            <input type="hidden" name="remove_main_image" id="remove_main_image_input" value="0">
                                             
                                             @if($product->main_image)
-                                                <div class="mb-3 d-flex align-items-center gap-2 p-2 bg-white rounded border">
-                                                    <img src="{{ \App\Helpers\ImageHelper::resolve($product->main_image) }}" class="rounded border" width="60" height="60" style="object-fit: cover;">
-                                                    <div>
-                                                        <span class="d-block small fw-semibold text-dark">Current Main Image</span>
-                                                        <span class="micro text-muted">Will remain active unless a new file is chosen below</span>
+                                                <div id="currentMainImageWrapper" class="mb-3 d-flex align-items-center justify-content-between gap-2 p-2 bg-white rounded border">
+                                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                                        <img src="{{ \App\Helpers\ImageHelper::resolve($product->main_image) }}" class="rounded border flex-shrink-0" width="60" height="60" style="object-fit: cover;">
+                                                        <div class="overflow-hidden">
+                                                            <span class="d-block small fw-semibold text-dark text-truncate">Current Main Image</span>
+                                                            <span class="micro text-muted">Active main showcase image</span>
+                                                        </div>
                                                     </div>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm text-nowrap d-flex align-items-center gap-1 flex-shrink-0" id="deleteCurrentMainImageBtn" title="Remove main image and keep blank">
+                                                        <iconify-icon icon="solar:trash-bin-trash-bold" class="fs-6"></iconify-icon>
+                                                        <span>Remove</span>
+                                                    </button>
+                                                </div>
+
+                                                <!-- Notice shown when user clicks Remove -->
+                                                <div id="mainImageRemovedNotice" class="alert alert-warning py-2 px-3 mb-3 d-none align-items-center justify-content-between border-warning-subtle rounded">
+                                                    <div class="d-flex align-items-center gap-2 small text-dark">
+                                                        <iconify-icon icon="solar:trash-bin-trash-bold" class="text-danger fs-5 flex-shrink-0"></iconify-icon>
+                                                        <span><strong>Main image removed.</strong> Saved as blank/no image unless replaced.</span>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-dark py-0 px-2 micro fw-semibold flex-shrink-0" id="undoRemoveMainImageBtn" title="Restore existing image">
+                                                        Undo
+                                                    </button>
                                                 </div>
                                             @endif
 
@@ -664,12 +689,50 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Main Image Instant Preview
+    // Main Image Instant Preview & Removal
     const mainImageInput = document.getElementById('main_image_input');
     const mainImagePreviewWrapper = document.getElementById('mainImagePreviewWrapper');
     const mainImagePreview = document.getElementById('mainImagePreview');
     const mainImageInfo = document.getElementById('mainImageInfo');
     const clearMainImageBtn = document.getElementById('clearMainImageBtn');
+    const removeMainImageInput = document.getElementById('remove_main_image_input');
+    const currentMainImageWrapper = document.getElementById('currentMainImageWrapper');
+    const mainImageRemovedNotice = document.getElementById('mainImageRemovedNotice');
+    const deleteCurrentMainImageBtn = document.getElementById('deleteCurrentMainImageBtn');
+    const undoRemoveMainImageBtn = document.getElementById('undoRemoveMainImageBtn');
+
+    if (deleteCurrentMainImageBtn && removeMainImageInput) {
+        deleteCurrentMainImageBtn.addEventListener('click', function () {
+            removeMainImageInput.value = '1';
+            if (currentMainImageWrapper) currentMainImageWrapper.classList.add('d-none');
+            if (mainImageRemovedNotice) {
+                mainImageRemovedNotice.classList.remove('d-none');
+                mainImageRemovedNotice.classList.add('d-flex');
+            }
+            if (mainImageInput) {
+                mainImageInput.value = '';
+            }
+            if (mainImagePreviewWrapper) {
+                mainImagePreviewWrapper.classList.add('d-none');
+            }
+            if (mainImagePreview) {
+                mainImagePreview.src = '';
+            }
+        });
+    }
+
+    if (undoRemoveMainImageBtn && removeMainImageInput) {
+        undoRemoveMainImageBtn.addEventListener('click', function () {
+            removeMainImageInput.value = '0';
+            if (mainImageRemovedNotice) {
+                mainImageRemovedNotice.classList.add('d-none');
+                mainImageRemovedNotice.classList.remove('d-flex');
+            }
+            if (currentMainImageWrapper) {
+                currentMainImageWrapper.classList.remove('d-none');
+            }
+        });
+    }
 
     if (mainImageInput && mainImagePreviewWrapper && mainImagePreview) {
         mainImageInput.addEventListener('change', function () {
@@ -684,6 +747,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 };
                 reader.readAsDataURL(file);
+
+                if (removeMainImageInput) {
+                    removeMainImageInput.value = '0';
+                }
+                if (mainImageRemovedNotice) {
+                    mainImageRemovedNotice.classList.add('d-none');
+                    mainImageRemovedNotice.classList.remove('d-flex');
+                }
             } else {
                 mainImagePreviewWrapper.classList.add('d-none');
                 mainImagePreview.src = '';
@@ -695,6 +766,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 mainImageInput.value = '';
                 mainImagePreviewWrapper.classList.add('d-none');
                 mainImagePreview.src = '';
+                if (removeMainImageInput && removeMainImageInput.value === '1') {
+                    if (mainImageRemovedNotice) {
+                        mainImageRemovedNotice.classList.remove('d-none');
+                        mainImageRemovedNotice.classList.add('d-flex');
+                    }
+                } else if (currentMainImageWrapper) {
+                    currentMainImageWrapper.classList.remove('d-none');
+                }
             });
         }
     }

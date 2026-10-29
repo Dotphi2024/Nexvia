@@ -200,6 +200,7 @@ class ProductAdminController extends Controller
             'stock'          => 'required|integer|min:0',
             'video_url'      => 'nullable|url',
             'main_image'     => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'remove_main_image' => 'nullable|in:0,1,true,false',
             'gallery.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
@@ -210,7 +211,19 @@ class ProductAdminController extends Controller
         $eligibleReferralValue = $request->eligible_referral_value ?: $mrp;
 
         $mainImagePath = $product->main_image;
+
+        // Check if existing main image should be removed/blank
+        if ($request->boolean('remove_main_image') || $request->input('remove_main_image') === '1' || $request->input('remove_main_image') === 1) {
+            if ($product->main_image && str_starts_with($product->main_image, 'uploads/products/') && file_exists(public_path($product->main_image))) {
+                @unlink(public_path($product->main_image));
+            }
+            $mainImagePath = null;
+        }
+
         if ($request->hasFile('main_image')) {
+            if ($product->main_image && str_starts_with($product->main_image, 'uploads/products/') && file_exists(public_path($product->main_image))) {
+                @unlink(public_path($product->main_image));
+            }
             $file = $request->file('main_image');
             $fileName = 'product_' . time() . '_' . Str::random(6) . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('uploads/products'), $fileName);

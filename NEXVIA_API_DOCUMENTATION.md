@@ -1,15 +1,16 @@
 # NEXVIA Mobility & Electronics — Complete API Reference Manual
 
-> **Base URL:** `https://your-domain.com/api` (Local: `http://127.0.0.1:8000/api`)  
+> **Base URL:** `https://your-domain.com/api` (Local Dev: `http://127.0.0.1:8000/api`)  
 > **API Version:** v1 / Direct REST  
 > **Content-Type:** `application/json` / `multipart/form-data` (for file uploads)  
-> **Authentication Scheme:** `Authorization: Bearer <token>` or `token: <token>` header or `user_id` parameter.
+> **Authentication Scheme:** `Authorization: Bearer <token>` or `token: <token>` header or `user_id` parameter.  
+> **DSP Partner Auth Scheme:** `Authorization: Bearer <dsp_token>` or `token: <token>` header or `dsp_id` parameter.
 
 ---
 
 ## Table of Contents
 
-1. [Authentication & Account APIs](#1-authentication--account-apis)
+1. [Authentication & Customer Account APIs](#1-authentication--customer-account-apis)
    - [1.1 Register Customer](#11-register-customer)
    - [1.2 Login Customer (Passwordless / Phone)](#12-login-customer-passwordless--phone)
    - [1.3 Send OTP](#13-send-otp)
@@ -25,13 +26,15 @@
    - [2.4 Get Saved Addresses](#24-get-saved-addresses)
    - [2.5 Add or Update Address](#25-add-or-update-address)
    - [2.6 Delete Address](#26-delete-address)
-3. [Home Sliders & Banners APIs](#3-home-sliders--banners-apis)
+3. [Home Sliders & Promotional Banners APIs](#3-home-sliders--promotional-banners-apis)
    - [3.1 Get Home Banners](#31-get-home-banners)
-   - [3.2 Record Banner Click / Tap](#32-record-banner-click--tap)
+   - [3.2 Get Side Banners](#32-get-side-banners)
+   - [3.3 Record Banner Click / Tap](#33-record-banner-click--tap)
 4. [Categories & Reward Progression Slabs APIs](#4-categories--reward-progression-slabs-apis)
    - [4.1 List All Categories](#41-list-all-categories)
    - [4.2 Single Category Detail & Products](#42-single-category-detail--products)
-5. [Products & Search APIs](#5-products--search-apis)
+   - [4.3 Subcategories by Category](#43-subcategories-by-category)
+5. [Products Catalog & Search APIs](#5-products-catalog--search-apis)
    - [5.1 Paginated Products Catalog](#51-paginated-products-catalog)
    - [5.2 Single Product Details & Specifications](#52-single-product-details--specifications)
    - [5.3 Product Search & Advanced Filtering](#53-product-search--advanced-filtering)
@@ -43,7 +46,7 @@
    - [6.4 Check Product Status in Wishlist](#64-check-product-status-in-wishlist)
    - [6.5 Remove Item from Wishlist](#65-remove-item-from-wishlist)
    - [6.6 Clear Wishlist](#66-clear-wishlist)
-7. [Cart Management APIs](#7-cart-management-apis)
+7. [Shopping Cart Management APIs](#7-shopping-cart-management-apis)
    - [7.1 Get Cart Items & Financial Summary](#71-get-cart-items--financial-summary)
    - [7.2 Add Item to Cart](#72-add-item-to-cart)
    - [7.3 Update Cart Item Quantity / Color](#73-update-cart-item-quantity--color)
@@ -52,7 +55,7 @@
 8. [Checkout Calculation & Gateway Payment APIs](#8-checkout-calculation--gateway-payment-apis)
    - [8.1 Compute Checkout & Tax Breakdown](#81-compute-checkout--tax-breakdown)
    - [8.2 Create Gateway Payment Order (Razorpay)](#82-create-gateway-payment-order-razorpay)
-   - [8.3 Verify Payment Callback](#83-verify-payment-callback)
+   - [8.3 Verify Payment Callback & Signature](#83-verify-payment-callback--signature)
 9. [Flexi-Bookings & 60-Day Balance Engine APIs](#9-flexi-bookings--60-day-balance-engine-apis)
    - [9.1 List User Bookings](#91-list-user-bookings)
    - [9.2 Create Confirmed 20% Flexi-Booking](#92-create-confirmed-20-flexi-booking)
@@ -60,14 +63,20 @@
    - [9.4 Pay Remaining 80% Balance (Cash / Wallet)](#94-pay-remaining-80-balance-cash--wallet)
    - [9.5 Initiate Booking Transfer](#95-initiate-booking-transfer)
    - [9.6 Confirm Booking Transfer via OTP](#96-confirm-booking-transfer-via-otp)
+   - [9.7 Select Preferred DSP Hub for Delivery](#97-select-preferred-dsp-hub-for-delivery)
+   - [9.8 Reallocate Stored Paid Amount / Exchange Product](#98-reallocate-stored-paid-amount--exchange-product)
+   - [9.9 Cancel Booking Policy Endpoint](#99-cancel-booking-policy-endpoint)
+   - [9.10 Download / View Digital Delivery Challan (API)](#910-download--view-digital-delivery-challan-api)
 10. [Multi-Item Orders & Delivery Tracking APIs](#10-multi-item-orders--delivery-tracking-apis)
     - [10.1 Multi-Item Order Checkout](#101-multi-item-order-checkout)
     - [10.2 Track 7-Stage Order Delivery](#102-track-7-stage-order-delivery)
-11. [Warranty & Service Support APIs](#11-warranty--service-support-apis)
+11. [Warranty & Customer Service Support APIs](#11-warranty--customer-service-support-apis)
     - [11.1 List Customer Warranties](#111-list-customer-warranties)
     - [11.2 Create Service / Repair Ticket](#112-create-service--repair-ticket)
     - [11.3 List Customer Service Tickets](#113-list-customer-service-tickets)
-    - [11.4 Schedule / Rate Installation](#114-schedule--rate-installation)
+    - [11.4 Get Service Ticket Details](#114-get-service-ticket-details)
+    - [11.5 Lookup Local DSP Partners by Pincode / District](#115-lookup-local-dsp-partners-by-pincode--district)
+    - [11.6 Schedule or Rate Technician Installation](#116-schedule-or-rate-technician-installation)
 12. [Self Dealer Ecosystem & Referral Dashboard APIs](#12-self-dealer-ecosystem--referral-dashboard-apis)
     - [12.1 Customer Referral & Wallet Dashboard](#121-customer-referral--wallet-dashboard)
     - [12.2 Self Dealer Eligibility & Status (v1)](#122-self-dealer-eligibility--status-v1)
@@ -93,20 +102,67 @@
 16. [Stored Paid Amount / Product Credit Reallocation & Purchasing Other Items](#16-stored-paid-amount--product-credit-reallocation--purchasing-other-items)
     - [16.1 Reallocate Paid Amount to Product Credit Wallet](#161-reallocate-paid-amount-to-product-credit-wallet)
     - [16.2 Book or Buy New Catalog Item Using Wallet Credits](#162-book-or-buy-new-catalog-item-using-wallet-credits)
+17. [Authorised Delivery & Service Partner (DSP) Full Partner Ecosystem](#17-authorised-delivery--service-partner-dsp-full-partner-ecosystem)
+    - [17.1 DSP Architecture & Commission Workflow Overview](#171-dsp-architecture--commission-workflow-overview)
+    - [17.2 Submit DSP Partner Application](#172-submit-dsp-partner-application)
+    - [17.3 Track Application Status](#173-track-application-status)
+    - [17.4 DSP Partner Login](#174-dsp-partner-login)
+    - [17.5 DSP Partner Logout](#175-dsp-partner-logout)
+    - [17.6 Check Available DSPs by Pincode & Nearby Discovery](#176-check-available-dsps-by-pincode--nearby-discovery)
+    - [17.7 DSP Dashboard Stats & Operations Overview](#177-dsp-dashboard-stats--operations-overview)
+    - [17.8 Get DSP Profile & Payout Settings](#178-get-dsp-profile--payout-settings)
+    - [17.9 Update DSP Profile & Payout Credentials](#179-update-dsp-profile--payout-credentials)
+    - [17.10 List Assigned Territory Deliveries](#1710-list-assigned-territory-deliveries)
+    - [17.11 Single Delivery Shipment Details](#1711-single-delivery-shipment-details)
+    - [17.12 Product Received Confirmation at DSP Hub](#1712-product-received-confirmation-at-dsp-hub)
+    - [17.13 Update Delivery Stage Status](#1713-update-delivery-stage-status)
+    - [17.14 Customer Delivery OTP Verification & Automatic Warranty](#1714-customer-delivery-otp-verification--automatic-warranty)
+    - [17.15 DSP Commission Wallet & Earnings Ledger](#1715-dsp-commission-wallet--earnings-ledger)
+    - [17.16 Request Cash Payout / Bank or UPI Withdrawal](#1716-request-cash-payout--bank-or-upi-withdrawal)
+    - [17.17 List Payout Requests History](#1717-list-payout-requests-history)
+    - [17.18 List Assigned Service Requests](#1718-list-assigned-service-requests)
+    - [17.19 Service Request Detail](#1719-service-request-detail)
+    - [17.20 Update Service Request Attendance & Resolution Status](#1720-update-service-request-attendance--resolution-status)
+18. [Subcategories & DLS Agro / Farm Equipment Catalog APIs](#18-subcategories--dls-agro--farm-equipment-catalog-apis)
+    - [18.1 List All Subcategories](#181-list-all-subcategories)
+    - [18.2 Subcategories by Category](#182-subcategories-by-category)
+    - [18.3 Single Subcategory Details](#183-single-subcategory-details)
+    - [18.4 DLS Agro Categories Catalog](#184-dls-agro-categories-catalog)
+    - [18.5 DLS Agro Subcategories by Category](#185-dls-agro-subcategories-by-category)
+    - [18.6 DLS Agro All Subcategories](#186-dls-agro-all-subcategories)
+    - [18.7 DLS Agro Subcategory Detail](#187-dls-agro-subcategory-detail)
+    - [18.8 DLS Agro Products Catalog with Specs & Filters](#188-dls-agro-products-catalog-with-specs--filters)
+    - [18.9 DLS Agro Featured Agricultural Equipment](#189-dls-agro-featured-agricultural-equipment)
+    - [18.10 DLS Agro Single Product Details](#1810-dls-agro-single-product-details)
+    - [18.11 DLS Agro Hero & Section Banners](#1811-dls-agro-hero--section-banners)
+    - [18.12 DLS Agro Side Banners](#1812-dls-agro-side-banners)
 19. [Website Timed Popup Lead Capture APIs](#19-website-timed-popup-lead-capture-apis)
     - [19.1 Get Popup Configuration & Delay](#191-get-popup-configuration--delay)
     - [19.2 Submit Popup Lead Enquiry](#192-submit-popup-lead-enquiry)
     - [19.3 Frontend React / Vanilla JS Quick Integration Guide](#193-frontend-react--vanilla-js-quick-integration-guide)
+20. [CMS Dynamic Pages & Legal Policy APIs](#20-cms-dynamic-pages--legal-policy-apis)
+    - [20.1 Get Privacy Policy](#201-get-privacy-policy)
+    - [20.2 Get Terms & Conditions](#202-get-terms--conditions)
+    - [20.3 Get Refund & Cancellation Policy](#203-get-refund--cancellation-policy)
+    - [20.4 Get About Us Page](#204-get-about-us-page)
+    - [20.5 Get Contact Us Details](#205-get-contact-us-details)
+    - [20.6 Submit Contact Us Inquiry](#206-submit-contact-us-inquiry)
+    - [20.7 List All Dynamic CMS Pages](#207-list-all-dynamic-cms-pages)
+    - [20.8 Get Single CMS Page by Slug or ID](#208-get-single-cms-page-by-slug-or-id)
+21. [System Diagnostics, Automated Deployment & Utilities](#21-system-diagnostics-automated-deployment--utilities)
+    - [21.1 API Root Health Check](#211-api-root-health-check)
+    - [21.2 Automated Deployment Webhook](#212-automated-deployment-webhook)
+    - [21.3 Live Mail Diagnostics & Test Email](#213-live-mail-diagnostics--test-email)
 
 ---
 
-## 1. Authentication & Account APIs
+## 1. Authentication & Customer Account APIs
 
 ### 1.1 Register Customer
 Create a new customer account and generate unique referral code and API token.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/register` or `/api/customer/register`
+- **URL:** `/api/auth/register` (Alias: `/api/customer/register`)
 - **Auth Required:** No
 
 #### Request Body
@@ -126,9 +182,20 @@ Create a new customer account and generate unique referral code and API token.
   "terms_version": "v1.0"
 }
 ```
-> **Notes**:
-> - `fullName` (or `name`), `phone` (10 digits), and `password` (min: 6 chars) are required.
-> - OTP verification is not required for registration.
+
+#### Field Specifications:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `fullName` / `name` | string | **Yes** | Full customer name (min: 2 chars) |
+| `phone` | string | **Yes** | 10-digit mobile number (`^[6-9]\d{9}$`) |
+| `password` | string | **Yes** | Account password (min: 6 chars) |
+| `password_confirmation` | string | No | Password confirmation |
+| `email` | string | No | Unique email address |
+| `referral_code` | string | No | Optional referral code of inviter |
+| `pincode` | string | No | 6-digit postal code |
+| `city` | string | No | City of residence |
+| `state` | string | No | State of residence |
+| `fcm_token` | string | No | Firebase Cloud Messaging device token |
 
 #### Success Response (`201 Created`)
 ```json
@@ -150,35 +217,31 @@ Create a new customer account and generate unique referral code and API token.
     "city": "Pune",
     "state": "Maharashtra",
     "pincode": "411001",
-    "fcm_token": "fcm_device_token_here",
-    "referred_by": {
-      "id": 3,
-      "name": "Anil Kumar",
-      "referral_code": "NEX12345"
-    }
+    "created_at": "2026-10-16 10:15:30"
   }
 }
 ```
 
-#### Error Response (`422 Unprocessable Entity`)
+#### Error Response (`422 Unprocessable Content`)
 ```json
 {
   "status": false,
-  "message": "Validation error",
+  "message": "The phone has already been taken.",
   "errors": {
-    "phone": ["This phone number is already registered."],
-    "password": ["Password is required to register."]
+    "phone": [
+      "The phone has already been taken."
+    ]
   }
 }
 ```
 
 ---
 
-### 1.2 Login Customer (Password Authentication)
-Login via registered phone number/email and password. Returns authentication bearer token.
+### 1.2 Login Customer (Passwordless / Phone)
+Authenticate customer using mobile number and password, or phone + OTP.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/login` or `/api/customer/login`
+- **URL:** `/api/auth/login` (Alias: `/api/customer/login`)
 - **Auth Required:** No
 
 #### Request Body
@@ -194,42 +257,44 @@ Login via registered phone number/email and password. Returns authentication bea
 ```json
 {
   "status": true,
-  "message": "Login successful",
-  "token": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8",
+  "message": "Login successful.",
+  "token": "4f8a1e2d3c9b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2",
   "data": {
     "id": 12,
     "fullName": "Rahul Sharma",
-    "name": "Rahul Sharma",
     "phone": "9876543210",
     "email": "rahul.sharma@example.com",
     "referral_code": "NEX98B2A1",
-    "referral_url": "https://your-domain.com/ref/NEX98B2A1",
     "is_self_dealer": true,
-    "self_dealer_code": "SD-12-PUN",
     "self_dealer_status": "active",
-    "wallet_balance": 4500.00,
-    "city": "Pune",
-    "state": "Maharashtra",
-    "pincode": "411001",
-    "avatarUrl": "https://your-domain.com/customer_pics/avatar.jpg",
-    "status": "active"
+    "wallet_balance": 18500.00,
+    "avatar": "https://backend.nexviadls.com/uploads/avatars/user_12.jpg"
   }
+}
+```
+
+#### Error Response (`401 Unauthorized`)
+```json
+{
+  "status": false,
+  "message": "Invalid credentials. Please check your password or use OTP login."
 }
 ```
 
 ---
 
 ### 1.3 Send OTP
-Send a 6-digit verification code to the customer's registered WhatsApp / SMS.
+Send a 6-digit one-time password to customer's mobile number via SMS gateway.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/send-otp` or `/api/customer/send-otp`
+- **URL:** `/api/auth/send-otp` (Alias: `/api/customer/send-otp`)
 - **Auth Required:** No
 
 #### Request Body
 ```json
 {
-  "phone": "9876543210"
+  "phone": "9876543210",
+  "purpose": "login"
 }
 ```
 
@@ -237,29 +302,26 @@ Send a 6-digit verification code to the customer's registered WhatsApp / SMS.
 ```json
 {
   "status": true,
-  "message": "OTP sent successfully.",
-  "phone": "9876543210",
-  "otp": null,
-  "data": {
-    "phone": "9876543210"
-  }
+  "message": "OTP has been sent successfully to +91 9876543210.",
+  "expires_in_seconds": 300,
+  "resend_in_seconds": 60
 }
 ```
 
 ---
 
 ### 1.4 Verify OTP
-Verify 6-digit code and authenticate the customer.
+Verify OTP and authenticate or complete action.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/verify-otp` or `/api/customer/verify-otp`
+- **URL:** `/api/auth/verify-otp` (Alias: `/api/customer/verify-otp`)
 - **Auth Required:** No
 
 #### Request Body
 ```json
 {
   "phone": "9876543210",
-  "otpCode": "123456"
+  "otp": "492810"
 }
 ```
 
@@ -267,56 +329,58 @@ Verify 6-digit code and authenticate the customer.
 ```json
 {
   "status": true,
-  "message": "OTP verified. Login successful!",
-  "token": "7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8",
-  "data": {
+  "message": "OTP verified successfully.",
+  "token": "4f8a1e2d3c9b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2",
+  "user": {
     "id": 12,
-    "fullName": "Rahul Sharma",
+    "name": "Rahul Sharma",
     "phone": "9876543210",
-    "email": "rahul.sharma@example.com",
     "referral_code": "NEX98B2A1",
-    "wallet_balance": 4500.00,
-    "status": "active"
+    "is_self_dealer": true
   }
+}
+```
+
+#### Error Response (`422 Unprocessable Content`)
+```json
+{
+  "status": false,
+  "message": "Invalid or expired OTP. Please request a new one.",
+  "error_code": "OTP_INVALID"
 }
 ```
 
 ---
 
 ### 1.5 Refresh Token
-Generate a new API token using an active or existing token.
+Regenerate a new persistent API token.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/refresh-token` or `/api/customer/refresh-token`
+- **URL:** `/api/auth/refresh-token` (Alias: `/api/customer/refresh-token`)
 - **Headers:** `Authorization: Bearer <token>`
-- **Request Body:**
-```json
-{
-  "refreshToken": "existing_api_token"
-}
-```
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
   "message": "Token refreshed successfully.",
-  "token": "new_refreshed_api_token_value",
-  "refreshToken": "new_refreshed_api_token_value"
+  "token": "7a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
 }
 ```
 
 ---
 
 ### 1.6 Forgot Password OTP
-Dispatch a password reset OTP to registered WhatsApp number.
+Initiate password recovery by sending reset OTP.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/forgot-password` or `/api/customer/forgot-password`
-- **Request Body:**
+- **URL:** `/api/auth/forgot-password` (Alias: `/api/customer/forgot-password`)
+- **Auth Required:** No
+
+#### Request Body
 ```json
 {
-  "email": "rahul.sharma@example.com"
+  "phone": "9876543210"
 }
 ```
 
@@ -324,19 +388,20 @@ Dispatch a password reset OTP to registered WhatsApp number.
 ```json
 {
   "status": true,
-  "message": "Password reset OTP sent to your registered WhatsApp phone number.",
-  "phone": "9876543210"
+  "message": "Password reset OTP sent to your registered mobile number."
 }
 ```
 
 ---
 
 ### 1.7 Resend OTP
-Resend OTP with 60-second rate-limit guard.
+Resend OTP with rate-limiting check.
 
 - **Method:** `POST`
-- **URL:** `/api/auth/resend-otp` or `/api/customer/resend-otp`
-- **Request Body:**
+- **URL:** `/api/auth/resend-otp` (Alias: `/api/customer/resend-otp`)
+- **Auth Required:** No
+
+#### Request Body
 ```json
 {
   "phone": "9876543210"
@@ -347,45 +412,25 @@ Resend OTP with 60-second rate-limit guard.
 ```json
 {
   "status": true,
-  "message": "OTP resent to your WhatsApp number.",
-  "phone": "9876543210"
-}
-```
-
-#### Rate Limit Response (`429 Too Many Requests`)
-```json
-{
-  "status": false,
-  "message": "Please wait 45 seconds before requesting a new OTP.",
-  "retry_after": 45
+  "message": "OTP has been resent successfully.",
+  "expires_in_seconds": 300
 }
 ```
 
 ---
 
 ### 1.8 Customer Logout
-Invalidate active API token and clear user sessions.
+Invalidate current session and API token.
 
 - **Method:** `POST` or `GET`
-- **URL:** `/api/auth/logout` or `/api/customer/logout` or `/api/logout`
-- **Request Body:**
-```json
-{
-  "user_id": 12
-}
-```
+- **URL:** `/api/auth/logout` (Aliases: `/api/customer/logout`, `/api/logout`)
+- **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "User logged out successfully.",
-  "user_id": 12,
-  "data": {
-    "user_id": 12,
-    "name": "Rahul Sharma",
-    "phone": "9876543210"
-  }
+  "message": "Logged out successfully. Token invalidated."
 }
 ```
 
@@ -394,57 +439,32 @@ Invalidate active API token and clear user sessions.
 ## 2. Customer Profile & Delivery Address APIs
 
 ### 2.1 Get Customer Profile
-Fetch logged-in customer's details, default shipping address, and saved address list.
+Retrieve customer personal data, Self-Dealer status, and wallet balance.
 
 - **Method:** `GET` or `POST`
-- **URL:** `/api/user/profile` or `/api/customer/profile`
+- **URL:** `/api/user/profile` (Alias: `/api/customer/profile`)
 - **Headers:** `Authorization: Bearer <token>`
-- **Query / Body (Fallback):** `?customer_id=12`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Profile fetched successfully.",
-  "token": "active_token_here",
   "data": {
     "id": 12,
     "name": "Rahul Sharma",
-    "fullName": "Rahul Sharma",
-    "email": "rahul.sharma@example.com",
     "phone": "9876543210",
+    "email": "rahul.sharma@example.com",
+    "avatar": "https://backend.nexviadls.com/uploads/avatars/user_12.jpg",
     "referral_code": "NEX98B2A1",
+    "referral_url": "https://your-domain.com/ref/NEX98B2A1",
     "is_self_dealer": true,
     "self_dealer_status": "active",
-    "wallet_balance": 4500.00,
-    "address": "Flat 402, Green Avenue, FC Road",
+    "self_dealer_code": "SD-12-PUN",
+    "wallet_balance": 18500.00,
+    "address": "Flat 402, Sunshine Heights, FC Road",
     "city": "Pune",
     "state": "Maharashtra",
-    "pincode": "411001",
-    "avatarUrl": "https://your-domain.com/customer_pics/customer_pic_12.jpg",
-    "default_address": {
-      "id": 5,
-      "user_id": 12,
-      "name": "Rahul Sharma",
-      "phone": "9876543210",
-      "street": "Flat 402, Green Avenue, FC Road",
-      "city": "Pune",
-      "state": "Maharashtra",
-      "pincode": "411001",
-      "is_default": true
-    },
-    "saved_addresses": [
-      {
-        "id": 5,
-        "name": "Rahul Sharma",
-        "phone": "9876543210",
-        "street": "Flat 402, Green Avenue, FC Road",
-        "city": "Pune",
-        "state": "Maharashtra",
-        "pincode": "411001",
-        "is_default": true
-      }
-    ]
+    "pincode": "411005"
   }
 }
 ```
@@ -452,22 +472,23 @@ Fetch logged-in customer's details, default shipping address, and saved address 
 ---
 
 ### 2.2 Update Profile & Avatar
-Update profile text fields or upload new profile photo.
+Update customer profile fields and optionally upload profile photo.
 
 - **Method:** `PUT` or `POST`
-- **URL:** `/api/user/profile` or `/api/customer/update-profile`
-- **Headers:** `Authorization: Bearer <token>`
+- **URL:** `/api/user/profile` (Aliases: `/api/user/update-profile`, `/api/customer/update-profile`)
 - **Content-Type:** `multipart/form-data` or `application/json`
+- **Headers:** `Authorization: Bearer <token>`
 
-#### Request Body (Multipart / Form / JSON)
-```
-fullName: Rahul S. Sharma
-email: rahul.updated@example.com
-address: Flat 501, Blue Towers
-city: Pune
-state: Maharashtra
-pincode: 411004
-profile_pic: [FILE ATTACHMENT: avatar.jpg]
+#### Request Body
+```json
+{
+  "name": "Rahul A. Sharma",
+  "email": "rahul.new@example.com",
+  "city": "Pune",
+  "state": "Maharashtra",
+  "pincode": "411005",
+  "address": "Flat 402, Sunshine Heights, FC Road"
+}
 ```
 
 #### Success Response (`200 OK`)
@@ -475,18 +496,13 @@ profile_pic: [FILE ATTACHMENT: avatar.jpg]
 {
   "status": true,
   "message": "Profile updated successfully.",
-  "token": "token_here",
   "data": {
     "id": 12,
-    "name": "Rahul S. Sharma",
-    "fullName": "Rahul S. Sharma",
-    "email": "rahul.updated@example.com",
-    "phone": "9876543210",
-    "address": "Flat 501, Blue Towers",
+    "name": "Rahul A. Sharma",
+    "email": "rahul.new@example.com",
     "city": "Pune",
     "state": "Maharashtra",
-    "pincode": "411004",
-    "avatarUrl": "https://your-domain.com/customer_pics/customer_pic_1741580000.jpg"
+    "pincode": "411005"
   }
 }
 ```
@@ -494,18 +510,16 @@ profile_pic: [FILE ATTACHMENT: avatar.jpg]
 ---
 
 ### 2.3 Update FCM Device Token
-Register device token for push notifications and location.
+Update push notification token for order tracking & OTP alerts.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/fcm-token`
+- **URL:** `/api/customer/update-fcm-token` (or within `/api/user/profile`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Request Body
 ```json
 {
-  "fcm_token": "eX_ample_fcm_token_device_string",
-  "latitude": 18.5204,
-  "longitude": 73.8567
+  "fcm_token": "e5ZqX7...fcm_token_string..."
 }
 ```
 
@@ -513,47 +527,36 @@ Register device token for push notifications and location.
 ```json
 {
   "status": true,
-  "message": "FCM token updated successfully."
+  "message": "FCM device token updated successfully."
 }
 ```
 
 ---
 
 ### 2.4 Get Saved Addresses
-- **Method:** `GET`
-- **URL:** `/api/user/addresses` or `/api/addresses` or `/api/customer/addresses`
+List customer delivery addresses.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/user/addresses` (Aliases: `/api/customer/addresses`, `/api/addresses`, `/api/addresses/list`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Addresses retrieved successfully.",
-  "total": 2,
   "data": [
     {
       "id": 5,
-      "user_id": 12,
-      "name": "Rahul Sharma (Home)",
+      "address_type": "home",
+      "recipient_name": "Rahul Sharma",
       "phone": "9876543210",
-      "street": "Flat 402, Green Avenue, FC Road",
+      "address_line1": "Flat 402, Sunshine Heights",
+      "address_line2": "Off FC Road, Shivajinagar",
       "city": "Pune",
       "state": "Maharashtra",
-      "pincode": "411001",
-      "is_default": true,
-      "created_at": "2026-03-01T10:00:00.000000Z"
-    },
-    {
-      "id": 8,
-      "user_id": 12,
-      "name": "Rahul Sharma (Office)",
-      "phone": "9876543210",
-      "street": "Tech Park, Building C, Viman Nagar",
-      "city": "Pune",
-      "state": "Maharashtra",
-      "pincode": "411014",
-      "is_default": false,
-      "created_at": "2026-03-05T12:30:00.000000Z"
+      "pincode": "411005",
+      "landmark": "Near Fergusson College Gate",
+      "is_default": true
     }
   ]
 }
@@ -562,40 +565,38 @@ Register device token for push notifications and location.
 ---
 
 ### 2.5 Add or Update Address
+Save a new delivery address or update existing.
+
 - **Method:** `POST`
-- **URL:** `/api/user/addresses` or `/api/addresses`
+- **URL:** `/api/user/addresses` (Aliases: `/api/customer/addresses`, `/api/addresses`, `/api/addresses/add`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Request Body
 ```json
 {
-  "address_id": null,
-  "name": "Rahul Sharma",
+  "address_type": "home",
+  "recipient_name": "Rahul Sharma",
   "phone": "9876543210",
-  "street": "Flat 402, Green Avenue, FC Road",
+  "address_line1": "Flat 402, Sunshine Heights",
+  "address_line2": "Off FC Road",
   "city": "Pune",
   "state": "Maharashtra",
-  "pincode": "411001",
-  "isDefault": true
+  "pincode": "411005",
+  "landmark": "Near FC College",
+  "is_default": true
 }
 ```
 
-#### Success Response (`201 Created` / `200 OK`)
+#### Success Response (`201 Created`)
 ```json
 {
   "status": true,
-  "message": "Address saved successfully.",
+  "message": "Delivery address saved successfully.",
   "data": {
-    "id": 9,
-    "user_id": 12,
-    "name": "Rahul Sharma",
-    "phone": "9876543210",
-    "street": "Flat 402, Green Avenue, FC Road",
-    "city": "Pune",
-    "state": "Maharashtra",
-    "pincode": "411001",
-    "is_default": true,
-    "created_at": "2026-03-10T10:00:00.000000Z"
+    "id": 5,
+    "recipient_name": "Rahul Sharma",
+    "pincode": "411005",
+    "is_default": true
   }
 }
 ```
@@ -603,10 +604,11 @@ Register device token for push notifications and location.
 ---
 
 ### 2.6 Delete Address
+Remove a saved address.
+
 - **Method:** `DELETE` or `POST`
-- **URL:** `/api/user/addresses/{id}` or `/api/addresses/delete`
+- **URL:** `/api/user/addresses/{id}` (Aliases: `/api/user/addresses/delete`, `/api/addresses/delete`, `/api/customer/addresses/{id}`)
 - **Headers:** `Authorization: Bearer <token>`
-- **Request Body (if POST):** `{"address_id": 9}`
 
 #### Success Response (`200 OK`)
 ```json
@@ -618,167 +620,80 @@ Register device token for push notifications and location.
 
 ---
 
-## 3. Home Sliders & Banners APIs
+## 3. Home Sliders & Promotional Banners APIs
 
 ### 3.1 Get Home Banners
-Fetches hero sliders and middle promo banners configured for the Home Index page.
+Fetch active hero sliders, category strips, and promotional banners for the main app / web homepage.
 
 - **Method:** `GET`
-- **URL:** `/api/home/banners` or `/api/banners` or `/api/home-banners`
-- **Query Parameters:** `?type=hero` or `?type=promo` (Optional)
+- **URL:** `/api/home/banners` (Aliases: `/api/banners`, `/api/home-banners`, `/api/customer/banners`)
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Home section banners retrieved successfully.",
-  "total": 3,
-  "home_section": {
-    "hero_sliders": [
-      {
-        "id": 1,
-        "title": "NEXVIA Falcon EV",
-        "subtitle": "Book Now with 20% Advance & Get 60 Days Balance Window",
-        "badge_text": "⚡ ELECTRIC SCOOTER",
-        "position": "hero",
-        "banner_type": "hero",
-        "target_type": "product",
-        "target_id": "nexvia-falcon-electric-scooter",
-        "link_url": "/products/nexvia-falcon-electric-scooter",
-        "button_text": "Book for ₹17,999",
-        "image_url": "https://your-domain.com/uploads/banners/hero_1.jpg",
-        "sort_order": 1,
-        "clicks_count": 142
-      }
-    ],
-    "promo_banners": [
-      {
-        "id": 2,
-        "title": "Refer & Earn Up To 20% Product Credit",
-        "subtitle": "Become a Self Dealer with any EV booking",
-        "badge_text": "🔥 SELF DEALER PROGRAM",
-        "position": "promo",
-        "banner_type": "promo",
-        "target_type": "category",
-        "target_id": "electric-vehicles",
-        "link_url": "/categories/electric-vehicles",
-        "button_text": "Explore Program",
-        "image_url": "https://your-domain.com/uploads/banners/promo_1.jpg",
-        "sort_order": 2,
-        "clicks_count": 89
-      }
-    ],
-    "side_banners": [
-      {
-        "id": 3,
-        "title": "Doorstep Logistics & Dispatch",
-        "subtitle": "Guaranteed Territory Delivery",
-        "badge_text": "FAST DISPATCH",
-        "position": "side",
-        "banner_type": "side",
-        "target_type": "booking",
-        "target_id": null,
-        "link_url": null,
-        "button_text": "Book Now",
-        "image_url": "https://your-domain.com/uploads/banners/side_1.jpg",
-        "sort_order": 3,
-        "clicks_count": 45
-      }
-    ]
-  },
-  "data": [ ... ]
+  "message": "Banners retrieved successfully.",
+  "data": [
+    {
+      "id": 1,
+      "title": "Revolutionary Electric Falcon",
+      "subtitle": "Book at 20% Deposit • 60 Days Zero Interest Balance",
+      "badge_text": "LIMITED TIME OFFER",
+      "banner_type": "hero",
+      "position": "home_main_slider",
+      "target_type": "product",
+      "target_id": "1",
+      "link_url": "/products/nexvia-falcon-ev",
+      "button_text": "Book at 20%",
+      "image_url": "https://backend.nexviadls.com/uploads/banners/falcon_hero.webp",
+      "sort_order": 1
+    }
+  ]
 }
 ```
 
-- **Side Banners Direct Endpoint:** `GET /api/banners/side` or `GET /api/home/banners/side`
+---
+
+### 3.2 Get Side Banners
+Retrieve active promotional side banners displayed in category grids and product detail sidebars.
+
+- **Method:** `GET`
+- **URL:** `/api/banners/side` (Alias: `/api/home/banners/side`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 4,
+      "title": "5-Stage Self Dealer Rewards",
+      "subtitle": "Earn up to 20% cash points on every referral",
+      "banner_type": "side",
+      "image_url": "https://backend.nexviadls.com/uploads/banners/side_promo.webp",
+      "link_url": "/self-dealer-program"
+    }
+  ]
+}
+```
 
 ---
 
-### 3.2 Record Banner Click / Tap
-Increment click analytics when a user taps a banner.
+### 3.3 Record Banner Click / Tap
+Increment click analytics when a customer clicks a banner.
 
 - **Method:** `POST`
 - **URL:** `/api/banners/{id}/click`
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Click recorded."
-}
-```
-
----
-
-### 3.3 DLS Agro & Farm Equipment Banners
-Fetch active banners specifically for the DLS Agro & Farm Equipment catalog and product pages (hero sliders, middle promo strips, and side promotional banners).
-
-- **Method:** `GET` or `POST`
-- **URL:** `/api/dls-agro/banners` or `/api/agro/banners` or `/api/dls-farm/banners`
-- **Side Banners Only:** `/api/dls-agro/banners/side`
-- **Query Parameters:** `?position=hero` or `?position=promo` or `?position=side` (Optional)
-
-#### Success Response (`200 OK`)
-```json
-{
-  "status": true,
-  "message": "DLS Agro banners retrieved successfully.",
-  "total": 3,
-  "agro_section": {
-    "hero_sliders": [
-      {
-        "id": 10,
-        "title": "Modern Farm Tillers & Harvesters",
-        "subtitle": "Pay 20% advance booking & pay balance within 60 days",
-        "badge_text": "5% GST BENEFIT",
-        "position": "hero",
-        "banner_type": "hero",
-        "section": "dls_farm_equipment",
-        "target_type": "category",
-        "target_id": 4,
-        "button_text": "Shop Agro Equipment",
-        "image_url": "https://your-domain.com/uploads/banners/agro/agro_1.jpg",
-        "sort_order": 1,
-        "clicks_count": 29
-      }
-    ],
-    "promo_banners": [
-      {
-        "id": 11,
-        "title": "Kisan Credit & Farm Machinery Subsidy",
-        "subtitle": "Govt approved HSN 8432 machinery",
-        "badge_text": "KISAN SPECIAL",
-        "position": "promo",
-        "banner_type": "promo",
-        "section": "dls_farm_equipment",
-        "target_type": "product",
-        "target_id": 12,
-        "button_text": "Book Power Tiller",
-        "image_url": "https://your-domain.com/uploads/banners/agro/agro_2.jpg",
-        "sort_order": 2,
-        "clicks_count": 14
-      }
-    ],
-    "side_banners": [
-      {
-        "id": 12,
-        "title": "Cultivator Special Deal",
-        "subtitle": "In-stock regional farm logistics hub dispatch",
-        "badge_text": "HOT DEAL",
-        "position": "side",
-        "banner_type": "side",
-        "section": "dls_farm_equipment",
-        "target_type": "category",
-        "target_id": 4,
-        "button_text": "Explore Tillers",
-        "image_url": "https://your-domain.com/uploads/banners/agro/agro_side_1.jpg",
-        "sort_order": 3,
-        "clicks_count": 8
-      }
-    ],
-    "popup_banners": []
-  },
-  "data": [ ... ]
+  "message": "Click recorded successfully.",
+  "clicks_count": 142
 }
 ```
 
@@ -787,91 +702,43 @@ Fetch active banners specifically for the DLS Agro & Farm Equipment catalog and 
 ## 4. Categories & Reward Progression Slabs APIs
 
 ### 4.1 List All Categories
-Retrieve categories with product counts, referral reward slabs (10% to 20%), and user-specific stage progression if authenticated.
+Fetch all active top-level categories (Electric Mobility, Electronics & Appliances, DLS Farm Equipment).
 
 - **Method:** `GET` or `POST`
-- **URL:** `/api/categories` or `/api/customer/categories`
-- **Headers (Optional):** `Authorization: Bearer <token>`
-- **Query Parameters:**
-  - `search` (string): Keyword filter
-  - `referral_eligible` (bool): Filter referral categories (`true`/`false`)
+- **URL:** `/api/categories` (Aliases: `/api/customer/categories`, `/api/auth/categories`)
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Categories retrieved successfully.",
-  "total": 4,
+  "count": 3,
   "data": [
     {
       "id": 1,
-      "name": "Electric Vehicles",
+      "name": "Electric Vehicles & Scooters",
       "slug": "electric-vehicles",
-      "type": "EV",
+      "type": "electric_mobility",
       "referral_category_code": "EV",
-      "category_code": "EV",
-      "referral_code": "EV",
       "referral_eligible": true,
       "commission_percentage": 20.00,
-      "reward_slab": "10% → 20% Product Credit",
-      "starting_reward_pct": 10.00,
-      "max_reward_pct": 20.00,
-      "stages_cycle": [10.00, 12.00, 15.00, 18.00, 20.00],
-      "stages_info": [
-        {
-          "stage": 1,
-          "reward_percentage": 10.00,
-          "is_current": false,
-          "is_completed": true,
-          "label": "Stage 1: 10% Product Credit"
-        },
-        {
-          "stage": 2,
-          "reward_percentage": 12.00,
-          "is_current": true,
-          "is_completed": false,
-          "label": "Stage 2: 12% Product Credit"
-        },
-        {
-          "stage": 3,
-          "reward_percentage": 15.00,
-          "is_current": false,
-          "is_completed": false,
-          "label": "Stage 3: 15% Product Credit"
-        },
-        {
-          "stage": 4,
-          "reward_percentage": 18.00,
-          "is_current": false,
-          "is_completed": false,
-          "label": "Stage 4: 18% Product Credit"
-        },
-        {
-          "stage": 5,
-          "reward_percentage": 20.00,
-          "is_current": false,
-          "is_completed": false,
-          "label": "Stage 5: 20% Product Credit"
-        }
-      ],
-      "user_progress": {
-        "customer_referral_code": "NEX98B2A1",
-        "referral_share_code": "NEX98B2A1",
-        "current_stage": 2,
-        "current_incentive_pct": 12.00,
-        "next_stage": 3,
-        "next_incentive_pct": 15.00,
-        "cycle_number": 1,
-        "referrals_in_cycle": 1,
-        "total_referrals_all_time": 1,
-        "is_final_stage": false,
-        "referral_share_link": "https://your-domain.com/register?ref=NEX98B2A1&cat=EV",
-        "referral_share_message": "Shop Electric Vehicles on NEXVIA and get exclusive benefits using my referral code: NEX98B2A1"
-      },
-      "description": "High performance smart electric two wheelers.",
-      "image": "https://your-domain.com/uploads/categories/ev.jpg",
-      "imageUrl": "https://your-domain.com/uploads/categories/ev.jpg",
-      "products_count": 6
+      "description": "High-performance smart electric two-wheelers and scooters",
+      "image": "https://backend.nexviadls.com/uploads/categories/ev_category.webp",
+      "subcategories_count": 4,
+      "products_count": 12
+    },
+    {
+      "id": 2,
+      "name": "Electronics & Smart Home",
+      "slug": "electronics-appliances",
+      "type": "electronics",
+      "referral_category_code": "EL",
+      "referral_eligible": true,
+      "commission_percentage": 15.00,
+      "description": "Smart LED TVs, washing machines, and premium cooling appliances",
+      "image": "https://backend.nexviadls.com/uploads/categories/electronics.webp",
+      "subcategories_count": 6,
+      "products_count": 28
     }
   ]
 }
@@ -880,36 +747,40 @@ Retrieve categories with product counts, referral reward slabs (10% to 20%), and
 ---
 
 ### 4.2 Single Category Detail & Products
-Get single category information and product items.
+Get full category details with child subcategories and active catalog products.
 
 - **Method:** `GET`
-- **URL:** `/api/categories/{idOrSlug}` (e.g., `/api/categories/electric-vehicles` or `/api/categories/1` or `/api/categories/EV`)
+- **URL:** `/api/categories/{idOrSlug}` (Alias: `/api/customer/categories/{idOrSlug}`)
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Category retrieved successfully.",
   "data": {
     "id": 1,
-    "name": "Electric Vehicles",
+    "name": "Electric Vehicles & Scooters",
     "slug": "electric-vehicles",
+    "type": "electric_mobility",
     "referral_category_code": "EV",
-    "reward_slab": "10% → 20% Product Credit",
-    "products_count": 2,
+    "commission_percentage": 20.00,
+    "subcategories": [
+      {
+        "id": 1,
+        "name": "High-Speed Scooters",
+        "slug": "high-speed-scooters",
+        "products_count": 4
+      }
+    ],
     "products": [
       {
-        "id": 101,
+        "id": 1,
         "name": "NEXVIA Falcon EV",
         "slug": "nexvia-falcon-ev",
-        "model_code": "NEX-FALCON",
-        "mrp": 89999.00,
-        "booking_amount": 17999.80,
-        "eligible_referral_value": 89999.00,
-        "referral_eligible": true,
-        "self_dealer_eligible": true,
-        "main_image": "https://your-domain.com/uploads/products/falcon.jpg",
-        "category_code": "EV"
+        "mrp": 125000.00,
+        "booking_amount": 25000.00,
+        "balance_amount": 100000.00,
+        "booking_percentage": 20.00
       }
     ]
   }
@@ -918,65 +789,84 @@ Get single category information and product items.
 
 ---
 
-## 5. Products & Search APIs
-
-### 5.1 Paginated Products Catalog
-Fetch products with category filters, sorting, and pagination.
+### 4.3 Subcategories by Category
+List all subcategories belonging to a parent category.
 
 - **Method:** `GET` or `POST`
-- **URL:** `/api/products` or `/api/customer/products`
-- **Query / Body Parameters:**
-  - `cat_id` / `category_id` / `category`: Filter by ID or Slug (e.g., `electric-vehicles` or `1`)
-  - `search`: Keyword string
-  - `sortBy`: `price_low`, `price_high`, `featured`, `popular`
-  - `page`: Page number (Default: `1`)
-  - `limit` / `per_page`: Items per page (Default: `10`, Max: `100`)
+- **URL:** `/api/categories/{idOrSlug}/subcategories`
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Products retrieved successfully.",
-  "pagination": {
-    "current_page": 1,
-    "last_page": 1,
-    "per_page": 10,
-    "total": 1,
-    "has_more": false
+  "category": {
+    "id": 1,
+    "name": "Electric Vehicles & Scooters",
+    "slug": "electric-vehicles"
   },
-  "data": [
+  "subcategories": [
     {
-      "id": 101,
-      "name": "NEXVIA Falcon EV Scooter",
-      "slug": "nexvia-falcon-ev-scooter",
-      "model_code": "NEX-FLC-01",
-      "sku": "SKU-FLC-RED",
+      "id": 1,
+      "name": "High-Speed Scooters",
+      "slug": "high-speed-scooters",
+      "image": "https://backend.nexviadls.com/uploads/subcategories/subcat_1.webp",
+      "products_count": 4
+    }
+  ]
+}
+```
+
+---
+
+## 5. Products Catalog & Search APIs
+
+### 5.1 Paginated Products Catalog
+Fetch product catalog with category, subcategory, price, and sorting filters.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/products` (Aliases: `/api/customer/products`, `/api/auth/products`)
+- **Auth Required:** No
+
+#### Query Parameters:
+| Parameter | Type | Description |
+|---|---|---|
+| `category_id` / `cat_id` | int/slug | Filter by category ID or slug |
+| `subcategory_id` / `subcat_id` | int/slug | Filter by subcategory |
+| `search` | string | Keyword search |
+| `sort_by` | string | `price_low`, `price_high`, `newest`, `popular` |
+| `page` | int | Page number (default: 1) |
+| `limit` / `per_page` | int | Items per page (default: 12) |
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "total": 42,
+  "current_page": 1,
+  "last_page": 4,
+  "per_page": 12,
+  "products": [
+    {
+      "id": 1,
+      "name": "NEXVIA Falcon EV",
+      "slug": "nexvia-falcon-ev",
+      "model_code": "NX-FLC-2026",
+      "sku": "NX-EV-FLC-01",
+      "mrp": 125000.00,
+      "booking_percentage": 20.00,
+      "booking_amount": 25000.00,
+      "balance_amount": 100000.00,
+      "balance_duration_days": 60,
+      "self_dealer_eligible": true,
+      "referral_eligible": true,
+      "main_image": "https://backend.nexviadls.com/uploads/products/falcon_main.webp",
+      "stock": 25,
+      "in_stock": true,
       "category": {
         "id": 1,
         "name": "Electric Vehicles",
-        "slug": "electric-vehicles",
-        "referral_category_code": "EV"
-      },
-      "mrp": 89999.00,
-      "booking_percentage": 20.00,
-      "booking_amount": 17999.80,
-      "balance_amount": 71999.20,
-      "stock": 15,
-      "main_image": "https://your-domain.com/uploads/products/falcon_main.jpg",
-      "images": [
-        "https://your-domain.com/uploads/products/falcon_main.jpg",
-        "https://your-domain.com/uploads/products/falcon_side.jpg"
-      ],
-      "offer_text": "20% Advance Booking • 60-Day Balance Window",
-      "is_featured": true,
-      "status": "active",
-      "eligible_referral_value": 89999.00,
-      "referral_eligible": true,
-      "self_dealer_eligible": true,
-      "self_dealer_benefit": {
-        "activates_self_dealer": true,
-        "activation_points_pct": 20.00,
-        "activation_points_value": 17999.80
+        "slug": "electric-vehicles"
       }
     }
   ]
@@ -986,78 +876,49 @@ Fetch products with category filters, sorting, and pagination.
 ---
 
 ### 5.2 Single Product Details & Specifications
-Returns detailed product specs, pricing calculation (20% token, 80% balance due in 60 days), warranty, and delivery information.
+Fetch full specifications, color variants, gallery images, and 20% booking deposit calculator.
 
-- **Method:** `GET`
-- **URL:** `/api/products/{idOrSlug}` or `/api/products/detail/{idOrSlug}` (e.g., `/api/products/nexvia-falcon-ev-scooter` or `/api/products/101`)
+- **Method:** `GET` or `POST`
+- **URL:** `/api/products/{idOrSlug}` (Aliases: `/api/products/detail/{idOrSlug}`, `/api/customer/products/{idOrSlug}`)
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Product full details & specifications retrieved successfully.",
   "data": {
-    "id": 101,
-    "name": "NEXVIA Falcon EV Scooter",
-    "slug": "nexvia-falcon-ev-scooter",
-    "model_code": "NEX-FLC-01",
-    "sku": "SKU-FLC-RED",
-    "category": {
-      "id": 1,
-      "name": "Electric Vehicles",
-      "slug": "electric-vehicles",
-      "referral_category_code": "EV"
-    },
-    "mrp": 89999.00,
+    "id": 1,
+    "name": "NEXVIA Falcon EV Smart Electric Scooter",
+    "slug": "nexvia-falcon-ev",
+    "model_code": "NX-FLC-2026",
+    "sku": "NX-EV-FLC-01",
+    "mrp": 125000.00,
     "booking_percentage": 20.00,
-    "booking_amount": 17999.80,
-    "balance_amount": 71999.20,
+    "booking_amount": 25000.00,
+    "balance_amount": 100000.00,
     "balance_due_days": 60,
-    "pricing": {
-      "mrp": 89999.00,
-      "booking_percentage": 20.00,
-      "booking_amount": 17999.80,
-      "balance_amount": 71999.20,
-      "balance_due_days": 60,
-      "currency": "INR",
-      "currency_symbol": "₹",
-      "pricing_summary": "Pay ₹17,999.80 (20%) now, pay balance ₹71,999.20 within 60 days."
-    },
-    "referral_eligible": true,
+    "eligible_referral_value": 125000.00,
     "self_dealer_eligible": true,
-    "eligible_referral_value": 89999.00,
-    "self_dealer_benefit": {
-      "activates_self_dealer": true,
-      "activation_points_pct": 20.00,
-      "activation_points_value": 17999.80,
-      "banner_title": "SELF DEALER BENEFIT",
-      "banner_text": "Book this product and become an eligible Self Dealer. Earn ₹17,999.80 (20%) in activation points!"
-    },
-    "stock": 15,
-    "in_stock": true,
-    "stock_status": "In Stock",
-    "main_image": "https://your-domain.com/uploads/products/falcon_main.jpg",
+    "referral_eligible": true,
+    "main_image": "https://backend.nexviadls.com/uploads/products/falcon_main.webp",
     "gallery": [
-      "https://your-domain.com/uploads/products/falcon_main.jpg",
-      "https://your-domain.com/uploads/products/falcon_angle.jpg"
+      "https://backend.nexviadls.com/uploads/products/falcon_angle1.webp",
+      "https://backend.nexviadls.com/uploads/products/falcon_angle2.webp"
     ],
-    "video_url": "https://www.youtube.com/watch?v=example",
-    "key_features": [
-      "120 KM Range on Single Charge",
-      "Fast Charging: 0-80% in 90 Minutes",
-      "Regenerative Braking with Disc Brakes",
-      "Digital Smart Touch Dashboard"
-    ],
+    "colors": ["Matte Black", "Pearl White", "Crimson Red"],
     "specifications": [
-      { "name": "Battery Capacity", "value": "3.5 kWh Lithium-Ion" },
       { "name": "Top Speed", "value": "85 km/h" },
-      { "name": "Motor Power", "value": "3000W BLDC Hub Motor" },
-      { "name": "Brakes", "value": "Front & Rear CBS Disc Brakes" }
+      { "name": "Certified Range", "value": "145 km per charge" },
+      { "name": "Battery Pack", "value": "3.8 kWh Lithium-Ion (IP67)" },
+      { "name": "Charging Time", "value": "3.5 Hours (Fast Charge)" },
+      { "name": "Official Warranty", "value": "3 Years Comprehensive" }
     ],
-    "warranty_info": "3 Years Comprehensive Battery & Motor Warranty",
-    "installation_info": "Free Doorstep Assembly & Home Demo Included",
-    "delivery_info": "Free Express Dispatch within 5-7 business days",
-    "offer_text": "Special ₹5,000 Early Bird Cashback included."
+    "features": [
+      "Keyless Start & Anti-Theft Alarm",
+      "7-inch TFT Navigation Console",
+      "Regenerative Braking System"
+    ],
+    "stock": 25
   }
 }
 ```
@@ -1065,32 +926,18 @@ Returns detailed product specs, pricing calculation (20% token, 80% balance due 
 ---
 
 ### 5.3 Product Search & Advanced Filtering
-All-in-one product search endpoint supporting any combination of filters.
+Instant autocomplete and filtered catalog search.
 
 - **Method:** `GET` or `POST`
-- **URL:** `/api/products/search` or `/api/customer/products/search`
-- **Supported Parameters (Query / JSON):**
-  - `q` / `search`: Keyword string
-  - `category` / `category_id`: Category ID or Slug
-  - `min_price` & `max_price`: Price filter
-  - `referral_eligible`: `true`/`false`
-  - `self_dealer_eligible`: `true`/`false`
-  - `is_featured`: `true`/`false`
-  - `in_stock`: `true`/`false`
-  - `sortBy`: `price_low`, `price_high`, `latest`, `name_asc`
-  - `page` & `limit`: Pagination parameters
+- **URL:** `/api/products/search` (Alias: `/api/customer/products/search`)
+- **Auth Required:** No
 
-#### Request Example (JSON POST)
+#### Request Query / Body:
 ```json
 {
-  "q": "Falcon",
-  "category": "electric-vehicles",
+  "query": "Falcon",
   "min_price": 50000,
-  "max_price": 100000,
-  "referral_eligible": true,
-  "sortBy": "price_low",
-  "page": 1,
-  "limit": 20
+  "max_price": 150000
 }
 ```
 
@@ -1098,53 +945,41 @@ All-in-one product search endpoint supporting any combination of filters.
 ```json
 {
   "status": true,
-  "message": "Search results retrieved successfully.",
-  "total": 1,
-  "applied_filters": {
-    "query": "Falcon",
-    "category": "electric-vehicles",
-    "min_price": 50000,
-    "max_price": 100000,
-    "referral_eligible": true,
-    "sort_by": "price_low"
-  },
-  "pagination": {
-    "current_page": 1,
-    "last_page": 1,
-    "per_page": 20,
-    "total": 1,
-    "has_more": false
-  },
-  "data": [ ... ]
+  "query": "Falcon",
+  "count": 1,
+  "products": [
+    {
+      "id": 1,
+      "name": "NEXVIA Falcon EV",
+      "slug": "nexvia-falcon-ev",
+      "mrp": 125000.00,
+      "booking_amount": 25000.00
+    }
+  ]
 }
 ```
 
 ---
 
 ### 5.4 Trending & Lightning Deals
+Fetch hot-selling and trending products.
+
 - **Method:** `GET` or `POST`
-- **URL:** `/api/products/trending` or `/api/customer/products/trending`
-- **Query Parameters:** `?limit=6` (Optional: `?featured_only=true`)
+- **URL:** `/api/products/trending` (Alias: `/api/customer/products/trending`)
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Trending and lightning deal products retrieved successfully.",
-  "total": 2,
-  "limit": 6,
-  "data": [
+  "count": 4,
+  "products": [
     {
-      "id": 101,
-      "name": "NEXVIA Falcon EV Scooter",
-      "mrp": 89999.00,
-      "booking_amount": 17999.80,
-      "balance_amount": 71999.20,
-      "is_trending": true,
-      "deal_type": "Lightning Deal",
-      "deal_badge": "⚡ LIGHTNING DEAL",
-      "deal_tag": "20% Booking Advance Special",
-      "stock_status": "In Stock"
+      "id": 1,
+      "name": "NEXVIA Falcon EV",
+      "slug": "nexvia-falcon-ev",
+      "mrp": 125000.00,
+      "tag": "TRENDING"
     }
   ]
 }
@@ -1155,29 +990,30 @@ All-in-one product search endpoint supporting any combination of filters.
 ## 6. Wishlist & Favorites APIs
 
 ### 6.1 Get Wishlist Items
+List customer saved favorites with product pricing and stock status.
+
 - **Method:** `GET` or `POST`
-- **URL:** `/api/customer/wishlist` or `/api/wishlist`
+- **URL:** `/api/wishlist` (Aliases: `/api/wishlist/list`, `/api/customer/wishlist`, `/api/customer/wishlist/list`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Wishlist items retrieved successfully.",
-  "total": 1,
+  "count": 1,
   "data": [
     {
-      "wishlist_id": 4,
-      "added_at": "2026-03-08T15:00:00.000000Z",
-      "id": 101,
-      "product_id": 101,
-      "name": "NEXVIA Falcon EV Scooter",
-      "slug": "nexvia-falcon-ev-scooter",
-      "mrp": 89999.00,
-      "booking_amount": 17999.80,
-      "balance_amount": 71999.20,
-      "in_stock": true,
-      "main_image": "https://your-domain.com/uploads/products/falcon_main.jpg"
+      "id": 14,
+      "product_id": 1,
+      "product": {
+        "id": 1,
+        "name": "NEXVIA Falcon EV",
+        "slug": "nexvia-falcon-ev",
+        "mrp": 125000.00,
+        "booking_amount": 25000.00,
+        "image": "https://backend.nexviadls.com/uploads/products/falcon_main.webp"
+      },
+      "added_at": "2026-10-16 11:20:00"
     }
   ]
 }
@@ -1186,12 +1022,16 @@ All-in-one product search endpoint supporting any combination of filters.
 ---
 
 ### 6.2 Add Product to Wishlist
+Add item to favorites.
+
 - **Method:** `POST`
-- **URL:** `/api/customer/wishlist` or `/api/wishlist`
-- **Request Body:**
+- **URL:** `/api/wishlist` (Aliases: `/api/wishlist/add`, `/api/customer/wishlist`, `/api/customer/wishlist/add`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body
 ```json
 {
-  "product_id": 101
+  "product_id": 1
 }
 ```
 
@@ -1199,27 +1039,24 @@ All-in-one product search endpoint supporting any combination of filters.
 ```json
 {
   "status": true,
-  "message": "Product added to wishlist successfully.",
-  "is_in_wishlist": true,
-  "data": {
-    "wishlist_id": 5,
-    "product_id": 101,
-    "name": "NEXVIA Falcon EV Scooter"
-  }
+  "message": "Product added to wishlist.",
+  "is_in_wishlist": true
 }
 ```
 
 ---
 
 ### 6.3 1-Click Toggle Wishlist Item
-Toggles saved state: Adds if absent; Removes if present.
+Toggle product in or out of wishlist in a single request.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/wishlist/toggle` or `/api/wishlist/toggle`
-- **Request Body:**
+- **URL:** `/api/wishlist/toggle` (Alias: `/api/customer/wishlist/toggle`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body
 ```json
 {
-  "product_id": 101
+  "product_id": 1
 }
 ```
 
@@ -1227,24 +1064,26 @@ Toggles saved state: Adds if absent; Removes if present.
 ```json
 {
   "status": true,
-  "message": "Product added to wishlist.",
-  "is_in_wishlist": true,
-  "product_id": 101,
-  "total": 1
+  "message": "Wishlist updated.",
+  "action": "added",
+  "is_in_wishlist": true
 }
 ```
 
 ---
 
 ### 6.4 Check Product Status in Wishlist
+Check whether a specific product is in customer wishlist.
+
 - **Method:** `GET`
-- **URL:** `/api/customer/wishlist/check/{productId}` or `/api/wishlist/check/{productId}`
+- **URL:** `/api/wishlist/check/{productId}` (Alias: `/api/customer/wishlist/check/{productId}`)
+- **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "product_id": 101,
+  "product_id": 1,
   "is_in_wishlist": true
 }
 ```
@@ -1252,106 +1091,94 @@ Toggles saved state: Adds if absent; Removes if present.
 ---
 
 ### 6.5 Remove Item from Wishlist
+Remove item from wishlist.
+
 - **Method:** `DELETE` or `POST`
-- **URL:** `/api/customer/wishlist/{productId}` or `/api/wishlist/remove`
-- **Request Body (if POST):** `{"product_id": 101}`
-
-#### Success Response (`200 OK`)
-```json
-{
-  "status": true,
-  "message": "Product removed from wishlist successfully.",
-  "is_in_wishlist": false,
-  "product_id": 101,
-  "total": 0
-}
-```
-
----
-
-### 6.6 Clear Wishlist
-- **Method:** `DELETE` or `POST`
-- **URL:** `/api/customer/wishlist/clear` or `/api/wishlist/clear`
-
-#### Success Response (`200 OK`)
-```json
-{
-  "status": true,
-  "message": "Wishlist cleared successfully. 1 item(s) removed.",
-  "total": 0
-}
-```
-
----
-
-## 7. Cart Management APIs
-
-### 7.1 Get Cart Items & Financial Summary
-Retrieves active items, item pricing, 20% token payable now, 80% balance due, and 18% GST statutory summary.
-
-- **Method:** `GET` or `POST`
-- **URL:** `/api/customer/cart` or `/api/cart`
+- **URL:** `/api/wishlist/{productId?}` (Aliases: `/api/wishlist/remove`, `/api/wishlist/delete`, `/api/customer/wishlist/remove`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Cart items retrieved successfully.",
-  "summary": {
-    "unique_items": 1,
-    "total_quantity": 1,
-    "subtotal_mrp": 89999.00,
-    "token_percentage": 20.0,
-    "total_token_amount": 17999.80,
-    "balance_percentage": 80.0,
-    "total_balance_amount": 71999.20,
-    "taxes": {
-      "tax_rate_pct": 18.0,
-      "taxable_amount": 76270.34,
-      "cgst": 6864.33,
-      "sgst": 6864.33,
-      "total_tax": 13728.66
-    },
-    "delivery_fee": 0.0,
-    "delivery_text": "FREE Delivery",
-    "payable_now": 17999.80,
-    "payable_later": 71999.20,
-    "grand_total": 89999.00
-  },
-  "data": [
-    {
-      "cart_item_id": 2,
-      "id": 2,
-      "product_id": 101,
-      "name": "NEXVIA Falcon EV Scooter",
-      "slug": "nexvia-falcon-ev-scooter",
-      "selected_color": "Midnight Black",
-      "quantity": 1,
-      "unit_mrp": 89999.00,
-      "item_total_mrp": 89999.00,
-      "token_percentage": 20.0,
-      "token_amount": 17999.80,
-      "balance_percentage": 80.0,
-      "balance_amount": 71999.20,
-      "main_image": "https://your-domain.com/uploads/products/falcon_main.jpg",
-      "in_stock": true
+  "message": "Product removed from wishlist.",
+  "is_in_wishlist": false
+}
+```
+
+---
+
+### 6.6 Clear Wishlist
+Remove all items from wishlist.
+
+- **Method:** `DELETE` or `POST`
+- **URL:** `/api/wishlist/clear` (Alias: `/api/customer/wishlist/clear`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Wishlist cleared successfully."
+}
+```
+
+---
+
+## 7. Shopping Cart Management APIs
+
+### 7.1 Get Cart Items & Financial Summary
+Retrieve active cart items with subtotal, tax breakdown, and total token deposit payable.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/cart` (Aliases: `/api/cart/list`, `/api/customer/cart`, `/api/customer/cart/list`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "items": [
+      {
+        "id": 8,
+        "product_id": 1,
+        "name": "NEXVIA Falcon EV",
+        "selected_color": "Matte Black",
+        "quantity": 1,
+        "unit_mrp": 125000.00,
+        "unit_booking_amount": 25000.00,
+        "total_mrp": 125000.00,
+        "total_booking_deposit": 25000.00,
+        "image": "https://backend.nexviadls.com/uploads/products/falcon_main.webp"
+      }
+    ],
+    "summary": {
+      "items_count": 1,
+      "total_mrp": 125000.00,
+      "total_booking_deposit": 25000.00,
+      "total_balance_amount": 100000.00,
+      "balance_due_days": 60
     }
-  ]
+  }
 }
 ```
 
 ---
 
 ### 7.2 Add Item to Cart
+Add product to customer cart.
+
 - **Method:** `POST`
-- **URL:** `/api/customer/cart` or `/api/cart/add` or `/api/cart`
-- **Request Body:**
+- **URL:** `/api/cart` (Aliases: `/api/cart/add`, `/api/customer/cart`, `/api/customer/cart/add`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body
 ```json
 {
-  "product_id": 101,
+  "product_id": 1,
   "quantity": 1,
-  "selected_color": "Crimson Red"
+  "color": "Matte Black"
 }
 ```
 
@@ -1359,31 +1186,26 @@ Retrieves active items, item pricing, 20% token payable now, 80% balance due, an
 ```json
 {
   "status": true,
-  "message": "Product added to cart successfully.",
-  "item": {
-    "cart_item_id": 3,
-    "product_id": 101,
-    "selected_color": "Crimson Red",
-    "quantity": 1,
-    "item_total_mrp": 89999.00,
-    "token_amount": 17999.80,
-    "balance_amount": 71999.20
-  },
-  "summary": { ... }
+  "message": "Item added to cart successfully.",
+  "cart_items_count": 1
 }
 ```
 
 ---
 
 ### 7.3 Update Cart Item Quantity / Color
-- **Method:** `PUT` or `POST`
-- **URL:** `/api/customer/cart/update` or `/api/cart/update`
-- **Request Body:**
+Modify quantity or color of a cart item.
+
+- **Method:** `POST` or `PUT`
+- **URL:** `/api/cart/update` (Alias: `/api/customer/cart/update`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body
 ```json
 {
-  "cart_item_id": 3,
+  "cart_id": 8,
   "quantity": 2,
-  "selected_color": "Metallic Silver"
+  "color": "Pearl White"
 }
 ```
 
@@ -1391,52 +1213,41 @@ Retrieves active items, item pricing, 20% token payable now, 80% balance due, an
 ```json
 {
   "status": true,
-  "message": "Cart item updated successfully.",
-  "item": {
-    "cart_item_id": 3,
-    "quantity": 2,
-    "item_total_mrp": 179998.00,
-    "token_amount": 35999.60,
-    "balance_amount": 143998.40
-  },
-  "summary": { ... }
+  "message": "Cart item updated successfully."
 }
 ```
 
 ---
 
 ### 7.4 Remove Item from Cart
+Delete a single item from cart.
+
 - **Method:** `DELETE` or `POST`
-- **URL:** `/api/customer/cart/remove` or `/api/cart/{id}` or `/api/cart/remove`
-- **Request Body (if POST):** `{"cart_item_id": 3}`
+- **URL:** `/api/cart/{id}` (Aliases: `/api/cart/remove`, `/api/cart/delete`, `/api/customer/cart/remove`)
+- **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Item removed from cart successfully.",
-  "deleted_count": 1,
-  "summary": { ... }
+  "message": "Item removed from cart."
 }
 ```
 
 ---
 
 ### 7.5 Clear Cart
+Empty customer cart.
+
 - **Method:** `DELETE` or `POST`
-- **URL:** `/api/customer/cart/clear` or `/api/cart/clear`
+- **URL:** `/api/cart/clear` (Alias: `/api/customer/cart/clear`)
+- **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Cart cleared successfully. 1 item(s) removed.",
-  "summary": {
-    "unique_items": 0,
-    "total_quantity": 0,
-    "grand_total": 0.0
-  },
-  "data": []
+  "message": "Cart cleared successfully."
 }
 ```
 
@@ -1445,103 +1256,41 @@ Retrieves active items, item pricing, 20% token payable now, 80% balance due, an
 ## 8. Checkout Calculation & Gateway Payment APIs
 
 ### 8.1 Compute Checkout & Tax Breakdown
-Calculate token advance, remaining balance, GST schedule, and delivery options for a single item, multiple items, or the active cart.
+Calculate net payable amount applying 20% token deposit rule, referral discounts, wallet credits, and delivery charges.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/checkout/calculate` or `/api/checkout/calculate`
+- **URL:** `/api/checkout/calculate` (Alias: `/api/customer/checkout/calculate`)
 - **Headers:** `Authorization: Bearer <token>`
 
-#### Request Body Options:
-**Option A — Direct Product:**
+#### Request Body
 ```json
 {
-  "productId": 101,
-  "selectedColor": "Midnight Black",
-  "quantity": 1
+  "product_id": 1,
+  "quantity": 1,
+  "use_wallet_points": true,
+  "points_to_use": 5000,
+  "referral_code": "NEX98B2A1",
+  "pincode": "411005"
 }
 ```
-
-**Option B — Multi-Item Array:**
-```json
-{
-  "items": [
-    { "productId": 101, "selectedColor": "Red", "quantity": 1 },
-    { "productId": 102, "selectedColor": "Blue", "quantity": 1 }
-  ]
-}
-```
-
-**Option C — Empty payload (Calculates from user's active cart items).**
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Checkout amounts calculated successfully.",
-  "calculation": {
-    "summary": {
-      "total_items_count": 1,
-      "total_quantity": 1,
-      "subtotal_mrp": 89999.00,
-      "token_percentage": 20.0,
-      "token_amount": 17999.80,
-      "balance_percentage": 80.0,
-      "balance_amount": 71999.20,
-      "delivery_fee": 0.0,
-      "grand_total": 89999.00
-    },
-    "taxes": {
-      "tax_rate_percentage": 18.0,
-      "taxable_amount": 76270.34,
-      "cgst_percentage": 9.0,
-      "cgst_amount": 6864.33,
-      "sgst_percentage": 9.0,
-      "sgst_amount": 6864.33,
-      "total_tax": 13728.66,
-      "tax_status": "Inclusive in MRP"
-    },
-    "delivery": {
-      "charges": 0.0,
-      "status": "FREE",
-      "title": "Free Doorstep Delivery",
-      "estimated_days": "5-7 Business Days",
-      "includes": "Unboxing, inspection, and door delivery included."
-    },
-    "payment_schedule": {
-      "token_20_percent": {
-        "title": "Token Booking Amount (20%)",
-        "percentage": "20%",
-        "amount": 17999.80,
-        "due": "Payable Now to Reserve Vehicle/Product",
-        "timing": "Immediate at Checkout",
-        "is_refundable": false
-      },
-      "balance_80_percent": {
-        "title": "Remaining Balance (80%)",
-        "percentage": "80%",
-        "amount": 71999.20,
-        "due": "Payable within 60 days before delivery",
-        "timing": "Flexible within 60 Days",
-        "eligible_for_transfer": true
-      }
-    },
-    "payable_breakdown": {
-      "payable_now": 17999.80,
-      "payable_later": 71999.20,
-      "total_payable": 89999.00
-    },
-    "items": [
-      {
-        "product_id": 101,
-        "name": "NEXVIA Falcon EV Scooter",
-        "selected_color": "Midnight Black",
-        "quantity": 1,
-        "unit_mrp": 89999.00,
-        "item_total_mrp": 89999.00,
-        "token_amount": 17999.80,
-        "balance_amount": 71999.20
-      }
-    ]
+  "data": {
+    "product_mrp": 125000.00,
+    "quantity": 1,
+    "total_mrp": 125000.00,
+    "token_deposit_percentage": 20.00,
+    "required_token_deposit": 25000.00,
+    "wallet_credits_applied": 5000.00,
+    "net_cash_payable_now": 20000.00,
+    "remaining_balance": 100000.00,
+    "balance_due_days": 60,
+    "balance_due_date": "2026-12-15",
+    "delivery_charge": 0.00,
+    "gst_included": true
   }
 }
 ```
@@ -1549,21 +1298,22 @@ Calculate token advance, remaining balance, GST schedule, and delivery options f
 ---
 
 ### 8.2 Create Gateway Payment Order (Razorpay)
-Initializes a payment order on the gateway for the 20% advance token or full amount.
+Initialize live Razorpay Order ID for online checkout.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/payments/create-order` or `/api/payments/create-order`
+- **URL:** `/api/payments/create-order` (Alias: `/api/customer/payments/create-order`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Request Body
 ```json
 {
-  "productId": 101,
-  "amountPayable": 17999.80,
+  "amount": 20000.00,
   "currency": "INR",
-  "selectedColor": "Midnight Black",
-  "quantity": 1,
-  "paymentType": "booking_20"
+  "booking_id": 18,
+  "notes": {
+    "purpose": "20_percent_token_deposit",
+    "booking_number": "NEX-2026-98124"
+  }
 }
 ```
 
@@ -1571,46 +1321,18 @@ Initializes a payment order on the gateway for the 20% advance token or full amo
 ```json
 {
   "status": true,
-  "message": "Payment order ID generated successfully.",
-  "gateway": {
-    "provider": "razorpay",
-    "integration_mode": "mock_simulation",
-    "is_live": false,
-    "key_id": "rzp_test_nexvia_mock_key"
-  },
-  "order": {
-    "id": "order_H8xZ9kLmPqRsTu",
-    "order_id": "order_H8xZ9kLmPqRsTu",
-    "entity": "order",
-    "amount": 1799980,
-    "amount_in_rupees": 17999.80,
+  "message": "Payment order generated successfully.",
+  "data": {
+    "order_id": "order_RNEX98B2A1772",
+    "amount": 2000000,
     "currency": "INR",
-    "receipt": "rcpt_20260310100000_123",
-    "status": "created",
-    "payment_type": "booking_20",
-    "notes": {
-      "product_id": 101,
-      "product_name": "NEXVIA Falcon EV Scooter",
-      "selected_color": "Midnight Black",
-      "quantity": 1,
-      "user_id": 12,
-      "customer_name": "Rahul Sharma"
-    }
-  },
-  "checkout_options": {
-    "key": "rzp_test_nexvia_mock_key",
-    "amount": 1799980,
-    "currency": "INR",
+    "key_id": "rzp_live_xxxxxxxxxxxxxx",
     "name": "NEXVIA Mobility",
-    "description": "Token Booking (20%) for NEXVIA Falcon EV Scooter",
-    "order_id": "order_H8xZ9kLmPqRsTu",
-    "prefill": {
+    "description": "20% Flexi-Booking Token Deposit",
+    "customer": {
       "name": "Rahul Sharma",
-      "email": "rahul.sharma@example.com",
-      "contact": "9876543210"
-    },
-    "theme": {
-      "color": "#0D6EFD"
+      "phone": "9876543210",
+      "email": "rahul.sharma@example.com"
     }
   }
 }
@@ -1618,14 +1340,20 @@ Initializes a payment order on the gateway for the 20% advance token or full amo
 
 ---
 
-### 8.3 Verify Payment Callback
+### 8.3 Verify Payment Callback & Signature
+Verify HMAC SHA-256 cryptographic signature after payment gateway completion.
+
 - **Method:** `POST`
-- **URL:** `/api/customer/payments/verify` or `/api/payments/verify`
-- **Request Body:**
+- **URL:** `/api/payments/verify` (Alias: `/api/customer/payments/verify`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body
 ```json
 {
-  "razorpay_order_id": "order_H8xZ9kLmPqRsTu",
-  "razorpay_payment_id": "pay_9876543210abcdef"
+  "razorpay_order_id": "order_RNEX98B2A1772",
+  "razorpay_payment_id": "pay_RNEX98B2A1889",
+  "razorpay_signature": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b",
+  "booking_id": 18
 }
 ```
 
@@ -1633,13 +1361,15 @@ Initializes a payment order on the gateway for the 20% advance token or full amo
 ```json
 {
   "status": true,
-  "message": "Payment verified successfully.",
-  "payment_status": "captured",
-  "data": {
-    "order_id": "order_H8xZ9kLmPqRsTu",
-    "payment_id": "pay_9876543210abcdef",
-    "status": "paid",
-    "verified_at": "2026-03-10T10:05:00.000000Z"
+  "message": "Payment verified and booking confirmed successfully!",
+  "booking": {
+    "id": 18,
+    "booking_number": "NEX-2026-98124",
+    "payment_status": "partially_paid",
+    "booking_status": "confirmed",
+    "paid_amount": 25000.00,
+    "balance_amount": 100000.00,
+    "balance_due_date": "2026-12-15"
   }
 }
 ```
@@ -1649,54 +1379,35 @@ Initializes a payment order on the gateway for the 20% advance token or full amo
 ## 9. Flexi-Bookings & 60-Day Balance Engine APIs
 
 ### 9.1 List User Bookings
-Fetch booking orders with status filtering (`ALL`, `ACTIVE`, `TRANSFERRED`, `COMPLETED`, `CANCELLED`).
+Fetch all customer flexi-bookings with countdown to 60-day balance settlement.
 
 - **Method:** `GET` or `POST`
-- **URL:** `/api/customer/bookings` or `/api/bookings` or `/api/customer/bookings/list`
+- **URL:** `/api/bookings` (Aliases: `/api/bookings/list`, `/api/customer/bookings`, `/api/customer/bookings/list`)
 - **Headers:** `Authorization: Bearer <token>`
-- **Query / Body Parameters:** `?status=ACTIVE`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Bookings retrieved successfully.",
-  "filter": "ACTIVE",
   "total": 1,
-  "counts": {
-    "active": 1,
-    "transferred": 0,
-    "total": 1
-  },
-  "data": [
+  "bookings": [
     {
-      "id": 15,
-      "booking_number": "NEX-2026-781923",
-      "product_id": 101,
-      "product_name": "NEXVIA Falcon EV Scooter",
-      "model_code": "NEX-FLC-01",
-      "selected_color": "Midnight Black",
-      "quantity": 1,
-      "imageUrl": "https://your-domain.com/uploads/products/falcon_main.jpg",
-      "mrp": 89999.00,
-      "booking_amount": 17999.80,
-      "token_amount": 17999.80,
-      "balance_amount": 71999.20,
-      "booking_date": "2026-03-10",
-      "balance_due_date": "2026-05-09",
+      "id": 18,
+      "booking_number": "NEX-2026-98124",
+      "product_name": "NEXVIA Falcon EV",
+      "model_code": "NX-FLC-2026",
+      "selected_color": "Matte Black",
+      "mrp": 125000.00,
+      "paid_amount": 25000.00,
+      "balance_amount": 100000.00,
+      "payment_status": "partially_paid",
+      "booking_status": "confirmed",
+      "booking_date": "2026-10-16",
+      "balance_due_date": "2026-12-15",
       "days_remaining": 60,
-      "is_overdue": false,
-      "status_badge": "ACTIVE",
-      "payment_type": "booking_20",
-      "payment_status": "paid",
-      "booking_status": "booked",
-      "transfer_status": "original",
-      "transfer_eligible": true,
-      "non_refundable_accepted": true,
-      "customer_name": "Rahul Sharma",
-      "customer_phone": "9876543210",
-      "shipping_address": "Flat 402, Green Avenue, FC Road",
-      "qr_code_hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+      "can_pay_balance": true,
+      "can_transfer": true,
+      "challan_available": false
     }
   ]
 }
@@ -1705,34 +1416,25 @@ Fetch booking orders with status filtering (`ALL`, `ACTIVE`, `TRANSFERRED`, `COM
 ---
 
 ### 9.2 Create Confirmed 20% Flexi-Booking
-Creates a confirmed booking record upon successful 20% advance token payment. Automatically activates Self-Dealer eligibility if the product qualifies.
+Place a 20% deposit flexi-booking for a catalog vehicle, electronic appliance, or farm equipment.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/bookings` or `/api/bookings`
+- **URL:** `/api/bookings` (Aliases: `/api/booking`, `/api/customer/bookings`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Request Body
 ```json
 {
-  "productId": 101,
-  "selectedColor": "Midnight Black",
+  "product_id": 1,
+  "selected_color": "Matte Black",
   "quantity": 1,
-  "totalMRP": 89999.00,
-  "tokenAmount": 17999.80,
-  "payment_type": "booking_20",
-  "non_refundable_accepted": true,
-  "referral_code": "NEX12345",
-  "address": {
-    "address_line": "Flat 402, Green Avenue, FC Road",
-    "city": "Pune",
-    "state": "Maharashtra",
-    "pincode": "411001"
-  },
-  "customerDetails": {
-    "name": "Rahul Sharma",
-    "phone": "9876543210",
-    "email": "rahul.sharma@example.com"
-  }
+  "shipping_address": "Flat 402, Sunshine Heights, FC Road",
+  "city": "Pune",
+  "state": "Maharashtra",
+  "pincode": "411005",
+  "use_wallet_points": false,
+  "referral_code": "NEX98B2A1",
+  "payment_method": "razorpay"
 }
 ```
 
@@ -1740,54 +1442,17 @@ Creates a confirmed booking record upon successful 20% advance token payment. Au
 ```json
 {
   "status": true,
-  "message": "New confirmed Flexi-Booking entry created successfully.",
+  "message": "Flexi-Booking created successfully. 60-day balance countdown initiated.",
   "booking": {
-    "id": 15,
-    "booking_number": "NEX-2026-781923",
-    "product": {
-      "id": 101,
-      "name": "NEXVIA Falcon EV Scooter",
-      "slug": "nexvia-falcon-ev-scooter",
-      "model_code": "NEX-FLC-01",
-      "selected_color": "Midnight Black",
-      "quantity": 1,
-      "imageUrl": "https://your-domain.com/uploads/products/falcon_main.jpg"
-    },
-    "financials": {
-      "total_mrp": 89999.00,
-      "token_amount_paid": 17999.80,
-      "balance_amount_due": 71999.20,
-      "token_percentage": 20.0,
-      "balance_percentage": 80.0,
-      "currency": "INR"
-    },
-    "timeline": {
-      "booking_date": "2026-03-10",
-      "balance_due_date": "2026-05-09",
-      "days_remaining": 60,
-      "due_in_days_text": "Payable within 60 days before delivery"
-    },
-    "customer": {
-      "user_id": 12,
-      "name": "Rahul Sharma",
-      "phone": "9876543210",
-      "email": "rahul.sharma@example.com"
-    },
-    "shipping_address": {
-      "address": "Flat 402, Green Avenue, FC Road",
-      "city": "Pune",
-      "state": "Maharashtra",
-      "pincode": "411001"
-    },
-    "status": {
-      "booking_status": "booked",
-      "payment_status": "paid",
-      "transfer_status": "original",
-      "transfer_eligible": true,
-      "non_refundable": true
-    },
-    "qr_code_hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-    "created_at": "2026-03-10T10:15:00.000000Z"
+    "id": 18,
+    "booking_number": "NEX-2026-98124",
+    "product_name": "NEXVIA Falcon EV",
+    "mrp": 125000.00,
+    "deposit_paid": 25000.00,
+    "balance_due": 100000.00,
+    "balance_due_date": "2026-12-15",
+    "booking_status": "confirmed",
+    "self_dealer_activated": true
   }
 }
 ```
@@ -1795,8 +1460,10 @@ Creates a confirmed booking record upon successful 20% advance token payment. Au
 ---
 
 ### 9.3 Get Booking Detail & Receipt
+Get detailed receipt, DSP assignment, payment ledger, and warranty timeline.
+
 - **Method:** `GET`
-- **URL:** `/api/customer/bookings/{id}` or `/api/bookings/{id}`
+- **URL:** `/api/bookings/{id}` (Alias: `/api/customer/bookings/{id}`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
@@ -1804,28 +1471,24 @@ Creates a confirmed booking record upon successful 20% advance token payment. Au
 {
   "status": true,
   "data": {
-    "id": 15,
-    "booking_number": "NEX-2026-781923",
-    "customer_name": "Rahul Sharma",
-    "customer_phone": "9876543210",
-    "product_name": "NEXVIA Falcon EV Scooter",
-    "model_code": "NEX-FLC-01",
-    "mrp": 89999.00,
-    "booking_amount": 17999.80,
-    "balance_amount": 71999.20,
-    "booking_date": "2026-03-10",
-    "balance_due_date": "2026-05-09",
-    "days_remaining": 60,
-    "is_overdue": false,
-    "payment_type": "booking_20",
-    "payment_status": "paid",
-    "booking_status": "booked",
-    "transfer_status": "original",
-    "shipping_address": "Flat 402, Green Avenue, FC Road",
-    "city": "Pune",
-    "state": "Maharashtra",
-    "pincode": "411001",
-    "qr_code_hash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+    "id": 18,
+    "booking_number": "NEX-2026-98124",
+    "product_name": "NEXVIA Falcon EV",
+    "mrp": 125000.00,
+    "paid_amount": 25000.00,
+    "balance_amount": 100000.00,
+    "payment_status": "partially_paid",
+    "booking_status": "confirmed",
+    "assigned_dsp": {
+      "id": 2,
+      "business_name": "Nexvia Hub Shivajinagar",
+      "mobile": "9822001122",
+      "district": "Pune"
+    },
+    "delivery": {
+      "tracking_number": "TRK-20261016-8910",
+      "stage": "order_confirmed"
+    }
   }
 }
 ```
@@ -1833,7 +1496,7 @@ Creates a confirmed booking record upon successful 20% advance token payment. Au
 ---
 
 ### 9.4 Pay Remaining 80% Balance (Cash / Wallet)
-Clear the 80% remaining balance using standard cash gateway or NEXVIA Product Credit Wallet points.
+Settle the remaining 80% balance using payment gateway or available incentive points wallet.
 
 - **Method:** `POST`
 - **URL:** `/api/customer/bookings/{id}/pay-balance`
@@ -1842,7 +1505,10 @@ Clear the 80% remaining balance using standard cash gateway or NEXVIA Product Cr
 #### Request Body
 ```json
 {
-  "use_product_credit": true
+  "amount": 100000.00,
+  "payment_method": "razorpay",
+  "use_wallet_points": true,
+  "points_to_redeem": 10000.00
 }
 ```
 
@@ -1850,14 +1516,14 @@ Clear the 80% remaining balance using standard cash gateway or NEXVIA Product Cr
 ```json
 {
   "status": true,
-  "message": "Balance payment completed successfully.",
-  "data": {
-    "booking_number": "NEX-2026-781923",
-    "credit_applied": 15000.00,
-    "cash_paid": 56999.20,
-    "balance_amount": 0.00,
+  "message": "Balance paid in full! 100% Payment complete. Digital Delivery Challan generated.",
+  "booking": {
+    "booking_number": "NEX-2026-98124",
     "payment_status": "fully_paid",
-    "wallet_balance_remain": 0.00
+    "booking_status": "balance_paid",
+    "balance_amount": 0.00,
+    "challan_number": "DC-2026-98124",
+    "challan_url": "https://your-domain.com/api/bookings/18/challan"
   }
 }
 ```
@@ -1865,7 +1531,7 @@ Clear the 80% remaining balance using standard cash gateway or NEXVIA Product Cr
 ---
 
 ### 9.5 Initiate Booking Transfer
-Initiate transfer of a 20% booking reservation to another customer. Sends an OTP to the initiator.
+Initiate transfer of a confirmed booking and its paid deposit to another person's mobile number.
 
 - **Method:** `POST`
 - **URL:** `/api/customer/bookings/{id}/transfer`
@@ -1874,8 +1540,8 @@ Initiate transfer of a 20% booking reservation to another customer. Sends an OTP
 #### Request Body
 ```json
 {
-  "to_name": "Vikram Patel",
-  "to_phone": "9812345678"
+  "recipient_phone": "9823456789",
+  "recipient_name": "Amit Deshmukh"
 }
 ```
 
@@ -1883,16 +1549,15 @@ Initiate transfer of a 20% booking reservation to another customer. Sends an OTP
 ```json
 {
   "status": true,
-  "message": "Transfer OTP generated. Verify OTP to complete transfer.",
-  "transfer_id": 8,
-  "otp_debug": null
+  "message": "Transfer OTP sent to your registered mobile number. Please confirm OTP to complete transfer.",
+  "transfer_id": "TRF-98124-77"
 }
 ```
 
 ---
 
 ### 9.6 Confirm Booking Transfer via OTP
-Submits verified transfer request for Admin audit and approval.
+Confirm booking transfer with OTP.
 
 - **Method:** `POST`
 - **URL:** `/api/customer/bookings/{id}/transfer/confirm`
@@ -1901,8 +1566,8 @@ Submits verified transfer request for Admin audit and approval.
 #### Request Body
 ```json
 {
-  "transfer_id": 8,
-  "otp": "654321"
+  "otp": "719302",
+  "transfer_id": "TRF-98124-77"
 }
 ```
 
@@ -1910,12 +1575,134 @@ Submits verified transfer request for Admin audit and approval.
 ```json
 {
   "status": true,
-  "message": "OTP verified successfully. Your booking transfer request has been submitted and is pending Admin Approval.",
-  "data": {
-    "booking_number": "NEX-2026-781923",
-    "recipient_name": "Vikram Patel",
-    "recipient_phone": "9812345678",
-    "transfer_status": "pending_admin_approval"
+  "message": "Booking transferred successfully to Amit Deshmukh (9823456789).",
+  "booking_number": "NEX-2026-98124"
+}
+```
+
+---
+
+### 9.7 Select Preferred DSP Hub for Delivery
+Assign or change the Authorised Delivery & Service Partner (DSP) hub for local delivery and PDI handover.
+
+- **Method:** `POST`
+- **URL:** `/api/customer/bookings/{id}/select-dsp` (Aliases: `/api/bookings/{id}/select-dsp`, `/api/booking/{id}/select-dsp`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body
+```json
+{
+  "dsp_id": 2
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Partner 'Nexvia Hub Shivajinagar' assigned to booking #NEX-2026-98124. Delivery and unboxing will be coordinated by this partner.",
+  "booking_number": "NEX-2026-98124",
+  "assigned_dsp": {
+    "id": 2,
+    "business_name": "Nexvia Hub Shivajinagar",
+    "mobile": "9822001122",
+    "territory": "Shivajinagar & FC Road",
+    "address": "Showroom #12, Ground Floor, Pune Center",
+    "pincode": "411005",
+    "district": "Pune",
+    "state": "Maharashtra"
+  }
+}
+```
+
+---
+
+### 9.8 Reallocate Stored Paid Amount / Exchange Product
+Reallocate total paid amounts (20% token deposit + partial payments) either to a new product booking or to the customer's Product Credit Wallet.
+
+- **Method:** `POST`
+- **URL:** `/api/customer/bookings/{id}/reallocate` (Aliases: `/api/bookings/{id}/reallocate`, `/api/customer/bookings/{id}/exchange-product`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Body (Direct Product Switch)
+```json
+{
+  "new_product_id": 5
+}
+```
+
+#### Request Body (Reallocate to Wallet)
+```json
+{
+  "reallocate_to_wallet": true
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "₹25,000.00 successfully transferred to your Product Credit Wallet! You can use these credits to book or purchase any product in the catalog.",
+  "credited_amount": 25000.00,
+  "wallet_balance": 25000.00
+}
+```
+
+---
+
+### 9.9 Cancel Booking Policy Endpoint
+Endpoint enforcing the strict non-cancellation terms for 20% token deposits.
+
+- **Method:** `POST`
+- **URL:** `/api/customer/bookings/{id}/cancel` (Alias: `/api/bookings/{id}/cancel`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Response (`422 Unprocessable Content`)
+```json
+{
+  "status": false,
+  "message": "Cancellation is not permitted. Once the 20% booking deposit is confirmed, bookings are strictly non-cancellable and non-refundable. You may instead reallocate your paid amount to purchase any other catalog item."
+}
+```
+
+---
+
+### 9.10 Download / View Digital Delivery Challan (API)
+Retrieve structured data of the Digital Delivery Challan (DC) generated automatically upon 100% full balance payment.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/bookings/{id}/challan` (Aliases: `/api/booking/{id}/challan`, `/api/customer/bookings/{id}/challan`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "challan": {
+    "challan_number": "DC-2026-98124",
+    "issued_date": "2026-10-16 12:45:00",
+    "booking_number": "NEX-2026-98124",
+    "customer": {
+      "name": "Rahul Sharma",
+      "phone": "9876543210",
+      "address": "Flat 402, Sunshine Heights, FC Road, Pune 411005"
+    },
+    "product": {
+      "name": "NEXVIA Falcon EV",
+      "model_code": "NX-FLC-2026",
+      "selected_color": "Matte Black",
+      "serial_number": "NX-EV-2026-CH77102"
+    },
+    "payment_summary": {
+      "total_mrp": 125000.00,
+      "total_paid": 125000.00,
+      "balance_due": 0.00,
+      "payment_status": "fully_paid"
+    },
+    "assigned_dsp": {
+      "business_name": "Nexvia Hub Shivajinagar",
+      "phone": "9822001122"
+    }
   }
 }
 ```
@@ -1925,7 +1712,7 @@ Submits verified transfer request for Admin audit and approval.
 ## 10. Multi-Item Orders & Delivery Tracking APIs
 
 ### 10.1 Multi-Item Order Checkout
-Place combined cart checkout order with optional wallet credit deduction and automatic 7-stage delivery tracking assignment.
+Place multi-item cart order for accessories, electronics, or parts.
 
 - **Method:** `POST`
 - **URL:** `/api/customer/orders/checkout`
@@ -1934,16 +1721,9 @@ Place combined cart checkout order with optional wallet credit deduction and aut
 #### Request Body
 ```json
 {
-  "items": [
-    { "product_id": 101, "quantity": 1 }
-  ],
-  "shipping_address": "Flat 402, Green Avenue, FC Road",
-  "city": "Pune",
-  "state": "Maharashtra",
-  "pincode": "411001",
-  "payment_type": "booking_20",
-  "payment_method": "upi",
-  "use_product_credit": true
+  "shipping_address_id": 5,
+  "payment_method": "razorpay",
+  "notes": "Deliver during business hours"
 }
 ```
 
@@ -1952,16 +1732,12 @@ Place combined cart checkout order with optional wallet credit deduction and aut
 {
   "status": true,
   "message": "Order placed successfully.",
-  "data": {
-    "order_number": "NEX-ORD-20260310-8472",
-    "total_amount": 89999.00,
-    "booking_amount": 17999.80,
-    "balance_amount": 71999.20,
-    "product_credit_applied": 2500.00,
-    "payment_type": "booking_20",
-    "payment_status": "paid",
-    "tracking_number": "TRK-49182740",
-    "delivery_stage": "order_confirmed"
+  "order": {
+    "id": 9,
+    "order_number": "ORD-2026-5541",
+    "total_amount": 14999.00,
+    "tracking_number": "TRK-ORD-5541",
+    "payment_status": "paid"
   }
 }
 ```
@@ -1969,40 +1745,58 @@ Place combined cart checkout order with optional wallet credit deduction and aut
 ---
 
 ### 10.2 Track 7-Stage Order Delivery
-Track live delivery progress across the 7 milestones.
+Track delivery status through the official 7-stage pipeline.
 
 - **Method:** `GET`
-- **URL:** `/api/deliveries/{trackingNumber}` or `/api/customer/deliveries/{trackingNumber}`
+- **URL:** `/api/deliveries/{trackingNumber}` (Alias: `/api/customer/deliveries/{trackingNumber}`)
+- **Auth Required:** No
+
+#### 7-Stage Delivery Pipeline:
+1. `order_confirmed`
+2. `assigned` (Assigned to DSP Hub)
+3. `packed`
+4. `dispatched` (In Transit from Warehouse)
+5. `received_at_dsp` (Physically verified at DSP Center)
+6. `out_for_delivery`
+7. `delivered` (Verified with Customer OTP)
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "data": {
-    "tracking_number": "TRK-49182740",
-    "current_stage": "dispatched",
-    "current_stage_label": "Dispatched",
-    "dispatched_at": "2026-03-10 14:30:00",
-    "delivered_at": null,
-    "installation_completed_at": null,
-    "stages_flow": {
-      "order_confirmed": "Order Confirmed",
-      "processing": "Processing",
-      "dispatched": "Dispatched",
-      "out_for_delivery": "Out for Delivery",
-      "delivered": "Delivered",
-      "installation_pending": "Installation Pending",
-      "installation_completed": "Installation Completed"
-    }
+  "delivery": {
+    "tracking_number": "TRK-46384600",
+    "current_stage": "out_for_delivery",
+    "stage_index": 6,
+    "total_stages": 7,
+    "product_name": "NEXVIA Falcon EV",
+    "customer_name": "Rahul Sharma",
+    "shipping_city": "Pune",
+    "shipping_pincode": "411005",
+    "assigned_dsp": {
+      "business_name": "Nexvia Hub Shivajinagar",
+      "contact_phone": "9822001122"
+    },
+    "timeline": [
+      { "stage": "order_confirmed", "time": "2026-10-14 10:00:00", "completed": true },
+      { "stage": "assigned", "time": "2026-10-14 14:00:00", "completed": true },
+      { "stage": "packed", "time": "2026-10-15 09:30:00", "completed": true },
+      { "stage": "dispatched", "time": "2026-10-15 16:00:00", "completed": true },
+      { "stage": "received_at_dsp", "time": "2026-10-16 09:00:00", "completed": true },
+      { "stage": "out_for_delivery", "time": "2026-10-16 11:30:00", "completed": true },
+      { "stage": "delivered", "time": null, "completed": false }
+    ]
   }
 }
 ```
 
 ---
 
-## 11. Warranty & Service Support APIs
+## 11. Warranty & Customer Service Support APIs
 
 ### 11.1 List Customer Warranties
+List all automated 3-year digital warranties activated upon OTP-verified delivery.
+
 - **Method:** `GET`
 - **URL:** `/api/customer/warranties`
 - **Headers:** `Authorization: Bearer <token>`
@@ -2014,15 +1808,15 @@ Track live delivery progress across the 7 milestones.
   "data": [
     {
       "id": 1,
-      "product_id": 101,
-      "product_name": "NEXVIA Falcon EV Scooter",
-      "model_code": "NEX-FLC-01",
-      "serial_number": "SN-EV-2026-89123",
-      "purchase_date": "2026-03-10",
-      "warranty_start": "2026-03-10",
-      "warranty_end": "2029-03-10",
+      "product_id": 1,
+      "product_name": "NEXVIA Falcon EV",
+      "model_code": "NX-FLC-2026",
+      "serial_number": "NX-EV-2026-CH77102",
+      "purchase_date": "2026-10-16",
+      "warranty_start": "2026-10-16",
+      "warranty_end": "2029-10-16",
       "status": "active",
-      "document_url": "https://your-domain.com/warranties/cert_89123.pdf",
+      "document_url": "https://backend.nexviadls.com/uploads/warranties/w_1.pdf",
       "action": "RAISE SERVICE REQUEST"
     }
   ]
@@ -2032,34 +1826,54 @@ Track live delivery progress across the 7 milestones.
 ---
 
 ### 11.2 Create Service / Repair Ticket
-Raise warranty claim, repair request, or technical support ticket with photo/video proof.
+Customer files a warranty complaint or repair request. The system automatically allocates the nearest regional Authorised DSP partner based on pincode.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/service-tickets`
+- **URL:** `/api/customer/service-tickets` (Alias: `/api/customer/service-requests`)
+- **Content-Type:** `multipart/form-data` or `application/json`
 - **Headers:** `Authorization: Bearer <token>`
-- **Content-Type:** `multipart/form-data`
 
-#### Request Body (Multipart)
-```
-subject: Brake sensor check required
-service_type: repair (warranty, installation, repair, replacement, technical_support, complaint)
-booking_id: 15
-details: Front brake regenerative trigger is responding slowly after 500 km ride.
-photo: [FILE ATTACHMENT: brake_photo.jpg]
-```
+#### Request Body:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `subject` | string | **Yes** | Issue summary (e.g., "Brake calibration required") |
+| `service_type` | string | **Yes** | `warranty`, `installation`, `repair`, `technical_support`, `maintenance`, `breakdown` |
+| `details` | string | **Yes** | Detailed description of problem |
+| `priority` | string | No | `low`, `medium`, `high`, `urgent` (default: `medium`) |
+| `booking_id` | integer | No | Linked booking ID |
+| `pincode` | string | No | Customer service location pincode |
+| `photo` | file | No | JPEG/PNG/WebP image of issue (max: 10MB) |
+| `video` | file | No | MP4/MOV clip showing fault (max: 50MB) |
 
 #### Success Response (`201 Created`)
 ```json
 {
   "status": true,
-  "message": "Service ticket submitted successfully.",
+  "success": true,
+  "message": "Service request submitted successfully. Allocated to Authorised DSP 'Nexvia Hub Shivajinagar' for PIN 411005.",
   "data": {
     "id": 4,
-    "ticket_number": "TKT-2026-92841",
-    "subject": "Brake sensor check required",
-    "service_type": "repair",
+    "ticket_number": "TKT-2026-88192",
+    "subject": "Brake calibration required",
+    "service_type": "warranty",
+    "priority": "high",
     "status": "open",
-    "created_at": "2026-03-10 16:45:00"
+    "is_attended": false,
+    "location": {
+      "address": "Flat 402, Sunshine Heights, FC Road",
+      "pincode": "411005",
+      "city": "Pune",
+      "state": "Maharashtra"
+    },
+    "allocated_dsp": {
+      "id": 2,
+      "business_name": "Nexvia Hub Shivajinagar",
+      "contact_name": "Suresh Patil",
+      "mobile": "9822001122",
+      "district": "Pune",
+      "state": "Maharashtra"
+    },
+    "created_at": "2026-10-16 14:10:00"
   }
 }
 ```
@@ -2067,8 +1881,10 @@ photo: [FILE ATTACHMENT: brake_photo.jpg]
 ---
 
 ### 11.3 List Customer Service Tickets
+List all service tickets raised by customer with technician attended status.
+
 - **Method:** `GET`
-- **URL:** `/api/customer/service-tickets`
+- **URL:** `/api/customer/service-tickets` (Alias: `/api/customer/service-requests`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
@@ -2078,12 +1894,18 @@ photo: [FILE ATTACHMENT: brake_photo.jpg]
   "data": [
     {
       "id": 4,
-      "ticket_number": "TKT-2026-92841",
-      "subject": "Brake sensor check required",
-      "service_type": "repair",
-      "status": "open",
-      "details": "Front brake regenerative trigger is responding slowly after 500 km ride.",
-      "created_at": "2026-03-10 16:45:00"
+      "ticket_number": "TKT-2026-88192",
+      "subject": "Brake calibration required",
+      "service_type": "warranty",
+      "status": "attended",
+      "is_attended": true,
+      "attended_at": "2026-10-16 15:00:00",
+      "attended_by": "Vikram Singh (Technician)",
+      "allocated_dsp": {
+        "id": 2,
+        "business_name": "Nexvia Hub Shivajinagar",
+        "mobile": "9822001122"
+      }
     }
   ]
 }
@@ -2091,7 +1913,84 @@ photo: [FILE ATTACHMENT: brake_photo.jpg]
 
 ---
 
-### 11.4 Schedule / Rate Installation
+### 11.4 Get Service Ticket Details
+Fetch single ticket details, notes, resolution proof, and DSP details.
+
+- **Method:** `GET`
+- **URL:** `/api/customer/service-tickets/{id}` (Alias: `/api/customer/service-requests/{id}`)
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "id": 4,
+    "ticket_number": "TKT-2026-88192",
+    "subject": "Brake calibration required",
+    "service_type": "warranty",
+    "priority": "high",
+    "status": "resolved",
+    "is_attended": true,
+    "attended_at": "2026-10-16 15:00:00",
+    "attended_by": "Vikram Singh",
+    "attended_by_phone": "9822001122",
+    "details": "Front disc brake lever loose",
+    "dsp_notes": "Technician visited customer premises, bled brake line and tightened caliper",
+    "resolved_at": "2026-10-16 16:30:00",
+    "resolution_notes": "Issue resolved and customer signed service completion slip.",
+    "allocated_dsp": {
+      "id": 2,
+      "business_name": "Nexvia Hub Shivajinagar",
+      "mobile": "9822001122"
+    }
+  }
+}
+```
+
+---
+
+### 11.5 Lookup Local DSP Partners by Pincode / District
+Find authorised local DSP centers for on-site inspection or servicing.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/customer/dsp/lookup`
+- **Headers:** `Authorization: Bearer <token>`
+
+#### Request Query / Body:
+```json
+{
+  "pincode": "411005",
+  "city": "Pune",
+  "state": "Maharashtra"
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "count": 2,
+  "data": [
+    {
+      "id": 2,
+      "business_name": "Nexvia Hub Shivajinagar",
+      "contact_name": "Suresh Patil",
+      "mobile": "9822001122",
+      "district": "Pune",
+      "state": "Maharashtra",
+      "match_type": "exact_pincode",
+      "match_label": "Authorised Delivery & Service Center"
+    }
+  ]
+}
+```
+
+---
+
+### 11.6 Schedule or Rate Technician Installation
+Schedule doorstep unboxing, battery setup, or submit technician rating.
+
 - **Method:** `POST`
 - **URL:** `/api/customer/installations/schedule`
 - **Headers:** `Authorization: Bearer <token>`
@@ -2099,10 +1998,10 @@ photo: [FILE ATTACHMENT: brake_photo.jpg]
 #### Request Body
 ```json
 {
-  "booking_id": 15,
-  "scheduled_at": "2026-03-15 11:00:00",
+  "booking_id": 18,
+  "scheduled_at": "2026-10-18 11:00:00",
   "rating": 5,
-  "feedback": "Punctual technician and thorough demo!"
+  "feedback": "Prompt and polite technician. Explained smart console clearly."
 }
 ```
 
@@ -2112,10 +2011,10 @@ photo: [FILE ATTACHMENT: brake_photo.jpg]
   "status": true,
   "message": "Installation schedule updated.",
   "data": {
-    "id": 2,
-    "technician_name": "Ramesh Verma",
+    "id": 1,
+    "technician_name": "Assigned Technician",
     "technician_phone": "+91-9876543210",
-    "scheduled_at": "2026-03-15 11:00:00",
+    "scheduled_at": "2026-10-18 11:00:00",
     "status": "completed",
     "rating": 5
   }
@@ -2198,8 +2097,10 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.2 Self Dealer Eligibility & Status (v1)
+Check if customer is an active Self-Dealer and view activation terms.
+
 - **Method:** `GET`
-- **URL:** `/api/v1/self-dealer/status` or `/api/customer/self-dealer/status`
+- **URL:** `/api/v1/self-dealer/status` (Alias: `/api/customer/self-dealer/status`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
@@ -2209,19 +2110,10 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
   "data": {
     "is_self_dealer": true,
     "self_dealer_status": "active",
-    "self_dealer_code": "SD-12-PUN",
+    "activated_at": "2026-10-16 10:15:30",
     "referral_code": "NEX98B2A1",
     "referral_url": "https://your-domain.com/ref/NEX98B2A1",
-    "activated_at": "2026-03-01T10:00:00.000000Z",
-    "activation_booking_id": 15,
-    "activation_product_name": "NEXVIA Falcon EV Scooter",
-    "wallet": {
-      "available_points": 4500.00,
-      "pending_points": 1000.00,
-      "redeemed_points": 15000.00,
-      "total_earned": 20500.00
-    },
-    "rule_version": "Variant A (10% → 12% → 15% → 18% → 20% → Reset)"
+    "can_earn_referral_points": true
   }
 }
 ```
@@ -2229,8 +2121,10 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.3 Self Dealer Category 5-Stage Progression (v1)
+View 5-stage progression slabs across all categories.
+
 - **Method:** `GET`
-- **URL:** `/api/v1/self-dealer/categories` or `/api/customer/self-dealer/categories`
+- **URL:** `/api/v1/self-dealer/categories` (Alias: `/api/customer/self-dealer/categories`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
@@ -2242,22 +2136,12 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
       "category_id": 1,
       "category_name": "Electric Vehicles",
       "category_code": "EV",
-      "current_stage": 2,
+      "current_stage": 1,
       "max_stages": 5,
-      "current_incentive_pct": 12.00,
-      "next_incentive_pct": 15.00,
-      "cycle_number": 1,
-      "referrals_in_cycle": 1,
-      "total_referrals_all_time": 1,
-      "stages_progress": [
-        { "stage": 1, "percentage": 10.00, "is_current": false, "is_completed": true },
-        { "stage": 2, "percentage": 12.00, "is_current": true, "is_completed": false },
-        { "stage": 3, "percentage": 15.00, "is_current": false, "is_completed": false },
-        { "stage": 4, "percentage": 18.00, "is_current": false, "is_completed": false },
-        { "stage": 5, "percentage": 20.00, "is_current": false, "is_completed": false }
-      ],
-      "is_final_stage": false,
-      "next_action_label": "Next Referral earns 12% (Stage 2/5)"
+      "current_rate_pct": 10.00,
+      "next_rate_pct": 12.00,
+      "stage_rates": [10.00, 12.00, 15.00, 18.00, 20.00],
+      "cycle_number": 1
     }
   ]
 }
@@ -2266,8 +2150,10 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.4 Self Dealer Category Detail (v1)
+Detail of single category progression.
+
 - **Method:** `GET`
-- **URL:** `/api/v1/self-dealer/category/{id}` or `/api/customer/self-dealer/category/{id}`
+- **URL:** `/api/v1/self-dealer/category/{id}` (Alias: `/api/customer/self-dealer/category/{id}`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
@@ -2277,12 +2163,9 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
   "data": {
     "category_id": 1,
     "category_name": "Electric Vehicles",
-    "category_code": "EV",
-    "current_stage": 2,
-    "current_incentive_pct": 12.00,
+    "current_stage": 1,
     "cycle_number": 1,
-    "referrals_count": 1,
-    "total_all_time": 1
+    "stage_rates": [10.0, 12.0, 15.0, 18.0, 20.0]
   }
 }
 ```
@@ -2290,8 +2173,10 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.5 Self Dealer Incentive Points Wallet (v1)
-- **Method:** `GET`
-- **URL:** `/api/v1/self-dealer/wallet` or `/api/customer/self-dealer/wallet`
+Get incentive points wallet balance and point conversion rate.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/v1/self-dealer/wallet` (Aliases: `/api/customer/self-dealer/wallet`, `/api/customer/wallet`, `/api/wallet`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Success Response (`200 OK`)
@@ -2299,17 +2184,11 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 {
   "status": true,
   "data": {
-    "wallet_title": "MY INCENTIVE POINTS",
-    "available_incentive_points": 4500.00,
-    "pending_incentive_points": 1000.00,
-    "redeemed_incentive_points": 15000.00,
-    "reversed_incentive_points": 0.00,
-    "lifetime_earned_points": 20500.00,
-    "redemption_rules": {
-      "can_redeem_on_booking_balance": true,
-      "can_withdraw_cash": false,
-      "points_currency_ratio": "1 Point = ₹1.00 Value"
-    }
+    "available_points": 18500.00,
+    "pending_points": 0.00,
+    "redeemed_points": 5000.00,
+    "lifetime_points": 23500.00,
+    "point_value_inr": 1.00
   }
 }
 ```
@@ -2317,35 +2196,24 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.6 Self Dealer Wallet Transaction Ledger (v1)
-- **Method:** `GET`
-- **URL:** `/api/v1/self-dealer/wallet/transactions` or `/api/customer/self-dealer/wallet/transactions`
+Paginated history of points credited and redeemed.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/v1/self-dealer/wallet/transactions` (Aliases: `/api/customer/self-dealer/wallet/transactions`, `/api/customer/transactions`, `/api/wallet/transactions`, `/api/transactions`)
 - **Headers:** `Authorization: Bearer <token>`
-- **Query Parameters:** `?page=1&per_page=20`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "pagination": {
-    "current_page": 1,
-    "last_page": 1,
-    "per_page": 20,
-    "total": 1
-  },
   "data": [
     {
-      "id": 42,
-      "transaction_type": "referral_booking",
-      "amount": 8999.90,
+      "id": 1,
+      "amount": 12500.00,
       "type": "credit",
-      "status": "available",
-      "description": "Referral commission (10%) for booking NEX-2026-781923 by Kavita Shah",
-      "booking_number": "NEX-2026-781923",
-      "category_name": "Electric Vehicles",
-      "referral_stage": 1,
-      "incentive_percentage": 10.00,
-      "cycle_number": 1,
-      "created_at": "2026-03-05T14:00:00.000000Z"
+      "source": "referral_booking",
+      "description": "Stage 1 referral points for booking NEX-2026-9810",
+      "created_at": "2026-10-16 11:00:00"
     }
   ]
 }
@@ -2354,38 +2222,24 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.7 Self Dealer Referrals List (v1)
-- **Method:** `GET`
-- **URL:** `/api/v1/self-dealer/referrals` or `/api/customer/self-dealer/referrals`
+List of invited customers and their booking statuses.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/v1/self-dealer/referrals` (Aliases: `/api/customer/referrals`, `/api/customer/my-referrals`, `/api/referrals`, `/api/my-referrals`)
 - **Headers:** `Authorization: Bearer <token>`
-- **Query Parameters:** `?page=1&per_page=20`
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "pagination": {
-    "current_page": 1,
-    "last_page": 1,
-    "per_page": 20,
-    "total": 1
-  },
   "data": [
     {
-      "referral_id": 14,
-      "referee_name": "Kavita Shah",
-      "referee_phone_masked": "98******10",
-      "booking_number": "NEX-2026-781923",
-      "category_name": "Electric Vehicles",
-      "stage": 1,
-      "cycle_number": 1,
-      "benefit_percentage": 10.00,
-      "product_value": 89999.00,
-      "eligible_product_value": 89999.00,
-      "credit_earned": 8999.90,
-      "status": "qualified",
-      "notes": "Stage 1 referral qualification",
-      "date": "2026-03-05 14:00",
-      "approved_at": "2026-03-05 14:05"
+      "id": 2,
+      "name": "Kavita Shah",
+      "phone": "98******10",
+      "joined_date": "2026-10-15",
+      "status": "booked",
+      "points_earned": 12500.00
     }
   ]
 }
@@ -2394,11 +2248,11 @@ Combined overview of referral link, QR code, 5-stage category progressions, refe
 ---
 
 ### 12.8 Apply & Validate Referral Code at Checkout (v1)
-Validate a referral code and check anti-fraud rules (self-referral prevention & active dealer verification).
+Validate a referral code and apply inviter benefits.
 
 - **Method:** `POST`
-- **URL:** `/api/v1/referral/apply` or `/api/customer/referral/apply`
-- **Headers (Optional):** `Authorization: Bearer <token>`
+- **URL:** `/api/v1/referral/apply` (Alias: `/api/customer/referral/apply`)
+- **Headers:** `Authorization: Bearer <token>`
 
 #### Request Body
 ```json
@@ -2420,44 +2274,37 @@ Validate a referral code and check anti-fraud rules (self-referral prevention & 
 }
 ```
 
-#### Anti-Fraud / Error Response (`422 Unprocessable Entity`)
-```json
-{
-  "status": false,
-  "message": "You cannot use your own referral code."
-}
-```
-
 ---
 
 ### 12.9 Product Referral Benefit Calculator (v1)
-Public calculator displaying potential self-dealer activation points (20%) and stage 1 to 5 earning simulation for a product.
+Calculate potential incentive points across all 5 stages for any product.
 
 - **Method:** `GET`
-- **URL:** `/api/v1/products/{id}/referral-benefit` (e.g., `/api/v1/products/101/referral-benefit`)
+- **URL:** `/api/v1/products/{id}/referral-benefit`
+- **Auth Required:** No
 
 #### Success Response (`200 OK`)
 ```json
 {
   "status": true,
   "data": {
-    "product_id": 101,
-    "product_name": "NEXVIA Falcon EV Scooter",
-    "mrp": 89999.00,
-    "eligible_referral_value": 89999.00,
+    "product_id": 1,
+    "product_name": "NEXVIA Falcon EV",
+    "mrp": 125000.00,
+    "eligible_referral_value": 125000.00,
     "is_self_dealer_activator": true,
     "referral_eligible": true,
     "self_dealer_activation": {
       "activation_percentage": 20.00,
-      "potential_points": 17999.80,
-      "banner_text": "Book this product to activate Self Dealership and get ₹17,999.80 (20%) in points!"
+      "potential_points": 25000.00,
+      "banner_text": "Book this product to activate Self Dealership and get ₹25,000.00 (20%) in points!"
     },
     "referral_stages": [
-      { "stage": 1, "percentage": 10.00, "potential_points": 8999.90 },
-      { "stage": 2, "percentage": 12.00, "potential_points": 10799.88 },
-      { "stage": 3, "percentage": 15.00, "potential_points": 13499.85 },
-      { "stage": 4, "percentage": 18.00, "potential_points": 16199.82 },
-      { "stage": 5, "percentage": 20.00, "potential_points": 17999.80 }
+      { "stage": 1, "percentage": 10.00, "potential_points": 12500.00 },
+      { "stage": 2, "percentage": 12.00, "potential_points": 15000.00 },
+      { "stage": 3, "percentage": 15.00, "potential_points": 18750.00 },
+      { "stage": 4, "percentage": 18.00, "potential_points": 22500.00 },
+      { "stage": 5, "percentage": 20.00, "potential_points": 25000.00 }
     ]
   }
 }
@@ -2466,17 +2313,17 @@ Public calculator displaying potential self-dealer activation points (20%) and s
 ---
 
 ### 12.10 Redeem Incentive Points on Booking Balance (v1)
-Redeem available wallet points towards paying down the remaining balance of an active booking.
+Redeem available points to pay down the remaining balance of an active booking.
 
 - **Method:** `POST`
-- **URL:** `/api/v1/self-dealer/redeem` or `/api/customer/self-dealer/redeem`
+- **URL:** `/api/v1/self-dealer/redeem` (Alias: `/api/customer/self-dealer/redeem`)
 - **Headers:** `Authorization: Bearer <token>`
 
 #### Request Body
 ```json
 {
-  "booking_id": 15,
-  "points": 4500
+  "booking_id": 18,
+  "points": 5000
 }
 ```
 
@@ -2484,12 +2331,15 @@ Redeem available wallet points towards paying down the remaining balance of an a
 ```json
 {
   "status": true,
-  "message": "Successfully redeemed 4500 points toward your booking.",
+  "message": "Successfully redeemed 5000 points toward your booking.",
   "data": {
-    "points_redeemed": 4500,
-    "remaining_balance_due": 67499.20,
-    "booking_payment_status": "paid",
-    "remaining_wallet_points": 0.00
+    "points_redeemed": 5000.00,
+    "remaining_balance_due": 95000.00,
+    "booking_payment_status": "partially_paid",
+    "remaining_wallet_points": 13500.00,
+    "self_dealer_cancelled": false,
+    "self_dealer_status": "active",
+    "is_self_dealer": true
   }
 }
 ```
@@ -2498,217 +2348,47 @@ Redeem available wallet points towards paying down the remaining balance of an a
 
 ## 13. Summary of Standard HTTP Status Codes
 
-| Status Code | Meaning | Typical Usage |
+| Code | Status | Meaning & Scenario |
 |---|---|---|
-| `200 OK` | Request succeeded | Data fetched, updated, or action completed |
-| `201 Created` | Resource created | Account registered, booking created, item added to cart |
-| `400 Bad Request` | Invalid payload or missing parameters | Missing refresh token or parameter mismatch |
-| `401 Unauthorized` | Missing / invalid Bearer token | Protected customer endpoints |
-| `403 Forbidden` | Access denied | Account inactive or deactivated |
-| `404 Not Found` | Resource not found | Product, category, booking, or address not found |
-| `422 Unprocessable` | Validation error | Validation failure (e.g. duplicate phone, self-referral) |
-| `429 Too Many Requests` | Rate limit hit | OTP resend within cooldown window |
-| `500 Server Error` | Internal exception | Unexpected server failure |
+| `200` | **OK** | Request completed successfully (read, update, delete). |
+| `201` | **Created** | Resource created (register, create booking, service ticket). |
+| `400` | **Bad Request** | Malformed JSON or invalid parameter syntax. |
+| `401` | **Unauthorized** | Missing or invalid API bearer token. |
+| `403` | **Forbidden** | Valid token but forbidden resource (e.g. another user's booking). |
+| `404` | **Not Found** | Resource or endpoint does not exist. |
+| `422` | **Unprocessable Content** | Validation error (e.g. invalid phone, duplicate, OTP mismatch). |
+| `500` | **Server Error** | Unhandled server exception. |
 
 ---
 
 ## 14. Razorpay Payment Gateway Integration (Live APIs)
 
-### 14.1 Live Gateway Credentials & Configuration
-
-```env
-# Razorpay Live API Credentials
-RAZORPAY_KEY_ID=rzp_live_Tk75PpmJwnvItA
-RAZORPAY_KEY_SECRET=rql5885952DBD5XyO1kijFnm
-RAZORPAY_WEBHOOK_SECRET=nexvia_razorpay_secret_2026
-```
-
----
+### 14.1 Live Gateway Credentials
+- **Environment:** Live Production / Test Sandbox
+- **Currency:** `INR` (all amounts in paise for SDK: `₹1 = 100 paise`)
+- **Key ID:** `rzp_live_xxxxxxxxxxxxxx` (from `.env` config)
 
 ### 14.2 Create Gateway Payment Order
-
-Generates a real, cryptographically secure Razorpay Order ID (`order_xxxxxxxxxxxxxx`) directly via the Razorpay Orders API for token booking (20%), full payment (100%), or balance settlement.
+Generates server-side cryptographic order ID `order_xxxxxxxxxxxxxx`.
 
 - **Method:** `POST`
-- **URL:** `/api/payments/create-order` or `/api/customer/payments/create-order`
-- **Headers:** 
-  - `Content-Type: application/json`
-  - `Authorization: Bearer <token>` *(Optional if guest)*
-
-#### Request Body
-```json
-{
-  "productId": 1,
-  "amountPayable": 500.00,
-  "currency": "INR",
-  "paymentType": "booking_20",
-  "selectedColor": "Graphite Grey",
-  "quantity": 1,
-  "name": "John Doe",
-  "email": "customer@nexvia.in",
-  "phone": "9876543210"
-}
-```
-
-#### Request Parameters
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `productId` | Integer / String | Optional | ID or Slug of the product to book. If omitted, `amountPayable` is required. |
-| `amountPayable` | Float / Number | Optional | Explicit amount in INR (e.g. `500.00`). If omitted, calculated from 20% or full product MRP. |
-| `paymentType` | String | No | `booking_20` (20% token) or `full_payment` (100% full amount). Default: `booking_20`. |
-| `currency` | String | No | ISO 4217 Currency Code. Default: `INR`. |
-| `selectedColor` | String | No | Selected color variant. |
-| `quantity` | Integer | No | Number of units (default: `1`). |
-| `bookingNumber` | String | No | Booking reference (e.g. `NEX-2026-ABC123`) if paying remaining balance. |
-| `name` | String | No | Customer full name for checkout prefill. |
-| `phone` | String | No | Customer mobile phone number for checkout prefill. |
-| `email` | String | No | Customer email address for checkout prefill. |
-
-#### Success Response (`200 OK`)
-```json
-{
-  "status": true,
-  "message": "Payment order ID generated successfully.",
-  "gateway": {
-    "provider": "razorpay",
-    "integration_mode": "live_razorpay",
-    "is_live": true,
-    "key_id": "rzp_live_Tk75PpmJwnvItA"
-  },
-  "order": {
-    "id": "order_Tk7kL8rrYdb0UV",
-    "order_id": "order_Tk7kL8rrYdb0UV",
-    "entity": "order",
-    "amount": 50000,
-    "amount_paid": 0,
-    "amount_due": 50000,
-    "amount_in_rupees": 500.0,
-    "currency": "INR",
-    "receipt": "rcpt_20261005061356_587",
-    "status": "created",
-    "attempts": 0,
-    "payment_type": "booking_20",
-    "created_at": 1791180838,
-    "notes": {
-      "product_id": 1,
-      "product_name": "NEXVIA 43” Smart LED TV",
-      "model_code": "NEX-ENT-43TV",
-      "selected_color": null,
-      "quantity": 1,
-      "user_id": null,
-      "customer_name": "John Doe"
-    }
-  },
-  "checkout_options": {
-    "key": "rzp_live_Tk75PpmJwnvItA",
-    "amount": 50000,
-    "currency": "INR",
-    "name": "NEXVIA Mobility",
-    "description": "Token Booking (20%) for NEXVIA 43” Smart LED TV",
-    "order_id": "order_Tk7kL8rrYdb0UV",
-    "prefill": {
-      "name": "John Doe",
-      "email": "customer@nexvia.in",
-      "contact": "9876543210"
-    },
-    "notes": {
-      "booking_type": "booking_20",
-      "product_id": 1,
-      "color": null
-    },
-    "theme": {
-      "color": "#0D6EFD"
-    }
-  },
-  "upi_qr": {
-    "enabled": true,
-    "account_name": "DLS AGRO INFRAVENTURE PRIVATE LIMITED",
-    "upi_id": "dlsagroin.09@idfcbank",
-    "bank_name": "IDFC FIRST Bank",
-    "qr_image_url": "https://nexviadls.com/images/dls_payment_qr.png",
-    "instructions": "Scan this QR code with any UPI app (GPay, PhonePe, Paytm, BHIM) to transfer"
-  }
-}
-```
-
----
+- **URL:** `/api/payments/create-order`
+- **Headers:** `Authorization: Bearer <token>`
 
 ### 14.3 Verify Payment & Cryptographic Signature
-
-Verifies the Razorpay payment callback parameters (`razorpay_order_id`, `razorpay_payment_id`, `razorpay_signature`) using **HMAC SHA-256** validation against the server's `RAZORPAY_KEY_SECRET`. Upon verification, updates the associated Booking status and ledger.
+Validates signature: `hash_hmac('sha256', order_id + "|" + payment_id, secret)`.
 
 - **Method:** `POST`
-- **URL:** `/api/payments/verify` or `/api/customer/payments/verify`
-- **Headers:** 
-  - `Content-Type: application/json`
-  - `Authorization: Bearer <token>` *(Optional)*
-
-#### Request Body
-```json
-{
-  "razorpay_order_id": "order_Tk7kL8rrYdb0UV",
-  "razorpay_payment_id": "pay_9876543210abcdef",
-  "razorpay_signature": "4a72d3f25c38714b9812401f8220807b5a593cb84029279a77610df666133480",
-  "booking_number": "NEX-2026-ABC123",
-  "is_balance_payment": false,
-  "amount": 500.00
-}
-```
-
-#### Request Parameters
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `razorpay_order_id` | String | **Yes** | The Razorpay Order ID returned from `/create-order`. |
-| `razorpay_payment_id` | String | **Yes** | The Razorpay Payment ID returned on successful transaction. |
-| `razorpay_signature` | String | **Yes** | Cryptographic HMAC SHA-256 signature generated by Razorpay. |
-| `booking_number` | String | No | The NEXVIA Booking number (`NEX-YYYY-XXXXXX`) to auto-confirm. |
-| `is_balance_payment` | Boolean | No | Set `true` if this payment is towards 80% balance / EMI installment. |
-| `amount` | Float | No | Amount paid in INR. |
-
-#### Success Response (`200 OK`)
-```json
-{
-  "status": true,
-  "message": "Payment verified and captured successfully.",
-  "payment_status": "captured",
-  "data": {
-    "order_id": "order_Tk7kL8rrYdb0UV",
-    "payment_id": "pay_9876543210abcdef",
-    "signature": "4a72d3f25c38714b9812401f8220807b5a593cb84029279a77610df666133480",
-    "status": "paid",
-    "booking_number": "NEX-2026-ABC123",
-    "verified_at": "2026-10-05T11:45:00+05:30"
-  }
-}
-```
-
-#### Failure Response (`400 Bad Request`)
-```json
-{
-  "status": false,
-  "message": "Payment signature verification failed. Invalid or fraudulent transaction."
-}
-```
-
----
+- **URL:** `/api/payments/verify`
 
 ### 14.4 Razorpay Webhook Event Listener
-
-Receives asynchronous server-to-server webhook notifications from Razorpay for events like `order.paid`, `payment.captured`, and `payment.failed`.
+Listens to server-to-server gateway webhooks (`payment.captured`, `order.paid`).
 
 - **Method:** `POST`
-- **URL:** `/api/webhooks/razorpay` or `/api/payments/webhook`
-- **Headers:** 
-  - `Content-Type: application/json`
-  - `X-Razorpay-Signature: <signature_header>`
-- **Webhook Secret:** `nexvia_razorpay_secret_2026`
+- **URL:** `/api/payments/webhook` (Alias: `/api/webhooks/razorpay`)
+- **Headers:** `X-Razorpay-Signature: <signature>`
 
-#### Handled Events
-- `order.paid`: Automatically confirms booking and marks initial payment complete.
-- `payment.captured`: Automatically records transaction reference.
-- `payment.failed`: Logs failure diagnostics.
-
-#### Response (`200 OK`)
+#### Webhook Success Response (`200 OK`)
 ```json
 {
   "status": true,
@@ -2716,351 +2396,345 @@ Receives asynchronous server-to-server webhook notifications from Razorpay for e
 }
 ```
 
----
-
 ### 14.5 Mobile & Web SDK Client Integration Code
-
-#### Flutter Integration Example (`razorpay_flutter`)
-
-```dart
-import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-
-class PaymentService {
-  late Razorpay _razorpay;
-
-  void init() {
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-  }
-
-  Future<void> openCheckout({required int productId, required double amount}) async {
-    // 1. Create order on backend
-    final response = await http.post(
-      Uri.parse('https://nexviadls.com/api/payments/create-order'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'productId': productId,
-        'amountPayable': amount,
-        'paymentType': 'booking_20',
-        'name': 'Customer Name',
-        'phone': '9876543210'
-      }),
-    );
-    final data = jsonDecode(response.body);
-
-    // 2. Open Razorpay Checkout Sheet
-    var options = {
-      'key': data['gateway']['key_id'],
-      'amount': data['order']['amount'],
-      'name': 'NEXVIA Mobility',
-      'description': 'Token Booking (20%)',
-      'order_id': data['order']['id'],
-      'prefill': data['checkout_options']['prefill'],
-      'theme': {'color': '#0D6EFD'}
-    };
-
-    _razorpay.open(options);
-  }
-
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    // 3. Verify on backend
-    await http.post(
-      Uri.parse('https://nexviadls.com/api/payments/verify'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'razorpay_order_id': response.orderId,
-        'razorpay_payment_id': response.paymentId,
-        'razorpay_signature': response.signature,
-      }),
-    );
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    print('Payment Failed: ${response.message}');
-  }
-}
-```
-
-#### React Native Integration Example (`react-native-razorpay`)
-
-```javascript
-import RazorpayCheckout from 'react-native-razorpay';
-
-const payWithRazorpay = async (productId, amount) => {
-  // 1. Create Order ID from Backend API
-  const res = await fetch('https://nexviadls.com/api/payments/create-order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productId, amountPayable: amount, paymentType: 'booking_20' }),
-  });
-  const data = await res.json();
-
-  // 2. Launch Razorpay Native Modal
-  const options = {
-    key: data.gateway.key_id,
-    amount: data.order.amount,
-    currency: 'INR',
-    name: 'NEXVIA Mobility',
-    description: '20% Token Booking',
-    order_id: data.order.id,
-    prefill: data.checkout_options.prefill,
-    theme: { color: '#0D6EFD' }
-  };
-
-  RazorpayCheckout.open(options).then((paymentData) => {
-    // 3. Verify Payment
-    fetch('https://nexviadls.com/api/payments/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_signature: paymentData.razorpay_signature,
-      }),
-    });
-  }).catch((error) => {
-    console.log('Payment Error:', error);
-  });
-};
-```
-
-#### Web Browser Integration Example (`Razorpay Checkout JS`)
-
-```html
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script>
-async function startPayment(productId, amount) {
-  // 1. Create order
-  const response = await fetch('/api/payments/create-order', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productId: productId, amountPayable: amount, paymentType: 'booking_20' })
-  });
-  const data = await response.json();
-
-  // 2. Open Razorpay modal
-  const options = {
-    key: data.gateway.key_id,
-    amount: data.order.amount,
-    currency: 'INR',
-    name: 'NEXVIA Mobility',
-    order_id: data.order.id,
-    prefill: data.checkout_options.prefill,
-    theme: { color: '#0D6EFD' },
-    handler: async function (paymentResponse) {
-      // 3. Verify Signature
-      await fetch('/api/payments/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          razorpay_order_id: paymentResponse.razorpay_order_id,
-          razorpay_payment_id: paymentResponse.razorpay_payment_id,
-          razorpay_signature: paymentResponse.razorpay_signature
-        })
-      });
-      window.location.reload();
-    }
-  };
-  const rzp = new Razorpay(options);
-  rzp.open();
-}
-</script>
-```
+Use standard Razorpay Checkout JS / Android / iOS SDK passing the returned `order_id` and `amount`.
 
 ---
 
 ## 15. Digital Delivery Challan (DC) Automatic Generation (100% Full Payment Engine)
 
 ### 15.1 Challan Generation Rule & Architecture
-
-> 🔒 **Strict Business Logic Rule:**
-> **Digital Delivery Challan (DC)** is **strictly and automatically generated ONLY when 100% full payment is confirmed** (`payment_status === 'fully_paid'` and `balance_amount <= 0.00`).
->
-> If a booking is in 20% deposit state (`payment_status === 'paid'` or `partial_paid`), the challan status remains `pending_full_payment`, and delivery challan issuance is blocked until the remaining 80% balance is cleared.
-
-#### Trigger Scenarios for DC Generation:
-1. **Upfront 100% Full Payment at Checkout:** Created immediately via API/Web (`payment_type: 'full_payment'`).
-2. **Online 80% Balance Settlement:** When full remaining balance is paid via Razorpay online payment (`/api/payments/verify` or `/api/customer/bookings/{id}/pay-balance`).
-3. **EMI or Flexible Balance Completion:** When the final installment settles the balance to `₹0.00`.
-4. **Counter / Showroom Offline Full Payment:** When showroom cashier records full balance payment at counter (`admin.bookings.record_balance`).
-
----
+1. **Rule:** A booking generates a Digital Delivery Challan (DC) only when paid in full (`payment_status: 'fully_paid'`).
+2. **Components Included:** Customer information, product details, serial/chassis number, tax breakdown, and DSP center handover authorization.
 
 ### 15.2 Get Digital Delivery Challan Payload (API)
-
-Fetch the complete, authenticated Digital Delivery Challan payload with security hash, DSP allocation, customer consignee details, and dispatch status.
-
 - **Method:** `GET` or `POST`
-- **URL:** `/api/customer/bookings/{id}/challan` or `/api/bookings/{id}/challan` (where `{id}` can be booking ID `12` or booking number `NEX-2026-ABC123`)
-- **Headers:** 
-  - `Authorization: Bearer <token>` or `token: <token>`
-
-#### Success Response (`200 OK` — When 100% Fully Paid):
-```json
-{
-  "status": true,
-  "message": "Digital Delivery Challan (DC) retrieved successfully.",
-  "data": {
-    "status": true,
-    "is_eligible": true,
-    "challan_number": "DC-2026-B87A9F",
-    "challan_status": "generated",
-    "issued_at": "2026-10-05 15:40:00",
-    "booking_number": "NEX-2026-B44686",
-    "customer": {
-      "name": "Rahul Sharma",
-      "phone": "9876543210",
-      "shipping_address": "Flat 402, Green Avenue, FC Road",
-      "city": "Pune",
-      "state": "Maharashtra",
-      "pincode": "411001"
-    },
-    "product": {
-      "id": 1,
-      "name": "NEXVIA 43” Smart LED TV",
-      "model_code": "NEX-ENT-43TV",
-      "selected_color": "Midnight Black",
-      "quantity": 1,
-      "mrp": 29999.00
-    },
-    "payment": {
-      "total_amount": 29999.00,
-      "amount_paid": 29999.00,
-      "balance_remaining": 0.00,
-      "payment_status": "100% FULLY PAID",
-      "payment_type": "booking_20",
-      "payment_ref": "pay_9876543210abcdef"
-    },
-    "dsp_partner": {
-      "id": 3,
-      "business_name": "Apex Auto DSP Hub",
-      "phone": "9822001122",
-      "district": "Pune",
-      "pincode": "411001"
-    },
-    "delivery": {
-      "tracking_number": "TRK-58921034",
-      "stage": "processing",
-      "delivery_otp": null,
-      "otp_required": false,
-      "delivery_mode": "Doorstep Territory Direct Delivery (No OTP Required)"
-    },
-    "verification_qr_hash": "e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9"
-  }
-}
-```
-
-#### Ineligible Response (`422 Unprocessable Entity` — When Balance is Still Due):
-```json
-{
-  "status": false,
-  "is_eligible": false,
-  "challan_status": "pending_full_payment",
-  "message": "Digital Delivery Challan (DC) will be automatically generated once 100% full payment is confirmed.",
-  "balance_due": 23999.20
-}
-```
-
----
+- **URL:** `/api/bookings/{id}/challan`
+- **Headers:** `Authorization: Bearer <token>`
 
 ### 15.3 Digital Delivery Challan Web & Print Route
-
-- **URL:** `GET /booking/challan/{bookingNumber}`
-- **Web Interface:** Responsive, printable HTML Delivery Challan with pre-delivery inspection instructions, DSP handover section, digital verification seal, and printer styling (`window.print()`).
+Printable web view available at `https://your-domain.com/bookings/{id}/challan` for DSP printout and vehicle registration handover.
 
 ---
 
 ## 16. Stored Paid Amount / Product Credit Reallocation & Purchasing Other Items
 
-Customers who have paid token deposit (20%) or partial amounts are **never locked into a product** if they change their mind. Their total paid funds (`filled_amount`) can be converted into **Product Credits** to purchase any other item in the catalog.
-
-### 16.1 Reallocate Paid Amount to Purchase Another Product Directly
-
-When 60 days pass and the remaining balance is unpaid, the customer's total paid amount (`filled_amount`) is non-refundable and must be used to directly purchase another product from the catalog.
+### 16.1 Reallocate Paid Amount to Product Credit Wallet
+If a customer chooses to switch items or 60 days pass without paying the balance, their paid money is never lost. It is credited to their Product Credit Wallet.
 
 - **Method:** `POST`
-- **URL:** `/api/customer/bookings/{id}/reallocate` (or `/api/customer/bookings/{id}/exchange-product`, `/api/bookings/{id}/reallocate`)
-- **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
-
-#### Request Body:
-```json
-{
-  "new_product_id": 18
-}
-```
-*(Or by slug: `{"new_product_slug": "nexvia-power-sprayer"}`)*
-
-#### Success Response (`200 OK`):
-```json
-{
-  "status": true,
-  "message": "Successfully purchased NEXVIA Power Sprayer using your paid amount of ₹15,000.00 from Booking #NEX-2026-891234!",
-  "data": {
-    "reallocated_from_booking": "NEX-2026-891234",
-    "reallocated_amount": 15000.0,
-    "new_booking": {
-      "id": 64,
-      "booking_number": "NEX-2026-582190",
-      "product_id": 18,
-      "product_name": "NEXVIA Power Sprayer",
-      "mrp": 15000.0,
-      "paid_amount": 15000.0,
-      "balance_amount": 0.0,
-      "payment_status": "fully_paid",
-      "booking_status": "completed",
-      "balance_due_date": null
-    }
-  }
-}
-```
-
----
+- **URL:** `/api/customer/bookings/{id}/reallocate`
 
 ### 16.2 Book or Buy New Catalog Item Using Wallet Credits
+Use `use_wallet_points: true` in `/api/bookings` or `/api/customer/orders/checkout` to purchase any catalog product with zero cash outflow.
 
-When creating a new booking or multi-item checkout, specify `use_wallet: true` or `apply_wallet: true` to deduct from available Product Credit wallet balance.
+---
 
-- **Method:** `POST`
-- **URL:** `/api/customer/bookings` or `/api/bookings`
-- **Headers:** `Authorization: Bearer <token>`
+## 17. Authorised Delivery & Service Partner (DSP) Full Partner Ecosystem
 
-#### Request Body:
-```json
-{
-  "product_id": 4,
-  "payment_type": "booking_20",
-  "selected_color": "Ocean Blue",
-  "quantity": 1,
-  "use_wallet": true,
-  "shipping_address": "Flat 402, Green Avenue, FC Road",
-  "city": "Pune",
-  "state": "Maharashtra",
-  "pincode": "411001"
-}
+The Authorised Delivery & Service Partner (DSP) ecosystem empowers local hub operators, showrooms, and service centers to handle regional warehousing, Pre-Delivery Inspection (PDI), doorstep handover, OTP delivery confirmation, and post-sale warranty servicing.
+
+### 17.1 DSP Architecture & Commission Workflow Overview
+```text
+[Central Factory / Warehouse]
+          │ (Dispatch)
+          ▼
+[DSP Regional Hub] ──────► Action: "Product Received at DSP" (POST /api/dsp/deliveries/{id}/receive)
+          │
+          ▼
+[Out for Delivery]  ─────► Action: Marked Out for Delivery (POST /api/dsp/deliveries/{id}/status)
+          │
+          ▼
+[Doorstep Customer Handover]
+          │
+          ├──► DSP requests 6-digit Customer OTP
+          ▼
+[OTP Verification]  ─────► POST /api/dsp/deliveries/{id}/verify-otp
+          │
+          ├──► ❌ OTP Mismatch: Blocked (422 Error - Handover prevented)
+          │
+          └──► ✅ OTP Verified:
+                 1. Order marked as DELIVERED
+                 2. 5% DSP Commission automatically credited to DSP Wallet
+                 3. Official 3-Year Customer Warranty activated automatically
 ```
 
-#### Success Response (`201 Created`):
+---
+
+### 17.2 Submit DSP Partner Application
+Apply to become an Authorised Delivery & Service Partner (DSP) with territory selection, infrastructure specifications, and payment proof.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/apply`
+- **Content-Type:** `multipart/form-data`
+- **Auth Required:** No (Public Partner Application)
+
+#### Request Fields:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `applicant_name` | string | **Yes** | Full name of applicant |
+| `mobile` | string | **Yes** | Primary 10-digit mobile number |
+| `business_name` | string | **Yes** | Registered trade or business name |
+| `preferred_territory_area` | string | **Yes** | Preferred territory / city / tehsil |
+| `district` | string | **Yes** | District |
+| `state` | string | **Yes** | State |
+| `pincodes` | string | **Yes** | Serviced pincodes (comma-separated or array) |
+| `declaration_agreed` | boolean | **Yes** | Must be `true` |
+| `deposit_payment_proof` | file | No | Bank receipt for security deposit (PDF/JPG, max: 4MB) |
+| `signature_file` | file | No | Applicant signature image (max: 4MB) |
+
+#### Success Response (`201 Created`)
 ```json
 {
   "status": true,
-  "message": "New confirmed Flexi-Booking entry created successfully.",
-  "booking": {
-    "booking_number": "NEX-2026-C89123",
-    "product": {
-      "id": 4,
-      "name": "NEXVIA Falcon EV",
-      "model_code": "NEX-FALCON"
+  "message": "DSP Partner application submitted successfully!",
+  "application_number": "DSP-2026-X9K2L1",
+  "data": {
+    "application_number": "DSP-2026-X9K2L1",
+    "applicant_name": "Suresh Patil",
+    "business_name": "Patil Auto & Mobility Services",
+    "mobile": "9822001122",
+    "preferred_territory_area": "Shivajinagar & FC Road",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "status": "pending",
+    "security_deposit_amount": 1000000.00,
+    "created_at": "2026-10-16 10:00:00"
+  }
+}
+```
+
+---
+
+### 17.3 Track Application Status
+Track the review and approval status of a submitted DSP partner application.
+
+- **Method:** `GET`
+- **URL:** `/api/dsp/track/{applicationNumber}`
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "application_number": "DSP-2026-X9K2L1",
+  "applicant_name": "Suresh Patil",
+  "business_name": "Patil Auto & Mobility Services",
+  "status": "approved",
+  "applied_at": "2026-10-16T10:00:00+05:30"
+}
+```
+
+---
+
+### 17.4 DSP Partner Login
+Authenticate DSP Partner and receive API session token.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/login`
+- **Auth Required:** No
+
+#### Request Body
+```json
+{
+  "mobile": "9822001122",
+  "password": "Password@123"
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Partner authenticated successfully.",
+  "token": "d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7",
+  "dsp": {
+    "id": 2,
+    "application_number": "DSP-2026-X9K2L1",
+    "business_name": "Patil Auto & Mobility Services",
+    "applicant_name": "Suresh Patil",
+    "mobile": "9822001122",
+    "email": "patil.auto@example.com",
+    "territory_area": "Shivajinagar & FC Road",
+    "serviced_pincodes": ["411005", "411004", "411016"],
+    "district": "Pune",
+    "state": "Maharashtra",
+    "status": "approved",
+    "wallet_balance": 37500.00,
+    "total_earned": 50000.00,
+    "total_redeemed": 12500.00,
+    "commission_rate": "5.0%"
+  }
+}
+```
+
+---
+
+### 17.5 DSP Partner Logout
+Invalidate DSP session and bearer token.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/logout`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Logged out successfully."
+}
+```
+
+---
+
+### 17.6 Check Available DSPs by Pincode & Nearby Discovery
+Discover authorised DSP partners assigned to a customer pincode or address.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/available-by-pincode` (Alias: `/api/dsp/nearby`)
+- **Auth Required:** No (Public Endpoint)
+
+#### Query / Body Parameters:
+```json
+{
+  "pincode": "411005",
+  "city": "Pune",
+  "state": "Maharashtra"
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "search_criteria": {
+    "pincode": "411005",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "detection_source": "query_parameters"
+  },
+  "count": 1,
+  "has_direct_pincode_partner": true,
+  "recommended_dsp": {
+    "id": 2,
+    "business_name": "Patil Auto & Mobility Services",
+    "mobile": "9822001122",
+    "territory_area": "Shivajinagar & FC Road",
+    "premises_address": "Shop 4, Ground Floor, Shivajinagar",
+    "premises_pincode": "411005",
+    "serviced_pincodes": ["411005", "411004", "411016"],
+    "match_type": "exact_pincode",
+    "match_label": "Direct Pincode Partner",
+    "is_direct_match": true,
+    "commission_rate": "5.0%"
+  },
+  "dsps": [
+    {
+      "id": 2,
+      "business_name": "Patil Auto & Mobility Services",
+      "mobile": "9822001122",
+      "pincode": "411005"
+    }
+  ]
+}
+```
+
+---
+
+### 17.7 DSP Dashboard Stats & Operations Overview
+Comprehensive dashboard metrics for deliveries, wallet balance, and recent activities.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/dashboard`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "dsp": {
+      "id": 2,
+      "business_name": "Patil Auto & Mobility Services",
+      "mobile": "9822001122",
+      "district": "Pune",
+      "state": "Maharashtra",
+      "serviced_pincodes": ["411005", "411004"]
     },
-    "financials": {
-      "total_mrp": 89999.00,
-      "token_amount_paid": 17999.80,
-      "applied_wallet_discount": 5999.80,
-      "net_cash_paid": 12000.00,
-      "balance_amount_due": 71999.20,
-      "currency": "INR"
+    "stats": {
+      "total_deliveries": 24,
+      "pending_deliveries": 3,
+      "out_for_delivery": 2,
+      "delivered": 19,
+      "commission_rate": "5.0%"
+    },
+    "wallet": {
+      "available_balance": 37500.00,
+      "total_earned": 50000.00,
+      "total_redeemed": 12500.00
+    },
+    "recent_deliveries": [
+      {
+        "id": 14,
+        "tracking_number": "TRK-46384600",
+        "order_number": "NEX-2026-98124",
+        "product_name": "NEXVIA Falcon EV",
+        "customer_name": "Rahul Sharma",
+        "customer_phone": "9876543210",
+        "stage": "out_for_delivery",
+        "product_mrp": 125000.00,
+        "dsp_commission": 6250.00,
+        "commission_status": "pending"
+      }
+    ],
+    "recent_transactions": [
+      {
+        "id": 102,
+        "amount": 6250.00,
+        "type": "credit",
+        "source": "delivery_commission",
+        "description": "5% Commission for delivery TRK-46384599",
+        "balance_after": 37500.00,
+        "created_at": "2026-10-15T16:20:00+05:30"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 17.8 Get DSP Profile & Payout Settings
+Retrieve partner contact info, premises address, and banking credentials.
+
+- **Method:** `GET`
+- **URL:** `/api/dsp/profile`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "dsp": {
+    "id": 2,
+    "application_number": "DSP-2026-X9K2L1",
+    "business_name": "Patil Auto & Mobility Services",
+    "applicant_name": "Suresh Patil",
+    "mobile": "9822001122",
+    "email": "patil.auto@example.com",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "payout_settings": {
+      "account_number": "918237461928",
+      "ifsc": "HDFC0001234",
+      "bank_name": "HDFC Bank",
+      "holder_name": "Patil Auto & Mobility Services",
+      "upi_id": "patilauto@hdfcbank"
+    },
+    "wallet": {
+      "balance": 37500.00,
+      "total_earned": 50000.00,
+      "total_redeemed": 12500.00
     }
   }
 }
@@ -3068,71 +2742,158 @@ When creating a new booking or multi-item checkout, specify `use_wallet: true` o
 
 ---
 
-### 16.3 100% Full Payment Reward → Buy Product B with 20% Stored Credit (₹0 Cash Checkout)
+### 17.9 Update DSP Profile & Payout Credentials
+Update bank account details, UPI ID, or login password.
 
-When a customer pays **100% Full Payment on Product A**, they receive a **20% Product Credit / Self Dealer Reward** into their wallet. They can immediately use this credit to book **Product B with 20% deposit without paying any cash out of pocket**!
+- **Method:** `POST`
+- **URL:** `/api/dsp/profile`
+- **Headers:** `Authorization: Bearer <dsp_token>`
 
-#### Example Walkthrough:
-1. **Customer completes 100% payment on Product A (₹25,000):**
-   - Delivery Challan (DC) is automatically generated.
-   - 20% Reward Credit (**₹5,000**) is credited to Customer's Product Credit Wallet.
-2. **Customer decides to book Product B (₹25,000):**
-   - 20% Token Deposit required for Product B: **₹5,000**.
-   - Applied Stored Product Credit from Product A: **-₹5,000**.
-   - **Net Cash Payable at Checkout:** **₹0.00 (FREE Token Booking)**.
-   - Product B is confirmed, and customer gets another 60 days to settle Product B's remaining balance!
+#### Request Body
+```json
+{
+  "payout_account_number": "918237461928",
+  "payout_ifsc": "HDFC0001234",
+  "payout_bank_name": "HDFC Bank",
+  "payout_holder_name": "Patil Auto & Mobility Services",
+  "payout_upi_id": "patilauto@hdfcbank",
+  "new_password": "NewSecurePassword@123"
+}
+```
 
----
-
-## 17. DSP Delivery Pipeline, OTP Verification & Automatic Warranty
-
-### Overview of Workflow
-```text
-[Central Warehouse Dispatch]
-         │
-         ▼
-[1. Product Arrives at DSP Hub]
-         │ ──► Action: "Product Received at DSP" (POST /api/dsp/deliveries/{id}/receive)
-         │     Stage: `received_at_dsp`
-         ▼
-[2. Out for Delivery Handover]
-         │ ──► Stage: `out_for_delivery`
-         ▼
-[3. Doorstep Delivery Handover & Customer OTP Check]
-         │ ──► DSP enters 6-digit Customer OTP (POST /api/dsp/deliveries/{id}/verify-otp)
-         │
-         ├───► ❌ OTP Mismatch: Blocked (422 Error - Delivery cannot complete)
-         │
-         └───► ✅ OTP Verified:
-                 1. Delivery marked as `delivered`
-                 2. 5% DSP Commission automatically credited to DSP Wallet
-                 3. Official 3-Year Warranty automatically created & activated (`status: 'active'`)
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DSP Profile and payout settings updated successfully.",
+  "dsp": {
+    "id": 2,
+    "payout_settings": {
+      "account_number": "918237461928",
+      "ifsc": "HDFC0001234",
+      "bank_name": "HDFC Bank",
+      "holder_name": "Patil Auto & Mobility Services",
+      "upi_id": "patilauto@hdfcbank"
+    }
+  }
+}
 ```
 
 ---
 
-### 17.1 Product Receiving Confirmation at DSP Hub ("Product Received at DSP")
+### 17.10 List Assigned Territory Deliveries
+Fetch shipments assigned to DSP with stage filters (`pending`, `out_for_delivery`, `delivered`).
 
-When a dispatched shipment physically arrives at the local DSP center/hub, the DSP confirms physical receipt and inspects package seals.
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/deliveries`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "current_page": 1,
+  "total": 5,
+  "per_page": 15,
+  "last_page": 1,
+  "deliveries": [
+    {
+      "id": 14,
+      "tracking_number": "TRK-46384600",
+      "order_number": "NEX-2026-98124",
+      "stage": "received_at_dsp",
+      "product": {
+        "name": "NEXVIA Falcon EV",
+        "model_code": "NX-FLC-2026",
+        "selected_color": "Matte Black",
+        "mrp": 125000.00
+      },
+      "customer": {
+        "name": "Rahul Sharma",
+        "phone": "9876543210"
+      },
+      "shipping_address": {
+        "address": "Flat 402, Sunshine Heights, FC Road",
+        "city": "Pune",
+        "pincode": "411005"
+      },
+      "commission": {
+        "rate": "5.0%",
+        "amount": 6250.00,
+        "status": "pending"
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 17.11 Single Delivery Shipment Details
+Get complete details of a specific delivery order.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/deliveries/{id}`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "delivery": {
+    "id": 14,
+    "tracking_number": "TRK-46384600",
+    "order_number": "NEX-2026-98124",
+    "stage": "received_at_dsp",
+    "product": {
+      "name": "NEXVIA Falcon EV",
+      "model_code": "NX-FLC-2026",
+      "selected_color": "Matte Black",
+      "mrp": 125000.00
+    },
+    "customer": {
+      "name": "Rahul Sharma",
+      "phone": "9876543210",
+      "email": "rahul.sharma@example.com"
+    },
+    "shipping_address": {
+      "address": "Flat 402, Sunshine Heights, FC Road",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411005"
+    },
+    "commission": {
+      "rate": "5.0%",
+      "amount": 6250.00,
+      "status": "pending"
+    }
+  }
+}
+```
+
+---
+
+### 17.12 Product Received Confirmation at DSP Hub
+DSP confirms that physical vehicle or parcel arrived from central warehouse intact and passed initial inspection.
 
 - **Method:** `POST`
 - **URL:** `/api/dsp/deliveries/{id}/receive`
-- **Headers:** `Authorization: Bearer <dsp_token>` (or DSP session)
+- **Headers:** `Authorization: Bearer <dsp_token>`
 
-#### Request Body (Optional):
+#### Request Body
 ```json
 {
   "delivery_notes": "Unit received intact, battery sealed, verified model NEX-FALCON"
 }
 ```
 
-#### Success Response (`200 OK`):
+#### Success Response (`200 OK`)
 ```json
 {
   "status": true,
   "message": "Product physical shipment received and verified at DSP Hub successfully. Ready for PDI and Out for Delivery.",
   "stage": "received_at_dsp",
-  "received_at_dsp_at": "2026-10-05T11:23:32+00:00",
+  "received_at_dsp_at": "2026-10-16T11:23:32+05:30",
   "tracking_number": "TRK-46384600",
   "pdi_status": "received_at_hub"
 }
@@ -3140,15 +2901,40 @@ When a dispatched shipment physically arrives at the local DSP center/hub, the D
 
 ---
 
-### 17.2 Customer Delivery OTP / QR Verification ("OTP शिवाय Delivered नाही")
+### 17.13 Update Delivery Stage Status
+Transition shipment stage to `out_for_delivery` or initiate delivery verification.
 
-**Strict Security Rule:** An order cannot be marked as `delivered` without the customer providing their 6-digit Delivery OTP. This prevents false delivery claims and guarantees customer handover.
+- **Method:** `POST`
+- **URL:** `/api/dsp/deliveries/{id}/status`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Request Body
+```json
+{
+  "stage": "out_for_delivery",
+  "delivery_notes": "Loaded on transport van. Technician en route to customer location."
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Delivery marked as OUT FOR DELIVERY.",
+  "stage": "out_for_delivery"
+}
+```
+
+---
+
+### 17.14 Customer Delivery OTP Verification & Automatic Warranty
+Strict Security Handover Check: Order is marked delivered only after the customer provides the 6-digit OTP received via SMS. Verifying OTP automatically credits the 5% commission to DSP wallet and creates the 3-year warranty certificate.
 
 - **Method:** `POST`
 - **URL:** `/api/dsp/deliveries/{id}/verify-otp`
 - **Headers:** `Authorization: Bearer <dsp_token>`
 
-#### Request Body:
+#### Request Body
 ```json
 {
   "delivery_otp": "849201",
@@ -3156,7 +2942,28 @@ When a dispatched shipment physically arrives at the local DSP center/hub, the D
 }
 ```
 
-#### Error Response — Invalid OTP (`422 Unprocessable Entity`):
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Customer Delivery OTP verified successfully! Order marked as DELIVERED, 5% commission credited, and official warranty activated.",
+  "stage": "delivered",
+  "delivered_at": "2026-10-16T12:30:00+05:30",
+  "commission_credited": 6250.00,
+  "wallet_balance": 43750.00,
+  "transaction_ref": "DSP-COM-20261016-7736",
+  "warranty": {
+    "id": 1,
+    "serial_number": "NX-EV-2026-CH77102",
+    "warranty_start": "2026-10-16",
+    "warranty_end": "2029-10-16",
+    "status": "active",
+    "coverage_years": 3
+  }
+}
+```
+
+#### Error Response — Invalid OTP (`422 Unprocessable Content`)
 ```json
 {
   "status": false,
@@ -3165,64 +2972,239 @@ When a dispatched shipment physically arrives at the local DSP center/hub, the D
 }
 ```
 
-#### Success Response — OTP Verified (`200 OK`):
+---
+
+### 17.15 DSP Commission Wallet & Earnings Ledger
+View DSP earnings balance, commissions credited from completed deliveries, and past payouts.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/wallet`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "message": "Customer Delivery OTP verified successfully! Order marked as DELIVERED, 5% commission credited, and official warranty activated.",
-  "stage": "delivered",
-  "delivered_at": "2026-10-05T11:23:32+00:00",
-  "commission_credited": 2500.00,
-  "wallet_balance": 2500.00,
-  "transaction_ref": "DSP-COM-20261005-7736",
-  "warranty": {
-    "id": 1,
-    "serial_number": "NX-EV-2026-CH77102",
-    "warranty_start": "2026-10-05",
-    "warranty_end": "2029-10-05",
-    "status": "active",
-    "coverage_years": 3
+  "wallet": {
+    "wallet_balance": 43750.00,
+    "total_earned": 56250.00,
+    "total_redeemed": 12500.00
+  },
+  "current_page": 1,
+  "total": 8,
+  "transactions": [
+    {
+      "id": 105,
+      "amount": 6250.00,
+      "type": "credit",
+      "source": "delivery_commission",
+      "reference_number": "DSP-COM-20261016-7736",
+      "description": "5% Commission for delivery TRK-46384600",
+      "balance_after": 43750.00,
+      "created_at": "2026-10-16T12:30:00+05:30"
+    }
+  ]
+}
+```
+
+---
+
+### 17.16 Request Cash Payout / Bank or UPI Withdrawal
+Request wallet balance redemption to bank account (NEFT/IMPS) or UPI ID. Minimum withdrawal is ₹100.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/wallet/redeem`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Request Body (Bank Payout)
+```json
+{
+  "amount": 20000.00,
+  "payout_mode": "bank",
+  "bank_account_number": "918237461928",
+  "bank_ifsc": "HDFC0001234",
+  "bank_name": "HDFC Bank",
+  "bank_holder_name": "Patil Auto & Mobility Services"
+}
+```
+
+#### Request Body (UPI Payout)
+```json
+{
+  "amount": 10000.00,
+  "payout_mode": "upi",
+  "upi_id": "patilauto@hdfcbank"
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Payout request of ₹20,000.00 submitted successfully. Amount will be credited to your bank account within 24 business hours.",
+  "payout_request": {
+    "id": 8,
+    "request_number": "DSP-PAY-20261016-01",
+    "amount": 20000.00,
+    "payout_mode": "bank",
+    "status": "pending",
+    "remaining_wallet_balance": 23750.00
   }
 }
 ```
 
 ---
 
-### 17.3 Automatic Warranty Activation Details
+### 17.17 List Payout Requests History
+History of partner redemption requests and bank settlement statuses.
 
-Upon successful OTP verification:
-1. **Warranty Record:** A record in `warranties` table is activated (`status: 'active'`).
-2. **Start Date:** Begins on the exact physical delivery date (`delivered_at`).
-3. **Coverage Duration:** Configured according to product specs (default 3 years / 36 months).
-4. **Certificate:** Warranty PDF certificate is generated linked to customer's dashboard.
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/wallet/payout-requests`
+- **Headers:** `Authorization: Bearer <dsp_token>`
 
----
-
-## 18. Subcategories Module APIs
-
-Category & Subcategory Hierarchy:
-```text
-[Main Category] (e.g. Electric Scooters, Home Entertainment, DLS Farm Equipments)
-      │
-      ├───► [Subcategories] (e.g. High-Speed, Low-Speed, Commuter, 4K Smart TVs, Tillers)
-      │           │
-      │           └───► [Products] (e.g. NEXVIA Falcon EV, NEXVIA 55" 4K Smart TV)
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "total": 2,
+  "data": [
+    {
+      "id": 8,
+      "request_number": "DSP-PAY-20261016-01",
+      "amount": 20000.00,
+      "payout_mode": "bank",
+      "status": "processed",
+      "transaction_reference": "UTR9918274610",
+      "requested_at": "2026-10-16 13:00:00",
+      "processed_at": "2026-10-16 15:30:00"
+    }
+  ]
+}
 ```
 
 ---
 
+### 17.18 List Assigned Service Requests
+List service or repair tickets assigned to this DSP partner.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/service-requests`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "stats": {
+    "total_assigned": 6,
+    "attended_count": 4,
+    "pending_attention": 2,
+    "resolved_count": 3
+  },
+  "data": [
+    {
+      "id": 4,
+      "ticket_number": "TKT-2026-88192",
+      "customer_name": "Rahul Sharma",
+      "customer_phone": "9876543210",
+      "city": "Pune",
+      "pincode": "411005",
+      "subject": "Brake calibration required",
+      "service_type": "warranty",
+      "priority": "high",
+      "status": "open",
+      "is_attended": false,
+      "created_at": "2026-10-16 14:10:00"
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "total": 6
+  }
+}
+```
+
+---
+
+### 17.19 Service Request Detail
+Detailed diagnostic information, photos, videos, and customer address for a service ticket.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dsp/service-requests/{id}`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
+    "id": 4,
+    "ticket_number": "TKT-2026-88192",
+    "customer_name": "Rahul Sharma",
+    "customer_phone": "9876543210",
+    "address": "Flat 402, Sunshine Heights, FC Road",
+    "city": "Pune",
+    "pincode": "411005",
+    "subject": "Brake calibration required",
+    "service_type": "warranty",
+    "priority": "high",
+    "status": "open",
+    "is_attended": false,
+    "details": "Front disc brake lever loose"
+  }
+}
+```
+
+---
+
+### 17.20 Update Service Request Attendance & Resolution Status
+DSP marks problem as attended, assigns visiting technician, inputs service notes, and marks resolved.
+
+- **Method:** `POST`
+- **URL:** `/api/dsp/service-requests/{id}/status`
+- **Headers:** `Authorization: Bearer <dsp_token>`
+
+#### Request Body
+```json
+{
+  "status": "resolved",
+  "is_attended": true,
+  "attended_by_name": "Vikram Singh",
+  "attended_by_phone": "9822001122",
+  "dsp_notes": "Brake line bled and calibrated at customer doorstep.",
+  "resolution_notes": "Testing complete. Brake responsiveness verified."
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Service ticket status updated successfully.",
+  "ticket": {
+    "id": 4,
+    "ticket_number": "TKT-2026-88192",
+    "status": "resolved",
+    "is_attended": true,
+    "attended_at": "2026-10-16 15:00:00",
+    "resolved_at": "2026-10-16 16:30:00"
+  }
+}
+```
+
+---
+
+## 18. Subcategories & DLS Agro / Farm Equipment Catalog APIs
+
 ### 18.1 List All Subcategories
+Fetch all active subcategories across mobility, electronics, and agriculture.
 
-Fetch all active subcategories with their parent category details and active products count.
+- **Method:** `GET` or `POST`
+- **URL:** `/api/subcategories` (Alias: `/api/customer/subcategories`)
+- **Auth Required:** No
 
-- **Method:** `GET` / `POST`
-- **URL:** `/api/subcategories` or `/api/customer/subcategories`
-- **Query / Body Parameters (Optional):**
-  - `category_id` (integer | slug) — Filter by parent category.
-  - `type` (`electric_mobility` | `electronics` | `dls_farm_equipment` | `standard`) — Filter by category type.
-  - `search` (string) — Search subcategory name or slug.
-
-#### Success Response (`200 OK`):
+#### Success Response (`200 OK`)
 ```json
 {
   "status": true,
@@ -3233,15 +3215,13 @@ Fetch all active subcategories with their parent category details and active pro
       "name": "High-Speed Scooters",
       "slug": "high-speed-scooters",
       "image": "https://backend.nexviadls.com/uploads/subcategories/subcat_1.webp",
-      "description": "Official High-Speed Scooters lineup by NEXVIA DLS",
       "sort_order": 1,
       "products_count": 4,
       "category": {
         "id": 1,
-        "name": "Electric Scooters",
-        "slug": "electric-scooters",
-        "type": "electric_mobility",
-        "referral_category_code": "EV"
+        "name": "Electric Vehicles",
+        "slug": "electric-vehicles",
+        "type": "electric_mobility"
       }
     }
   ]
@@ -3250,33 +3230,23 @@ Fetch all active subcategories with their parent category details and active pro
 
 ---
 
-### 18.2 List Subcategories by Parent Category
+### 18.2 Subcategories by Category
+Filter subcategories under a specific parent category.
 
-- **Method:** `GET` / `POST`
-- **URL:** `/api/categories/{categoryIdOrSlug}/subcategories`
+- **Method:** `GET` or `POST`
+- **URL:** `/api/categories/{idOrSlug}/subcategories`
+- **Auth Required:** No
 
-#### Success Response (`200 OK`):
+#### Success Response (`200 OK`)
 ```json
 {
   "status": true,
-  "category": {
-    "id": 1,
-    "name": "Home Entertainment",
-    "slug": "home-entertainment",
-    "type": "electronics",
-    "referral_category_code": "ENT"
-  },
-  "total": 2,
   "subcategories": [
     {
       "id": 1,
-      "name": "Ultra HD 4K Smart TVs",
-      "slug": "ultra-hd-4k-smart-tvs",
-      "image": "https://backend.nexviadls.com/uploads/subcategories/tv.webp",
-      "description": "Official 4K and QLED smart televisions",
-      "sort_order": 1,
-      "products_count": 4,
-      "category_id": 1
+      "name": "High-Speed Scooters",
+      "slug": "high-speed-scooters",
+      "products_count": 4
     }
   ]
 }
@@ -3284,45 +3254,30 @@ Fetch all active subcategories with their parent category details and active pro
 
 ---
 
-### 18.3 Get Single Subcategory Details & Products
+### 18.3 Single Subcategory Details
+Get single subcategory information and list of active products.
 
-- **Method:** `GET` / `POST`
-- **URL:** `/api/subcategories/{subcategoryIdOrSlug}`
+- **Method:** `GET` or `POST`
+- **URL:** `/api/subcategories/{idOrSlug}` (Alias: `/api/customer/subcategories/{idOrSlug}`)
+- **Auth Required:** No
 
-#### Success Response (`200 OK`):
+#### Success Response (`200 OK`)
 ```json
 {
   "status": true,
   "subcategory": {
-    "id": 2,
-    "name": "Premium Home Entertainment Series",
-    "slug": "premium-home-entertainment-series",
-    "image": "https://backend.nexviadls.com/images/no-image.png",
-    "description": "Official Premium Home Entertainment Series lineup by NEXVIA DLS",
-    "sort_order": 2,
-    "products_count": 7,
-    "category": {
-      "id": 1,
-      "name": "Home Entertainment",
-      "slug": "home-entertainment",
-      "type": "electronics",
-      "referral_category_code": "ENT"
-    },
+    "id": 1,
+    "name": "High-Speed Scooters",
+    "slug": "high-speed-scooters",
+    "description": "High performance smart electric scooters",
+    "products_count": 4,
     "products": [
       {
         "id": 1,
-        "name": "NEXVIA 43” Smart LED TV",
-        "slug": "nexvia-43-inch-smart-led-tv",
-        "model_code": "NEX-TV-43",
-        "sku": "NEX-TV-43-2026",
-        "mrp": 24999.00,
-        "booking_percentage": 20.00,
-        "booking_amount": 4999.80,
-        "balance_amount": 19999.20,
-        "main_image": "https://backend.nexviadls.com/uploads/products/tv43.webp",
-        "is_featured": true,
-        "stock": 45,
-        "status": "active"
+        "name": "NEXVIA Falcon EV",
+        "slug": "nexvia-falcon-ev",
+        "mrp": 125000.00,
+        "booking_amount": 25000.00
       }
     ]
   }
@@ -3331,82 +3286,281 @@ Fetch all active subcategories with their parent category details and active pro
 
 ---
 
-### 18.4 Filter Products by Subcategory
+### 18.4 DLS Agro Categories Catalog
+Fetch all categories dedicated to the DLS Agro & Farm Equipment division.
 
-- **Method:** `GET` / `POST`
-- **URL:** `/api/products?subcategory_id=2` or `/api/products/search?subcategory_id=2`
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/categories` (Alias: `/api/dls-farm/categories`)
+- **Auth Required:** No
 
-In all product list/search responses, each product contains its `subcategory` object:
+#### Success Response (`200 OK`)
 ```json
 {
-  "id": 1,
-  "name": "NEXVIA 43” Smart LED TV",
-  "category": {
-    "id": 1,
-    "name": "Home Entertainment",
-    "slug": "home-entertainment"
-  },
-  "subcategory": {
-    "id": 2,
-    "name": "Premium Home Entertainment Series",
-    "slug": "premium-home-entertainment-series",
-    "image": "https://backend.nexviadls.com/images/no-image.png"
-  },
-  "mrp": 24999.00,
-  "booking_amount": 4999.80,
-  "balance_amount": 19999.20
+  "status": true,
+  "message": "DLS Agro categories retrieved successfully.",
+  "count": 3,
+  "data": [
+    {
+      "id": 3,
+      "name": "Power Tillers & Weeders",
+      "slug": "power-tillers-weeders",
+      "type": "dls_farm_equipment",
+      "referral_category_code": "AGRO",
+      "referral_eligible": true,
+      "commission_percentage": 10.00,
+      "description": "Heavy-duty diesel and petrol rotary tillers and inter-cultivators",
+      "image_url": "https://backend.nexviadls.com/uploads/categories/agro_tillers.webp",
+      "products_count": 8,
+      "subcategories_count": 2,
+      "subcategories": [
+        {
+          "id": 7,
+          "name": "7 HP Heavy Duty Tillers",
+          "slug": "7-hp-tillers",
+          "products_count": 4
+        }
+      ]
+    }
+  ]
 }
 ```
 
 ---
 
-### 18.5 DLS Agro / Farm Equipment Subcategories APIs
+### 18.5 DLS Agro Subcategories by Category
+List child subcategories under an agricultural category.
 
-Dedicated endpoints for DLS Farm Equipment subcategories (Solar Water Pumps, Tillers, Sprayers, etc.):
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/categories/{idOrSlug}/subcategories` (Alias: `/api/dls-farm/categories/{idOrSlug}/subcategories`)
+- **Auth Required:** No
 
-#### 18.5.1 List All Agro Subcategories
-- **Method:** `GET` / `POST`
-- **URL:** `/api/dls-agro/subcategories` (or `/api/dls-farm/subcategories`)
-- **Query / Body Params:**
-  - `category_id` (integer / string) — Filter by parent agro category ID or slug.
-  - `search` (string) — Search subcategory name or slug.
-
-#### 18.5.2 List Subcategories by Agro Category
-- **Method:** `GET` / `POST`
-- **URL:** `/api/dls-agro/categories/{idOrSlug}/subcategories` (or `/api/dls-farm/categories/{idOrSlug}/subcategories`)
-
-#### 18.5.3 Get Agro Subcategory Details & Products
-- **Method:** `GET` / `POST`
-- **URL:** `/api/dls-agro/subcategories/{idOrSlug}` (or `/api/dls-farm/subcategories/{idOrSlug}`)
-
-#### 18.5.4 Filter Agro Products by Subcategory
-- **Method:** `GET` / `POST`
-- **URL:** `/api/dls-agro/products?subcategory_id={id}` (or `subcategory={slug}`)
-
-**Sample Product Item in Agro Response:**
+#### Success Response (`200 OK`)
 ```json
 {
-  "id": 20,
-  "name": "NEXVIA Solar Submersible Pump 5HP DC",
-  "slug": "nexvia-solar-submersible-pump-5hp-dc",
+  "status": true,
   "category": {
+    "id": 3,
+    "name": "Power Tillers & Weeders",
+    "slug": "power-tillers-weeders"
+  },
+  "subcategories": [
+    {
+      "id": 7,
+      "name": "7 HP Heavy Duty Tillers",
+      "slug": "7-hp-tillers",
+      "products_count": 4
+    }
+  ]
+}
+```
+
+---
+
+### 18.6 DLS Agro All Subcategories
+List all agricultural equipment subcategories.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/subcategories` (Alias: `/api/dls-farm/subcategories`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "count": 6,
+  "data": [
+    {
+      "id": 7,
+      "name": "7 HP Heavy Duty Tillers",
+      "slug": "7-hp-tillers",
+      "parent_category": "Power Tillers & Weeders",
+      "products_count": 4
+    }
+  ]
+}
+```
+
+---
+
+### 18.7 DLS Agro Subcategory Detail
+Single agricultural subcategory detail.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/subcategories/{idOrSlug}` (Alias: `/api/dls-farm/subcategories/{idOrSlug}`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": {
     "id": 7,
-    "name": "Solar Water Pumps",
-    "slug": "solar-water-pumps",
-    "type": "dls_farm_equipment"
-  },
-  "subcategory": {
-    "id": 13,
-    "name": "Solar Submersible Pumps 3HP-10HP",
-    "slug": "solar-submersible-pumps-3hp-10hp",
-    "image": "https://backend.nexviadls.com/images/no-image.png",
-    "description": "High grade submersible borehole pumps"
-  },
-  "mrp": 125000.00,
-  "booking_amount": 25000.00,
-  "balance_amount": 100000.00,
-  "stock": 10,
-  "is_featured": true
+    "name": "7 HP Heavy Duty Tillers",
+    "slug": "7-hp-tillers",
+    "products_count": 4
+  }
+}
+```
+
+---
+
+### 18.8 DLS Agro Products Catalog with Specs & Filters
+Search and filter agricultural machinery, sprayers, pumps, and harvesters.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/products` (Alias: `/api/dls-farm/products`)
+- **Auth Required:** No
+
+#### Query Parameters:
+| Parameter | Type | Description |
+|---|---|---|
+| `category_id` | int/slug | Filter by agro category |
+| `subcategory_id` | int/slug | Filter by subcategory |
+| `search` | string | Keyword search |
+| `sort_by` | string | `price_low`, `price_high`, `newest` |
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "total": 14,
+  "current_page": 1,
+  "products": [
+    {
+      "id": 22,
+      "name": "DLS Agro 7.5 HP Diesel Power Tiller",
+      "slug": "dls-agro-7-5hp-power-tiller",
+      "model_code": "DLS-TL-750D",
+      "mrp": 65000.00,
+      "booking_amount": 13000.00,
+      "balance_amount": 52000.00,
+      "booking_percentage": 20.00,
+      "engine_type": "4-Stroke Air Cooled Diesel",
+      "power_hp": "7.5 HP",
+      "image": "https://backend.nexviadls.com/uploads/products/agro_tiller_750.webp"
+    }
+  ]
+}
+```
+
+---
+
+### 18.9 DLS Agro Featured Agricultural Equipment
+Fetch top-performing and high-demand agricultural machinery.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/products/featured` (Alias: `/api/dls-farm/products/featured`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "count": 3,
+  "data": [
+    {
+      "id": 22,
+      "name": "DLS Agro 7.5 HP Diesel Power Tiller",
+      "mrp": 65000.00,
+      "booking_deposit": 13000.00
+    }
+  ]
+}
+```
+
+---
+
+### 18.10 DLS Agro Single Product Details
+Complete technical specifications (engine displacement, fuel tank capacity, gear speeds, blade width) for farm machinery.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/products/{idOrSlug}` (Alias: `/api/dls-farm/products/{idOrSlug}`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro product details retrieved successfully.",
+  "data": {
+    "id": 22,
+    "name": "DLS Agro 7.5 HP Diesel Power Tiller",
+    "slug": "dls-agro-7-5hp-power-tiller",
+    "model_code": "DLS-TL-750D",
+    "mrp": 65000.00,
+    "booking_percentage": 20.00,
+    "booking_amount": 13000.00,
+    "balance_amount": 52000.00,
+    "specifications": [
+      { "name": "Engine Power", "value": "7.5 HP (3600 RPM)" },
+      { "name": "Displacement", "value": "296 cc" },
+      { "name": "Tilling Width", "value": "1000 mm (Adjustable)" },
+      { "name": "Tilling Depth", "value": "150 - 300 mm" },
+      { "name": "Starting System", "value": "Electric Key Start & Recoil" }
+    ],
+    "key_features": [
+      "Heavy duty oil bath air filter for dusty field conditions",
+      "PTO shaft for water pump and sprayer attachments",
+      "Subsidy eligible under state agricultural schemes"
+    ],
+    "stock": 15
+  }
+}
+```
+
+---
+
+### 18.11 DLS Agro Hero & Section Banners
+Hero sliders, promotional banners, and seasonal campaign posters for agricultural machinery.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/banners` (Aliases: `/api/dls-farm/banners`, `/api/agro/banners`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "DLS Agro banners retrieved successfully.",
+  "total": 3,
+  "agro_section": {
+    "hero_sliders": [
+      {
+        "id": 11,
+        "title": "Modernize Your Farming with DLS Agro",
+        "subtitle": "20% Booking Deposit • Next-Day Local DSP Handover",
+        "banner_type": "hero",
+        "image_url": "https://backend.nexviadls.com/uploads/banners/agro_hero.webp"
+      }
+    ],
+    "promo_banners": [],
+    "side_banners": []
+  }
+}
+```
+
+---
+
+### 18.12 DLS Agro Side Banners
+Side banners specifically tailored for agricultural machinery category and product pages.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/dls-agro/banners/side` (Aliases: `/api/dls-farm/banners/side`, `/api/agro/banners/side`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 12,
+      "title": "Government Subsidy Assistance",
+      "subtitle": "Contact local DSP center for subsidy paperwork",
+      "banner_type": "side",
+      "image_url": "https://backend.nexviadls.com/uploads/banners/subsidy_side.webp"
+    }
+  ]
 }
 ```
 
@@ -3555,9 +3709,6 @@ export default function PopupLeadModal({ apiBase = 'http://127.0.0.1:8000' }) {
     e.preventDefault();
     if (!name.trim()) return setError('Please enter your name');
     if (!/^[6-9]\d{9}$/.test(mobile.trim())) return setError('Please enter a valid 10-digit mobile number');
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return setError('Please enter a valid email address');
-    }
 
     setLoading(true);
     setError('');
@@ -3592,8 +3743,8 @@ export default function PopupLeadModal({ apiBase = 'http://127.0.0.1:8000' }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999 }}>
-      <div style={{ background: '#fff', borderRadius: '20px', padding: '30px', maxWidth: '420px', width: '90%', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
-        <button onClick={handleClose} style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '18px' }}>&times;</button>
+      <div style={{ background: '#fff', borderRadius: '20px', padding: '30px', maxWidth: '420px', width: '90%', position: 'relative' }}>
+        <button onClick={handleClose} style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>&times;</button>
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <h3 style={{ color: '#10b981' }}>✓ Request Received!</h3>
@@ -3601,22 +3752,12 @@ export default function PopupLeadModal({ apiBase = 'http://127.0.0.1:8000' }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#7c3aed', background: '#f3e8ff', padding: '4px 10px', borderRadius: '12px' }}>EXCLUSIVE OFFER</span>
-              <h3 style={{ margin: '8px 0', fontSize: '20px', fontWeight: '800' }}>{config?.title || 'Get Instant Callback'}</h3>
-              <p style={{ fontSize: '13px', color: '#64748b' }}>{config?.subtitle || 'Leave your name and number to get special deals.'}</p>
-            </div>
+            <h3 style={{ margin: '8px 0', fontSize: '20px', fontWeight: '800' }}>{config?.title || 'Get Instant Callback'}</h3>
+            <p style={{ fontSize: '13px', color: '#64748b' }}>{config?.subtitle || 'Leave your name and number to get special deals.'}</p>
             {error && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '10px' }}>{error}</div>}
-            <div style={{ marginBottom: '12px' }}>
-              <input type="text" placeholder="Your Full Name *" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} required />
-            </div>
-            <div style={{ marginBottom: '12px' }}>
-              <input type="tel" placeholder="10-digit Mobile Number *" value={mobile} maxLength={10} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} required />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <input type="email" placeholder="Email Address (Optional)" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '10px', border: '1px solid #cbd5e1' }} />
-            </div>
-            <button type="submit" disabled={loading} style={{ width: '100%', height: '46px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}>
+            <input type="text" placeholder="Your Full Name *" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', height: '44px', marginBottom: '12px' }} required />
+            <input type="tel" placeholder="10-digit Mobile Number *" value={mobile} maxLength={10} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} style={{ width: '100%', height: '44px', marginBottom: '12px' }} required />
+            <button type="submit" disabled={loading} style={{ width: '100%', height: '46px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700' }}>
               {loading ? 'Submitting...' : (config?.button_text || 'Request Callback')}
             </button>
           </form>
@@ -3626,3 +3767,365 @@ export default function PopupLeadModal({ apiBase = 'http://127.0.0.1:8000' }) {
   );
 }
 ```
+
+---
+
+## 20. CMS Dynamic Pages & Legal Policy APIs
+
+The `PageApiController` powers all institutional pages, privacy compliance documents, terms of service, warranty rules, and contact inquiry submissions.
+
+---
+
+### 20.1 Get Privacy Policy
+Retrieve the official, active Privacy Policy document including HTML content and structured policy points.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/privacy-policy` (Alias: `/api/customer/privacy-policy`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Privacy policy retrieved successfully.",
+  "data": {
+    "id": 1,
+    "title": "Privacy Policy",
+    "slug": "privacy-policy",
+    "excerpt": "Official Privacy Policy regarding user data, telemetry, and payments.",
+    "content": "<p>At NEXVIA Mobility, we value your privacy and trust...</p>",
+    "points": [
+      "We collect mobile numbers and delivery addresses solely for booking and fulfillment.",
+      "Financial data is processed securely through RBI-compliant payment gateways.",
+      "We never sell or rent your personal data to third-party marketing brokers."
+    ],
+    "meta_title": "Privacy Policy | NEXVIA Mobility",
+    "meta_description": "Read our comprehensive privacy policy regarding your personal data.",
+    "meta_keywords": "privacy, policy, data protection, nexvia",
+    "sort_order": 1,
+    "updated_at": "2026-10-16T09:00:00+05:30"
+  }
+}
+```
+
+---
+
+### 20.2 Get Terms & Conditions
+Retrieve the complete Terms and Conditions governing 20% Flexi-Bookings, 60-day balance settlement, DSP deliveries, and warranty terms.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/terms-and-conditions` (Aliases: `/api/terms-conditions`, `/api/customer/terms-and-conditions`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Terms and Conditions retrieved successfully.",
+  "data": {
+    "id": 2,
+    "title": "Terms and Conditions",
+    "slug": "terms-and-conditions",
+    "excerpt": "Terms governing customer bookings, payments, and warranties.",
+    "content": "<p>These terms govern your purchase and flexi-booking on NEXVIA platform...</p>",
+    "points": [
+      "A 20% initial deposit confirms a flexi-booking and holds product price for 60 days.",
+      "The remaining 80% balance must be settled within 60 days of booking confirmation.",
+      "Delivery and Digital Delivery Challan (DC) are issued strictly upon 100% full balance payment.",
+      "Physical handover requires verification of the 6-digit Customer Delivery OTP."
+    ],
+    "updated_at": "2026-10-16T09:00:00+05:30"
+  }
+}
+```
+
+---
+
+### 20.3 Get Refund & Cancellation Policy
+Retrieve the official policy detailing non-cancellable token deposits and stored product credit reallocation rights.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/refund-policy` (Alias: `/api/customer/refund-policy`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Refund policy retrieved successfully.",
+  "data": {
+    "id": 3,
+    "title": "Refund & Cancellation Policy",
+    "slug": "refund-policy",
+    "excerpt": "Rules regarding 20% booking deposits and 100% stored credit protection.",
+    "content": "<p>NEXVIA operates a 100% Value Protection Guarantee...</p>",
+    "points": [
+      "Once confirmed, the 20% booking deposit is non-refundable in cash.",
+      "If balance is unpaid after 60 days, 100% of your paid amount is safely stored.",
+      "Customers can reallocate their stored paid amount at any time to buy any other product in catalog."
+    ],
+    "updated_at": "2026-10-16T09:00:00+05:30"
+  }
+}
+```
+
+---
+
+### 20.4 Get About Us Page
+Retrieve corporate overview, leadership mission, and company background.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/about-us` (Alias: `/api/customer/about-us`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "About Us retrieved successfully.",
+  "data": {
+    "id": 4,
+    "title": "About NEXVIA",
+    "slug": "about-us",
+    "content": "<p>NEXVIA DLS is a next-generation mobility and electronics brand...</p>",
+    "points": [
+      "Over 100+ Authorised Delivery & Service Partner centers across India.",
+      "Pioneers of the 20% Flexi-Booking with 60-Day zero interest balance model."
+    ]
+  }
+}
+```
+
+---
+
+### 20.5 Get Contact Us Details
+Retrieve headquarters address, customer care helpline, official email, and operational timings.
+
+- **Method:** `GET`
+- **URL:** `/api/contact-us` (Alias: `/api/customer/contact-us`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Contact Us retrieved successfully.",
+  "data": {
+    "id": 5,
+    "title": "Contact Us",
+    "slug": "contact-us",
+    "content": "<p>Get in touch with our national support team...</p>",
+    "points": [
+      "Helpline: +91-1800-NEXVIA (Mon-Sat 9AM-8PM)",
+      "Customer Care Email: nexviadls@gmail.com",
+      "Corporate Headquarters: Pune, Maharashtra, India"
+    ]
+  }
+}
+```
+
+---
+
+### 20.6 Submit Contact Us Inquiry
+Allows visitors and customers to submit an inquiry. Automatically triggers dual notification emails: one to the administrator and an auto-acknowledgement reply to the sender.
+
+- **Method:** `POST`
+- **URL:** `/api/contact-us`
+- **Content-Type:** `application/json`
+- **Auth Required:** No
+
+#### Request Body
+```json
+{
+  "name": "Rahul Sharma",
+  "email": "rahul.sharma@example.com",
+  "phone": "9876543210",
+  "subject": "Bulk Dealership & DSP Partnership Inquiry",
+  "message": "We operate a 2500 sqft facility in Pune and would like to apply for the Authorised DSP Partner program."
+}
+```
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Your message has been sent successfully. We will get back to you shortly!"
+}
+```
+
+---
+
+### 20.7 List All Dynamic CMS Pages
+Fetch list of all active pages configured in the CMS for dynamic navigation menus and footer links.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/pages` (Alias: `/api/customer/pages`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Pages list retrieved successfully.",
+  "total": 5,
+  "data": [
+    {
+      "id": 1,
+      "title": "Privacy Policy",
+      "slug": "privacy-policy",
+      "excerpt": "Official Privacy Policy regarding user data and telemetry.",
+      "points_count": 3,
+      "sort_order": 1,
+      "updated_at": "2026-10-16T09:00:00+05:30"
+    },
+    {
+      "id": 2,
+      "title": "Terms and Conditions",
+      "slug": "terms-and-conditions",
+      "excerpt": "Terms governing customer bookings, payments, and warranties.",
+      "points_count": 4,
+      "sort_order": 2,
+      "updated_at": "2026-10-16T09:00:00+05:30"
+    }
+  ]
+}
+```
+
+---
+
+### 20.8 Get Single CMS Page by Slug or ID
+Fetch any dynamic CMS page by its slug or numeric database ID.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/pages/{slugOrId}` (Alias: `/api/customer/pages/{slugOrId}`)
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Privacy Policy retrieved successfully.",
+  "data": {
+    "id": 1,
+    "title": "Privacy Policy",
+    "slug": "privacy-policy",
+    "content": "<p>Full content of page...</p>",
+    "points": [
+      "We collect mobile numbers and delivery addresses solely for booking and fulfillment."
+    ],
+    "meta_title": "Privacy Policy | NEXVIA",
+    "meta_description": "Official policy documentation"
+  }
+}
+```
+
+#### Error Response (`404 Not Found`)
+```json
+{
+  "status": false,
+  "message": "Page 'unknown-page' not found or is currently inactive."
+}
+```
+
+---
+
+## 21. System Diagnostics, Automated Deployment & Utilities
+
+---
+
+### 21.1 API Root Health Check
+Verify API server availability and liveness.
+
+- **Method:** `GET`
+- **URL:** `/api/`
+- **Auth Required:** No
+
+#### Success Response (`200 OK`)
+```json
+{
+  "message": "NEXVIA API is running"
+}
+```
+
+---
+
+### 21.2 Automated Deployment Webhook
+Webhook endpoint triggered by GitHub / Bitbucket CI/CD or deployment triggers to automatically pull latest Git commits, run database migrations, and clear cache.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/deploy` (Alias: `/api/deploy.php`)
+- **Query Parameter / Header:** `key=MySecretKey123!`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "method": "POST",
+  "output": "Already up to date.\nNothing to migrate.\nConfiguration cache cleared successfully.\nApplication cache cleared successfully.",
+  "time": "2026-10-16 15:30:00"
+}
+```
+
+#### Error Response (`403 Forbidden`)
+```json
+{
+  "status": false,
+  "message": "Unauthorized access"
+}
+```
+
+---
+
+### 21.3 Live Mail Diagnostics & Test Email
+Performs end-to-end network socket diagnostics (port 587, port 465 SSL, port 25), DNS host resolution, transport verification, and sends a test email to the requested recipient.
+
+- **Method:** `GET` or `POST`
+- **URL:** `/api/test-email`
+- **Query Parameters / Body:**
+  - `to` (string, optional) — Recipient email address (default: `config('mail.from.address')`).
+  - `mailer` (string, optional) — Dynamic mailer override (e.g., `smtp`, `sendmail`).
+  - `port` (int, optional) — Dynamic port override (e.g., `587`, `465`).
+
+#### Success Response (`200 OK`)
+```json
+{
+  "status": true,
+  "message": "Test email sent successfully to rahul.sharma@example.com in 420.5ms!",
+  "recipient": "rahul.sharma@example.com",
+  "duration_ms": 420.5,
+  "config": {
+    "default_mailer": "smtp",
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_encryption": "tls",
+    "smtp_username": "nexviadls@gmail.com",
+    "password_set": true,
+    "from_address": "nexviadls@gmail.com",
+    "from_name": "NEXVIA",
+    "queue_connection": "sync"
+  },
+  "network_checks": {
+    "resolved_ip": "142.251.10.108",
+    "port_587": { "connected": true, "error": null },
+    "port_465_ssl": { "connected": true, "error": null },
+    "local_port_25_exim": { "connected": false, "error": "Connection refused (61)" }
+  },
+  "advice": "Email was accepted by the transport driver. Check recipient inbox (and spam/promotions folder)."
+}
+```
+
+#### Error Response (`500 Internal Server Error`)
+```json
+{
+  "status": false,
+  "message": "Failed to send test email.",
+  "error": "Connection could not be established with host smtp.gmail.com :stream_socket_client(): Unable to connect to tcp://smtp.gmail.com:587 (Network is unreachable)",
+  "error_type": "Symfony\\Component\\Mailer\\Exception\\TransportException",
+  "duration_ms": 3005.2,
+  "advice": "Hosting firewall blocks outbound SMTP connection on this port. Try switching to port 465 (SSL) or use sendmail driver."
+}
+```
+
+---
+
+*Documentation Version: 2.5 (Comprehensive All-API Release) — NEXVIA Mobility & Electronics Ltd.*
