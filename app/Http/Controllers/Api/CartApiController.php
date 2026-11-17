@@ -31,6 +31,17 @@ class CartApiController extends Controller
             if (!empty($token)) {
                 $customer = Customer::where('api_token', $token)->first();
             }
+
+            if (!$customer) {
+                $userId = $request->query('user_id')
+                    ?? $request->input('user_id')
+                    ?? $request->header('user_id')
+                    ?? $request->header('X-User-Id')
+                    ?? ($bodyJson['user_id'] ?? null);
+                if (!empty($userId)) {
+                    $customer = Customer::find($userId);
+                }
+            }
         }
 
         return $customer;
@@ -78,15 +89,10 @@ class CartApiController extends Controller
         $unitMrp = (float) $product->mrp;
         $totalMrp = $unitMrp * $qty;
 
-        $bookingPct = (float) ($product->booking_percentage ?: 20.00);
-        $tokenAmount = round($totalMrp * ($bookingPct / 100), 2);
-        $balancePct = 100.00 - $bookingPct;
-        $balanceAmount = round($totalMrp - $tokenAmount, 2);
-
         $mainImageUrl = ImageHelper::resolve($product->main_image);
         $galleryUrls  = ImageHelper::resolveGallery($product->gallery, $product->main_image);
 
-        // Tax breakdown: 5% for DLS Agro products vs 18% for other products
+        // Tax breakdown: 5% for DLS Agro products vs 18% for other products (added on top of price)
         $catType = strtolower($product->category?->type ?? '');
         $catName = strtolower($product->category?->name ?? '');
         $isDlsAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
@@ -95,10 +101,16 @@ class CartApiController extends Controller
             || str_contains(strtolower($product->name), 'cultivator');
 
         $taxRate = $isDlsAgro ? 5.0 : 18.0;
-        $taxableAmount = round($totalMrp / (1 + ($taxRate / 100)), 2);
-        $totalTax = round($totalMrp - $taxableAmount, 2);
+        $taxableAmount = round($totalMrp, 2); // Base price before tax
+        $totalTax = round($taxableAmount * ($taxRate / 100), 2); // Tax added on top of base price
         $cgst = round($totalTax / 2, 2);
         $sgst = round($totalTax / 2, 2);
+        $itemTotalWithTax = round($totalMrp + $totalTax, 2);
+
+        $bookingPct = (float) ($product->booking_percentage ?: 20.00);
+        $tokenAmount = round($itemTotalWithTax * ($bookingPct / 100), 2);
+        $balancePct = 100.00 - $bookingPct;
+        $balanceAmount = round($itemTotalWithTax - $tokenAmount, 2);
 
         return [
             'cart_item_id'       => $item->id,
@@ -112,6 +124,10 @@ class CartApiController extends Controller
             'quantity'           => $qty,
             'unit_mrp'           => $unitMrp,
             'item_total_mrp'     => $totalMrp,
+            'item_total_without_tax' => $totalMrp,
+            'item_total_with_tax'=> $itemTotalWithTax,
+            'total_mrp_with_tax' => $itemTotalWithTax,
+            'base_mrp'           => $totalMrp,
             'token_percentage'   => $bookingPct,
             'token_amount'       => $tokenAmount,
             'balance_percentage' => $balancePct,
@@ -125,6 +141,7 @@ class CartApiController extends Controller
                 'cgst_pct'       => $taxRate / 2,
                 'sgst_pct'       => $taxRate / 2,
                 'total_tax'      => $totalTax,
+                'tax_status'     => 'exclusive',
             ],
             'category'           => $product->category ? [
                 'id'             => $product->category->id,
@@ -148,51 +165,48 @@ class CartApiController extends Controller
     protected function calculateCartSummary($formattedItems)
     {
         $totalItems = 0;
-        $subtotalMrp = 0.0;
+        $subtotalBase = 0.0;
         $totalToken = 0.0;
         $totalBalance = 0.0;
-
-        foreach ($formattedItems as $item) {
-            $totalItems += (int) $item['quantity'];
-            $subtotalMrp += (float) $item['item_total_mrp'];
-            $totalToken += (float) $item['token_amount'];
-            $totalBalance += (float) $item['balance_amount'];
-        }
-
-        $taxableAmount = 0.0;
         $totalTax = 0.0;
         $cgst = 0.0;
         $sgst = 0.0;
-        foreach ($formattedItems as $it) {
-            $taxableAmount += (float) ($it['tax_breakdown']['taxable_amount'] ?? 0);
-            $totalTax      += (float) ($it['tax_breakdown']['total_tax'] ?? 0);
-            $cgst          += (float) ($it['tax_breakdown']['cgst_amount'] ?? 0);
-            $sgst          += (float) ($it['tax_breakdown']['sgst_amount'] ?? 0);
+
+        foreach ($formattedItems as $item) {
+            $totalItems += (int) $item['quantity'];
+            $subtotalBase += (float) ($item['base_mrp'] ?? $item['item_total_mrp']);
+            $totalToken += (float) $item['token_amount'];
+            $totalBalance += (float) $item['balance_amount'];
+            $totalTax += (float) ($item['tax_breakdown']['total_tax'] ?? 0);
+            $cgst += (float) ($item['tax_breakdown']['cgst_amount'] ?? 0);
+            $sgst += (float) ($item['tax_breakdown']['sgst_amount'] ?? 0);
         }
 
         // Free delivery standard for all orders
         $deliveryCharge = 0.0;
+        $grandTotal = round($subtotalBase + $totalTax + $deliveryCharge, 2);
 
         return [
             'unique_items'       => count($formattedItems),
             'total_quantity'     => $totalItems,
-            'subtotal_mrp'       => round($subtotalMrp, 2),
+            'subtotal_mrp'       => round($subtotalBase, 2),
             'token_percentage'   => 20.0,
             'total_token_amount' => round($totalToken, 2),
             'balance_percentage' => 80.0,
             'total_balance_amount'=> round($totalBalance, 2),
             'taxes'              => [
-                'taxable_amount' => round($taxableAmount, 2),
+                'taxable_amount' => round($subtotalBase, 2),
                 'cgst'           => round($cgst, 2),
                 'sgst'           => round($sgst, 2),
                 'total_tax'      => round($totalTax, 2),
-                'note'           => 'DLS Agro products calculated at 5% GST; all other items at 18% GST (inclusive in MRP).',
+                'tax_status'     => 'exclusive',
+                'note'           => 'GST added at checkout: 5% for DLS Agro products, 18% for other products.',
             ],
             'delivery_fee'       => $deliveryCharge,
             'delivery_text'      => 'FREE Delivery',
             'payable_now'        => round($totalToken, 2),
             'payable_later'      => round($totalBalance, 2),
-            'grand_total'        => round($subtotalMrp + $deliveryCharge, 2),
+            'grand_total'        => $grandTotal,
         ];
     }
 
@@ -284,8 +298,16 @@ class CartApiController extends Controller
                 })
                 ->first();
 
+            $mode = $request->input('mode') ?? ($bodyJson['mode'] ?? null);
+            $setQuantity = $request->boolean('set_quantity') || ($bodyJson['set_quantity'] ?? false) || $mode === 'set';
+
             if ($cartItem) {
-                $cartItem->increment('quantity', $quantity);
+                if ($setQuantity) {
+                    $cartItem->quantity = $quantity;
+                    $cartItem->save();
+                } else {
+                    $cartItem->increment('quantity', $quantity);
+                }
                 $cartItem->refresh();
                 $message = 'Cart item quantity updated successfully.';
             } else {
@@ -309,6 +331,7 @@ class CartApiController extends Controller
             return response()->json([
                 'status'  => true,
                 'message' => $message,
+                'data'    => $allFormatted,
                 'item'    => $this->formatCartItem($cartItem),
                 'summary' => $this->calculateCartSummary($allFormatted),
             ], 201);
@@ -379,9 +402,11 @@ class CartApiController extends Controller
                         ->values();
 
                     return response()->json([
-                        'status'  => true,
-                        'message' => 'Item removed from cart (quantity 0).',
-                        'summary' => $this->calculateCartSummary($remaining),
+                        'status'          => true,
+                        'message'         => 'Item removed from cart (quantity 0).',
+                        'data'            => $remaining,
+                        'remaining_items' => $remaining,
+                        'summary'         => $this->calculateCartSummary($remaining),
                     ], 200);
                 }
                 $cartItem->quantity = $newQty;
@@ -409,6 +434,7 @@ class CartApiController extends Controller
             return response()->json([
                 'status'  => true,
                 'message' => 'Cart item updated successfully.',
+                'data'    => $allFormatted,
                 'item'    => $this->formatCartItem($cartItem),
                 'summary' => $this->calculateCartSummary($allFormatted),
             ], 200);
@@ -473,11 +499,12 @@ class CartApiController extends Controller
                 ->values();
 
             return response()->json([
-                'status'  => true,
-                'message' => $deleted > 0 ? 'Item removed from cart successfully.' : 'Item not found in your cart.',
-                'deleted_count' => $deleted,
-                'summary' => $this->calculateCartSummary($remaining),
+                'status'          => true,
+                'message'         => $deleted > 0 ? 'Item removed from cart successfully.' : 'Item not found in your cart.',
+                'deleted_count'   => $deleted,
+                'data'            => $remaining,
                 'remaining_items' => $remaining,
+                'summary'         => $this->calculateCartSummary($remaining),
             ], 200);
 
         } catch (\Exception $e) {

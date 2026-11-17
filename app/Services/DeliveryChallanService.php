@@ -106,12 +106,12 @@ class DeliveryChallanService
         $invoiceNumber = $booking->invoice_number ?: ($delivery?->invoice_number ?: ('INV-' . date('Y') . '-' . strtoupper(substr(md5($booking->booking_number), 0, 6))));
         $serialNumber = $booking->serial_number ?: ($delivery?->serial_number ?: ('NX-EV-' . date('Y') . '-' . strtoupper(substr(md5($booking->booking_number), 0, 8))));
 
-        $totalMrp = (float) $booking->mrp;
+        $totalWithTax = (float) $booking->mrp;
         $qty = max(1, (int) ($booking->quantity ?: 1));
-        $unitPrice = round($totalMrp / $qty, 2);
 
         // Category & Product Classification for GST (5% for DLS Agro vs 18% for others)
-        $category = $booking->product?->category;
+        $product  = $booking->product ?: \App\Models\Product::find($booking->product_id);
+        $category = $product?->category;
         $catType  = strtolower($category?->type ?? '');
         $catName  = strtolower($category?->name ?? '');
         $catSlug  = strtolower($category?->slug ?? '');
@@ -126,29 +126,38 @@ class DeliveryChallanService
             || str_contains($prodName, 'tiller')
             || str_contains($prodName, 'dls agro');
 
+        $gstRatePercent = $isDlsAgro ? 5.0 : 18.0;
+        $cgstRate = $isDlsAgro ? '2.5%' : '9%';
+        $sgstRate = $isDlsAgro ? '2.5%' : '9%';
+
+        // Base price / Taxable Value strictly excluding GST:
+        if ($product && (float)$product->mrp > 0) {
+            $taxableValue = round((float)$product->mrp * $qty, 2);
+            $totalTax = round($totalWithTax - $taxableValue, 2);
+            if ($totalTax <= 0 || abs($totalTax - round($taxableValue * ($gstRatePercent / 100), 2)) > 10.0) {
+                $totalTax = round($taxableValue * ($gstRatePercent / 100), 2);
+                $grandInvoiceTotal = round($taxableValue + $totalTax, 2);
+            } else {
+                $grandInvoiceTotal = $totalWithTax;
+            }
+        } else {
+            $taxMultiplier = 1.0 + ($gstRatePercent / 100.0);
+            $taxableValue = round($totalWithTax / $taxMultiplier, 2);
+            $totalTax = round($totalWithTax - $taxableValue, 2);
+            $grandInvoiceTotal = $totalWithTax;
+        }
+
+        $cgstAmount = round($totalTax / 2, 2);
+        $sgstAmount = round($totalTax - $cgstAmount, 2);
+        $unitPrice = round($taxableValue / $qty, 2);
+
         if ($isDlsAgro) {
-            // 5% GST for DLS Agro Products (2.5% CGST + 2.5% SGST)
-            $gstRatePercent = 5.0;
-            $cgstRate = '2.5%';
-            $sgstRate = '2.5%';
-            $taxableValue = round($totalMrp / 1.05, 2);
-            $cgstAmount = round($taxableValue * 0.025, 2);
-            $sgstAmount = round($taxableValue * 0.025, 2);
-            $totalTax = round($totalMrp - $taxableValue, 2);
             $hsnCode = '8432.80.90'; // Agricultural Machinery & Farm Equipment
         } else {
-            // 18% GST for All Other Products (9% CGST + 9% SGST)
-            $gstRatePercent = 18.0;
-            $cgstRate = '9%';
-            $sgstRate = '9%';
-            $taxableValue = round($totalMrp / 1.18, 2);
-            $cgstAmount = round($taxableValue * 0.09, 2);
-            $sgstAmount = round($taxableValue * 0.09, 2);
-            $totalTax = round($totalMrp - $taxableValue, 2);
             $hsnCode = '8711.60.90'; // Default: Electric Two-Wheelers & EV Mobility
             if (str_contains($catName, 'solar') || str_contains($catName, 'energy')) {
                 $hsnCode = '8504.40.80';
-            } elseif (str_contains($catName, 'appliance') || str_contains($catName, 'tv') || str_contains($catName, 'electronics')) {
+            } elseif (str_contains($catName, 'appliance') || str_contains($catName, 'tv') || str_contains($catName, 'electronics') || str_contains($catName, 'ac')) {
                 $hsnCode = '8528.72.00';
             }
         }
@@ -232,12 +241,13 @@ class DeliveryChallanService
                 'selected_color'      => $booking->selected_color ?: 'Standard',
                 'quantity'            => $qty,
                 'unit_mrp'            => $unitPrice,
-                'total_mrp'           => $totalMrp,
+                'total_mrp'           => $taxableValue,
+                'total_with_tax'      => $grandInvoiceTotal,
                 'serial_number'       => $serialNumber,
                 'hsn_code'            => $hsnCode,
             ],
 
-            // GST & Tax Breakdown (5% for DLS Agro vs 18% for others)
+            // GST & Tax Breakdown (5% for DLS Agro vs 18% for others added to base price)
             'tax_breakdown'           => [
                 'hsn_code'            => $hsnCode,
                 'gst_rate'            => $gstRatePercent . '%',
@@ -249,15 +259,16 @@ class DeliveryChallanService
                 'sgst_rate'           => $sgstRate,
                 'sgst_amount'         => $sgstAmount,
                 'total_tax'           => $totalTax,
-                'grand_total'         => $totalMrp,
+                'grand_total'         => $grandInvoiceTotal,
+                'tax_type'            => 'exclusive',
             ],
 
             // Comprehensive Payment & Installments Ledger
             'payment'                 => [
-                'total_amount'            => $totalMrp,
-                'amount_paid'             => $totalMrp,
-                'balance_remaining'       => 0.00,
-                'payment_status'          => '100% FULLY PAID',
+                'total_amount'            => $grandInvoiceTotal,
+                'amount_paid'             => round($grandInvoiceTotal - (float)$booking->balance_amount, 2),
+                'balance_remaining'       => (float)$booking->balance_amount,
+                'payment_status'          => ((float)$booking->balance_amount <= 0) ? '100% FULLY PAID' : 'PARTIALLY PAID',
                 'payment_type'            => $booking->payment_type,
                 'payment_ref'             => $booking->offline_payment_ref ?: ('TXN-' . strtoupper(substr(md5($booking->booking_number), 0, 8))),
                 'payment_confirmed_at'    => $issueDate,
@@ -268,7 +279,7 @@ class DeliveryChallanService
                     'paid_at'      => $booking->booking_date ? $booking->booking_date->format('Y-m-d') : null,
                 ],
                 'balance_80_percent'      => [
-                    'total_balance_paid' => round($totalMrp - $tokenAmount, 2),
+                    'total_balance_paid' => round($grandInvoiceTotal - $tokenAmount, 2),
                     'installments_count' => count($installmentsList),
                     'installments'       => $installmentsList,
                 ],

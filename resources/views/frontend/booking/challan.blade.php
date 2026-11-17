@@ -87,7 +87,7 @@
                                 <strong class="text-dark font-monospace fs-13">{{ $delivery['tracking_number'] ?? 'TRK-' . rand(10000000, 99999999) }}</strong>
                             </div>
                             <div class="col-6 col-md-3">
-                                <span class="micro text-muted d-block text-uppercase fw-bold">Delivery Verification</span>
+                                <span class="micro text-muted d-block text-uppercase fw-bold">Delivery Mode</span>
                                 <strong class="text-success font-monospace fs-13"><iconify-icon icon="solar:shield-check-bold" class="align-middle"></iconify-icon> Direct Handover (No OTP Required)</strong>
                             </div>
                         </div>
@@ -227,8 +227,8 @@
                                     <span class="font-monospace fw-bold text-dark">₹{{ number_format($tax['total_tax'] ?? 0, 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between fs-14 fw-bold pt-2 text-dark">
-                                    <span>Total Dispatched Value:</span>
-                                    <span class="text-primary font-monospace">₹{{ number_format($product['total_mrp'], 2) }}</span>
+                                    <span>Total Dispatched Value (Incl. GST):</span>
+                                    <span class="text-primary font-monospace">₹{{ number_format($tax['grand_total'] ?? $product['total_with_tax'] ?? $product['total_mrp'], 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between micro text-success pt-1">
                                     <span>Payment Status:</span>
@@ -323,9 +323,9 @@
                         </div>
                     </div>
 
-                    <!-- Pre-Delivery Inspection (PDI) Checklist & Verification Seal -->
+                    <!-- Pre-Delivery Inspection (PDI) Checklist -->
                     <div class="row g-4 mb-4 align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-12">
                             <div class="p-3 bg-light rounded-3 border">
                                 <h6 class="fw-bold text-dark micro text-uppercase mb-2">
                                     <iconify-icon icon="solar:checklist-minimalistic-bold" class="text-primary me-1 align-middle fs-16"></iconify-icon>
@@ -356,15 +356,6 @@
                                             <span>Keys, Toolkit & Warranty Card Handed Over</span>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 text-center">
-                            <div class="p-3 border rounded-3 bg-white h-100 d-flex flex-column justify-content-center align-items-center">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data={{ urlencode($qrUrl) }}" alt="QR Seal" class="img-thumbnail rounded p-1 mb-2" style="width: 100px; height: 100px;">
-                                <div class="micro fw-bold text-success">✓ DIGITAL SECURITY VERIFIED</div>
-                                <div class="micro text-muted font-monospace text-truncate" style="max-width: 180px;">
-                                    {{ substr($cd['verification_qr_hash'] ?? md5($booking->booking_number), 0, 16) }}...
                                 </div>
                             </div>
                         </div>

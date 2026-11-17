@@ -501,6 +501,15 @@ class BookingApiController extends Controller
                 })(),
             ]);
 
+            // Clear booked product from customer's cart
+            try {
+                \App\Models\CartItem::where('user_id', $user->id)
+                    ->where('product_id', $product->id)
+                    ->delete();
+            } catch (\Throwable $e) {
+                \Log::warning("Could not clear cart item for booked product: " . $e->getMessage());
+            }
+
             // Initialize Delivery Record for DSP Partner
             $trackingNumber = 'TRK-' . rand(10000000, 99999999);
             \App\Models\Delivery::create([
@@ -1349,6 +1358,15 @@ class BookingApiController extends Controller
             // Mark old booking as reallocated
             $booking->booking_status = 'reallocated';
             $booking->save();
+
+            // Clear new upgraded product from customer's cart if present
+            try {
+                \App\Models\CartItem::where('user_id', $user->id)
+                    ->where('product_id', $newProduct->id)
+                    ->delete();
+            } catch (\Throwable $e) {
+                // ignore
+            }
 
             return response()->json([
                 'status'  => true,

@@ -150,8 +150,10 @@ class Booking extends Model
 
     public function getCanDownloadChallanAttribute(): bool
     {
-        $isPaid = in_array(strtolower((string)$this->payment_status), ['fully_paid', 'paid', 'completed']) || (float)$this->balance_amount <= 0.01;
-        return $isPaid && ($this->booking_status !== 'cancelled');
+        // Challan is ONLY downloadable once 100% full payment is completed (balance cleared)
+        $hasNoBalance = (float)$this->balance_amount <= 0.01;
+        $isFullyPaid = in_array(strtolower((string)$this->payment_status), ['fully_paid', 'completed']);
+        return ($hasNoBalance || $isFullyPaid) && ($this->booking_status !== 'cancelled');
     }
 
     public function getChallanStatusAttribute(): string
@@ -160,6 +162,69 @@ class Booking extends Model
             return 'generated';
         }
         return 'pending_full_payment';
+    }
+
+    public function getTaxBreakdownAttribute(): array
+    {
+        $totalWithTax = (float) $this->mrp;
+        $qty = max(1, (int) ($this->quantity ?: 1));
+
+        $product  = $this->product ?: Product::find($this->product_id);
+        $category = $product?->category;
+        $catType  = strtolower($category?->type ?? '');
+        $catName  = strtolower($category?->name ?? '');
+        $catSlug  = strtolower($category?->slug ?? '');
+        $prodName = strtolower($this->product_name ?? '');
+
+        $isDlsAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
+            || str_contains($catName, 'farm')
+            || str_contains($catName, 'agro')
+            || str_contains($catSlug, 'farm')
+            || str_contains($catSlug, 'agro')
+            || str_contains($prodName, 'cultivator')
+            || str_contains($prodName, 'tiller')
+            || str_contains($prodName, 'dls agro');
+
+        $gstRatePercent = $isDlsAgro ? 5.0 : 18.0;
+        $cgstRate = $isDlsAgro ? '2.5%' : '9%';
+        $sgstRate = $isDlsAgro ? '2.5%' : '9%';
+
+        if ($product && (float)$product->mrp > 0) {
+            $taxableValue = round((float)$product->mrp * $qty, 2);
+            $totalTax = round($totalWithTax - $taxableValue, 2);
+            if ($totalTax <= 0 || abs($totalTax - round($taxableValue * ($gstRatePercent / 100), 2)) > 10.0) {
+                $totalTax = round($taxableValue * ($gstRatePercent / 100), 2);
+                $grandInvoiceTotal = round($taxableValue + $totalTax, 2);
+            } else {
+                $grandInvoiceTotal = $totalWithTax;
+            }
+        } else {
+            $taxMultiplier = 1.0 + ($gstRatePercent / 100.0);
+            $taxableValue = round($totalWithTax / $taxMultiplier, 2);
+            $totalTax = round($totalWithTax - $taxableValue, 2);
+            $grandInvoiceTotal = $totalWithTax;
+        }
+
+        $cgstAmount = round($totalTax / 2, 2);
+        $sgstAmount = round($totalTax - $cgstAmount, 2);
+
+        return [
+            'is_dls_agro'      => $isDlsAgro,
+            'gst_rate_percent' => $gstRatePercent,
+            'cgst_rate'        => $cgstRate,
+            'cgst_amount'      => $cgstAmount,
+            'sgst_rate'        => $sgstRate,
+            'sgst_amount'      => $sgstAmount,
+            'total_tax'        => $totalTax,
+            'taxable_amount'   => $taxableValue,
+            'base_mrp'         => $taxableValue,
+            'grand_total'      => $grandInvoiceTotal,
+        ];
+    }
+
+    public function getBaseMrpAttribute(): float
+    {
+        return (float) ($this->tax_breakdown['base_mrp'] ?? $this->mrp);
     }
 }
 

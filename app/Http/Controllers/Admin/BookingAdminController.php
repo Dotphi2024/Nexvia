@@ -370,6 +370,13 @@ class BookingAdminController extends Controller
         $booking->balance_amount = $newBalance;
         $booking->balance_payments_history = $history;
 
+        // Settle referral commission for this payment installment
+        app(ReferralCommissionService::class)->settleReferralCommissionForPayment(
+            $booking,
+            (float) $paymentAmount,
+            $newBalance <= 0.00
+        );
+
         $autoApprovedMsg = '';
         if ($newBalance <= 0.00) {
             $booking->payment_status = 'fully_paid';

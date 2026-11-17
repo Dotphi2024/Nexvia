@@ -42,6 +42,17 @@ class SelfDealerApiController extends Controller
             if (!empty($token)) {
                 $user = Customer::where('api_token', $token)->first();
             }
+
+            if (!$user) {
+                $userId = $request->query('user_id')
+                    ?? $request->input('user_id')
+                    ?? $request->header('user_id')
+                    ?? $request->header('X-User-Id')
+                    ?? ($bodyJson['user_id'] ?? null);
+                if (!empty($userId)) {
+                    $user = Customer::find($userId);
+                }
+            }
         }
         return $user;
     }

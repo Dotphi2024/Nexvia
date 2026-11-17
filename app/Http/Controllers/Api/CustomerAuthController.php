@@ -34,6 +34,13 @@ class CustomerAuthController extends Controller
             $request->merge(['name' => $name, 'fullName' => $name]);
         }
 
+        $address = trim($request->input('address') ?? $request->input('full_address') ?? $request->input('street_address') ?? '');
+        $pincode = trim($request->input('pincode') ?? $request->input('postal_code') ?? $request->input('postalCode') ?? $request->input('postcode') ?? '');
+        $request->merge([
+            'address' => $address,
+            'pincode' => $pincode,
+        ]);
+
         $validator = Validator::make($request->all(), [
             'fullName'              => 'nullable|string|max:255',
             'name'                  => 'required|string|max:255',
@@ -44,7 +51,8 @@ class CustomerAuthController extends Controller
             'fcm_token'             => 'nullable|string',
             'referral_code'         => 'nullable|string',
             'referred_by'           => 'nullable|string',
-            'pincode'               => 'nullable|string|max:10',
+            'address'               => 'required|string|min:3|max:500',
+            'pincode'               => 'required|string|min:4|max:10',
             'city'                  => 'nullable|string|max:100',
             'state'                 => 'nullable|string|max:100',
             'terms_accepted'        => 'nullable|boolean',
@@ -58,6 +66,8 @@ class CustomerAuthController extends Controller
             'password.required'          => 'Password is required to register.',
             'password.min'               => 'Password must be at least 6 characters long.',
             'password_confirmation.same' => 'Password confirmation does not match.',
+            'address.required'           => 'Address is required.',
+            'pincode.required'           => 'Postal code / Pincode is required.',
         ]);
 
         if ($validator->fails()) {
@@ -107,7 +117,8 @@ class CustomerAuthController extends Controller
                 'name'                     => $name,
                 'phone'                    => trim($request->phone),
                 'email'                    => $request->email ? strtolower(trim($request->email)) : null,
-                'pincode'                  => $request->pincode ?? null,
+                'address'                  => $address,
+                'pincode'                  => $pincode,
                 'city'                     => $request->city ?? null,
                 'state'                    => $request->state ?? null,
                 'dob'                      => $request->dob ?? null,
@@ -125,6 +136,24 @@ class CustomerAuthController extends Controller
             ];
 
             $customer = Customer::create($customerData);
+
+            // Also create default UserAddress for checkout and order fulfillment
+            if (!empty($address)) {
+                try {
+                    \App\Models\UserAddress::create([
+                        'user_id'    => $customer->id,
+                        'name'       => $customer->name,
+                        'phone'      => $customer->phone,
+                        'street'     => $address,
+                        'city'       => $customer->city ?: 'City',
+                        'state'      => $customer->state ?: 'State',
+                        'pincode'    => $pincode,
+                        'is_default' => true,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::warning("UserAddress auto-creation failed: " . $e->getMessage());
+                }
+            }
 
             // 4. Initialize Self Dealer Wallet
             SelfDealerWallet::firstOrCreate(['user_id' => $customer->id]);
@@ -151,6 +180,7 @@ class CustomerAuthController extends Controller
                     'name'               => $customer->name,
                     'phone'              => $customer->phone,
                     'email'              => $customer->email,
+                    'address'            => $customer->address,
                     'referral_code'      => $customer->referral_code,
                     'referral_url'       => url('/ref/' . $customer->referral_code),
                     'is_self_dealer'     => (bool) $customer->is_self_dealer,
@@ -957,9 +987,37 @@ class CustomerAuthController extends Controller
             }
 
             // Update text fields if provided
-            foreach (['name', 'email', 'phone', 'address', 'pincode', 'city', 'state', 'dob', 'gst_number'] as $field) {
+            foreach (['name', 'phone', 'address', 'pincode', 'city', 'state', 'dob', 'gst_number'] as $field) {
                 if ($request->has($field) && !empty($request->$field)) {
                     $customer->$field = $request->$field;
+                }
+            }
+
+            // Sync email across users table and all bookings
+            if ($request->has('email') && !empty($request->email)) {
+                $newEmail = strtolower(trim($request->email));
+                if ($customer->email !== $newEmail) {
+                    $customer->email = $newEmail;
+                    try {
+                        \App\Models\Booking::where('user_id', $customer->id)
+                            ->update(['customer_email' => $newEmail]);
+                    } catch (\Throwable $e) {
+                        \Log::warning("Syncing booking email failed: " . $e->getMessage());
+                    }
+                }
+            }
+
+            // Sync name across users table and all bookings
+            if ($request->has('name') && !empty($request->name)) {
+                $newName = trim($request->name);
+                if ($customer->name !== $newName) {
+                    $customer->name = $newName;
+                    try {
+                        \App\Models\Booking::where('user_id', $customer->id)
+                            ->update(['customer_name' => $newName]);
+                    } catch (\Throwable $e) {
+                        \Log::warning("Syncing booking name failed: " . $e->getMessage());
+                    }
                 }
             }
 

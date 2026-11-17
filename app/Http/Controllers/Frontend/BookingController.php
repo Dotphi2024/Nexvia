@@ -177,6 +177,17 @@ class BookingController extends Controller
             'offline_payment_ref'     => $paymentRef,
         ]);
 
+        // Clear booked product from cart
+        if ($user) {
+            try {
+                \App\Models\CartItem::where('user_id', $user->id)
+                    ->where('product_id', $product->id)
+                    ->delete();
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
         // Initialize Delivery Record for DSP
         $trackingNumber = 'TRK-' . rand(10000000, 99999999);
         \App\Models\Delivery::create([

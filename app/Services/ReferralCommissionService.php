@@ -32,7 +32,7 @@ class ReferralCommissionService
             return false; // Already an active self dealer and has received activation points
         }
 
-        $product = $booking->product ?: Product::find($booking->product_id);
+        $product = $booking->product ?: \App\Models\Product::find($booking->product_id);
         if (!$product || !$product->self_dealer_eligible) {
             return false; // Product not eligible for self dealer program
         }
@@ -51,11 +51,11 @@ class ReferralCommissionService
             $customer->activation_booking_id    = $booking->id;
             $customer->save();
 
-            // 3. Calculate Activation Points (20% of total product booking value / MRP)
+            // 3. Calculate Activation Points (20% of base product value / MRP excluding GST)
             $activationRate   = ReferralStageConfig::getActivationRate(); // from DB, default 20%
             $qty              = max(1, (int) ($booking->quantity ?: 1));
-            $bookingMrp       = (float) ($booking->mrp > 0 ? $booking->mrp : (($product->mrp ?: ($product->eligible_referral_value ?: 0)) * $qty));
-            $eligibleValue    = $bookingMrp;
+            $baseMrp          = (float) ($product->mrp ?: ($product->eligible_referral_value ?: 0));
+            $eligibleValue    = $baseMrp > 0 ? round($baseMrp * $qty, 2) : (float)$booking->mrp;
             $activationPoints = round($eligibleValue * ($activationRate / 100), 2);
 
             // 4. Create Wallet
@@ -85,7 +85,7 @@ class ReferralCommissionService
                 'category_id'            => $product->category_id,
                 'sequence_in_category'   => 0,
                 'benefit_percentage'     => $activationRate,
-                'product_value'          => $product->mrp,
+                'product_value'          => $baseMrp > 0 ? $baseMrp : $product->mrp,
                 'eligible_product_value' => $eligibleValue,
                 'credit_earned'          => $activationPoints,
                 'status'                 => $initialStatus,
@@ -94,7 +94,7 @@ class ReferralCommissionService
                 'cycle_number'           => 1,
                 'referral_stage'         => null,
                 'rule_version'           => 'v1.0',
-                'notes'                  => "Self Dealer Activation — {$activationRate}% of ₹{$eligibleValue}",
+                'notes'                  => "Self Dealer Activation — {$activationRate}% of base ₹{$eligibleValue} (Excl. GST)",
             ]);
 
             // 6. Record Wallet Transaction
@@ -105,7 +105,7 @@ class ReferralCommissionService
                 'source'               => 'self_dealer_activation',
                 'booking_id'           => $booking->id,
                 'referral_id'          => $referral->id,
-                'description'          => "Self Dealer Activation Points — {$activationRate}% of ₹" . number_format($eligibleValue, 2),
+                'description'          => "Self Dealer Activation Points — {$activationRate}% of base ₹" . number_format($eligibleValue, 2) . " (Excl. GST)",
                 'transaction_type'     => 'activation_points',
                 'status'               => $initialStatus,
                 'available_at'         => $availableAt,
@@ -116,6 +116,30 @@ class ReferralCommissionService
 
             return true;
         });
+    }
+
+    /**
+     * Get the base product price / MRP strictly excluding GST for referral commission calculations.
+     */
+    public function getBookingBaseMrp(Booking $booking): float
+    {
+        $qty = max(1, (int) ($booking->quantity ?: 1));
+        $product = $booking->product ?: \App\Models\Product::find($booking->product_id);
+        if ($product && (float)$product->mrp > 0) {
+            return round((float)$product->mrp * $qty, 2);
+        }
+        if ($product && (float)$product->eligible_referral_value > 0) {
+            return round((float)$product->eligible_referral_value * $qty, 2);
+        }
+        if ((float)$booking->mrp > 0) {
+            $catType = strtolower($product?->category?->type ?? '');
+            $catName = strtolower($product?->category?->name ?? '');
+            $isAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
+                || str_contains($catName, 'farm') || str_contains($catName, 'agro');
+            $taxMultiplier = $isAgro ? 1.05 : 1.18;
+            return round((float)$booking->mrp / $taxMultiplier, 2);
+        }
+        return 0.00;
     }
 
     // =========================================================================
@@ -194,25 +218,30 @@ class ReferralCommissionService
                 || (float)$booking->balance_amount <= 0);
 
             $qty = max(1, (int) ($booking->quantity ?: 1));
-            $bookingMrp = (float) ($booking->mrp > 0 ? $booking->mrp : (($product->mrp ?: 0) * $qty));
+            // Commission calculation base is strictly the original product price excluding GST
+            $baseMrp = $this->getBookingBaseMrp($booking);
+            $totalCommission = round($baseMrp * ($stageRate / 100), 2);
 
             if ($isUpfrontFull) {
-                // For upfront full payment, calculation base is the full purchase MRP
-                $eligibleValue = $bookingMrp;
-                $pointsEarned  = round($eligibleValue * ($stageRate / 100), 2);
-                $noteText      = "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of full booking MRP ₹" . number_format($eligibleValue, 2);
-                $descText      = "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of ₹" . number_format($eligibleValue, 2) . " (Full Payment)";
+                // For upfront full payment (single transaction), calculation base is full product MRP excluding GST
+                $eligibleValue = $baseMrp;
+                $pointsEarned  = $totalCommission;
+                $noteText      = "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% commission fully settled (₹" . number_format($totalCommission, 2) . ") on base price ₹" . number_format($baseMrp, 2) . " (Excl. GST) (Full Payment)";
+                $descText      = "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of ₹" . number_format($baseMrp, 2) . " (Full Payment Excl. GST)";
             } else {
-                // For flexi-booking, Part 1 calculation base is the 20% booking deposit
-                $twentyPercentDeposit = round($bookingMrp * 0.20, 2);
-                $eligibleValue = (float) ($booking->booking_amount > 0 ? min((float)$booking->booking_amount, $twentyPercentDeposit) : $twentyPercentDeposit);
-                $pointsEarned  = round($eligibleValue * ($stageRate / 100), 2);
-                $noteText      = "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of 20% booking deposit ₹" . number_format($eligibleValue, 2);
-                $descText      = "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of 20% booking deposit ₹" . number_format($eligibleValue, 2);
+                // For partial / advance deposit, credit proportional commission for the deposit portion
+                $depositFraction = ($booking->booking_amount > 0 && $booking->mrp > 0)
+                    ? min(1.0, (float)$booking->booking_amount / (float)$booking->mrp)
+                    : 0.20;
+                $depositBase  = round($baseMrp * $depositFraction, 2);
+                $pointsEarned = round($depositBase * ($stageRate / 100), 2);
+                $eligibleValue = $baseMrp;
+                $noteText     = "Stage {$currentStage} | Cycle {$progress->cycle_number} | {$stageRate}% of 20% booking deposit base ₹" . number_format($depositBase, 2) . " (₹" . number_format($pointsEarned, 2) . " credited; ₹" . number_format(max(0, $totalCommission - $pointsEarned), 2) . " locked pending balance completion)";
+                $descText     = "Referral Incentive Points — Stage {$currentStage} | {$stageRate}% of 20% booking deposit base ₹" . number_format($depositBase, 2) . " (Excl. GST)";
             }
 
             $isInstant  = !$fraudResult['flagged'];
-            $status     = $isInstant ? 'available' : 'pending';
+            $status     = $isInstant ? ($isUpfrontFull ? 'available' : 'partial') : 'pending';
             $approvedAt = $isInstant ? now() : null;
 
             // Create Referral record (Instantly available if not flagged for fraud)
@@ -223,9 +252,9 @@ class ReferralCommissionService
                 'category_id'            => $categoryId,
                 'sequence_in_category'   => $progress->total_referrals_all_time + 1,
                 'benefit_percentage'     => $stageRate,
-                'product_value'          => $product->mrp,
-                'eligible_product_value' => $eligibleValue,
-                'credit_earned'          => $pointsEarned,
+                'product_value'          => $baseMrp,
+                'eligible_product_value' => $baseMrp,
+                'credit_earned'          => $isUpfrontFull ? $totalCommission : $pointsEarned,
                 'status'                 => $status,
                 'approved_at'            => $approvedAt,
                 'transaction_type'       => 'referral',
@@ -267,7 +296,7 @@ class ReferralCommissionService
                 'booking_id'           => $booking->id,
                 'description'          => $descText,
                 'transaction_type'     => 'referral_incentive',
-                'status'               => $status,
+                'status'               => $isInstant ? 'available' : 'pending',
                 'available_at'         => $approvedAt,
                 'referral_id'          => $referral->id,
                 'category_id'          => $categoryId,
@@ -359,33 +388,23 @@ class ReferralCommissionService
             }
         }
 
-        // Also trigger 80% completion category credit if eligible
-        $this->award80PercentCategoryCompletionCredit($booking);
+        // Also trigger balance completion settlement if fully paid
+        $isFullyPaid = ($booking->payment_status === 'fully_paid' || (float)$booking->balance_amount <= 0);
+        if ($isFullyPaid) {
+            $this->settleReferralCommissionForPayment($booking, 0.0, true);
+        }
 
         return $approvedCount;
     }
 
     /**
-     * STEP 3B — AWARD 80% BALANCE COMPLETION REWARD ACCORDING TO CATEGORY
-     * Triggered when the customer completes the remaining 80% balance (via EMI, lump-sum, or flexible payments).
-     * Calculates referral credits based on the Product's Category commission_percentage and credits the Referrer.
+     * STEP 3B — SETTLE REFERRAL COMMISSION FOR BALANCE PAYMENTS
+     * Handles single or multiple balance installments, strictly calculating commission on base price excluding GST.
+     * When fully paid, guarantees the total commission across all transactions equals stageRate% of base MRP.
      */
-    public function award80PercentCategoryCompletionCredit(Booking $booking): ?Referral
+    public function settleReferralCommissionForPayment(Booking $booking, float $cashPaid = 0.0, bool $isFullyPaid = false): ?Referral
     {
-        // 1. Ensure booking balance is completed
-        if ($booking->payment_status !== 'fully_paid' && (float)$booking->balance_amount > 0) {
-            return null;
-        }
-
-        // 2. Prevent duplicate award for this booking
-        $existing = Referral::where('booking_id', $booking->id)
-            ->where('transaction_type', 'category_completion')
-            ->first();
-        if ($existing) {
-            return $existing;
-        }
-
-        // 3. Resolve referred customer and their referrer
+        // 1. Resolve referee and referrer
         $referee = Customer::find($booking->user_id);
         if (!$referee || !$referee->referred_by_id) {
             return null;
@@ -396,102 +415,147 @@ class ReferralCommissionService
             return null;
         }
 
-        // 4. Resolve Product & Category
         $product = $booking->product ?: \App\Models\Product::find($booking->product_id);
         if (!$product) {
             return null;
         }
 
-        $category = $product->category ?: Category::find($product->category_id);
-        if (!$category) {
+        $baseMrp = $this->getBookingBaseMrp($booking);
+        if ($baseMrp <= 0) {
             return null;
         }
 
-        $qty = max(1, (int) ($booking->quantity ?: 1));
-        $mrpTotal = (float) ($booking->mrp > 0 ? $booking->mrp : (($product->mrp ?: 0) * $qty));
-
-        // Check if initial referral was already awarded on full MRP upfront
-        $initialReferral = Referral::where('booking_id', $booking->id)
+        // 2. Find primary referral record for this booking
+        $referral = Referral::where('booking_id', $booking->id)
+            ->where('referrer_id', $referrer->id)
+            ->where('referee_id', $referee->id)
             ->where('transaction_type', 'referral')
             ->first();
 
-        if ($initialReferral && (float)$initialReferral->eligible_product_value >= $mrpTotal) {
-            return null; // Full commission was already awarded upfront on full purchase MRP
-        }
-
-        // 5. Eligible referral percentage: exactly the same percentage applied to the 20% booking deposit
-        if ($initialReferral && (float)$initialReferral->benefit_percentage > 0) {
-            $eligibleRate = (float) $initialReferral->benefit_percentage;
-            $stage        = $initialReferral->referral_stage;
-        } else {
-            $progress = CustomerCategoryProgress::where('user_id', $referrer->id)
-                ->where('category_id', $category->id)
+        if (!$referral) {
+            $referral = Referral::where('booking_id', $booking->id)
+                ->where('referrer_id', $referrer->id)
                 ->first();
-            $stage        = $progress ? (int)$progress->current_stage : 1;
-            $eligibleRate = ReferralStageConfig::getRateForStage($stage);
         }
 
-        // 6. Base amount: remaining 80% balance amount (MRP - deposit awarded)
-        $depositBase = $initialReferral ? (float)$initialReferral->eligible_product_value : round($mrpTotal * 0.20, 2);
-        $eightyPercentBase = max(0.00, round($mrpTotal - $depositBase, 2));
-
-        if ($eightyPercentBase <= 0) {
+        if (!$referral) {
             return null;
         }
 
-        // Calculate credit earned using same eligible percentage
-        $creditEarned = round($eightyPercentBase * ($eligibleRate / 100), 2);
-        if ($creditEarned <= 0) {
-            return null;
+        $stageRate = (float) $referral->benefit_percentage;
+        if ($stageRate <= 0) {
+            $stageRate = (float) ReferralStageConfig::getRateForStage($referral->referral_stage ?: 1);
         }
 
-        return DB::transaction(function () use ($referrer, $referee, $booking, $product, $category, $eligibleRate, $stage, $eightyPercentBase, $creditEarned) {
-            // Create Referral Record
-            $referral = Referral::create([
-                'referrer_id'            => $referrer->id,
-                'referee_id'             => $referee->id,
-                'booking_id'             => $booking->id,
-                'category_id'            => $category->id,
-                'sequence_in_category'   => 0,
-                'benefit_percentage'     => $eligibleRate,
-                'product_value'          => $product->mrp,
-                'eligible_product_value' => $eightyPercentBase,
-                'credit_earned'          => $creditEarned,
-                'status'                 => 'available',
-                'approved_at'            => now(),
-                'transaction_type'       => 'category_completion',
-                'referral_stage'         => $stage,
-                'rule_version'           => 'v1.0',
-                'notes'                  => "80% Balance Completion Reward | {$eligibleRate}% (same as 20% deposit stage) on 80% balance ₹" . number_format($eightyPercentBase, 2),
-            ]);
+        $totalEligibleCommission = round($baseMrp * ($stageRate / 100), 2);
 
-            // Credit to Referrer's Wallet
+        // 3. How much commission has already been credited to referrer for this booking?
+        $alreadyCredited = (float) WalletTransaction::where('user_id', $referrer->id)
+            ->where('booking_id', $booking->id)
+            ->where('type', 'credit')
+            ->where('status', 'available')
+            ->whereIn('source', ['referral_incentive', 'category_completion_reward', 'referral_balance_settlement'])
+            ->sum('amount');
+
+        $remainingCommission = max(0.00, round($totalEligibleCommission - $alreadyCredited, 2));
+
+        $bookingBalance = (float) $booking->balance_amount;
+        $actuallyFullyPaid = $isFullyPaid || ($bookingBalance <= 0) || ($booking->payment_status === 'fully_paid');
+
+        if ($remainingCommission <= 0) {
+            if ($referral->status !== 'available' && $actuallyFullyPaid) {
+                $referral->status                 = 'available';
+                $referral->approved_at            = $referral->approved_at ?: now();
+                $referral->credit_earned          = $totalEligibleCommission;
+                $referral->eligible_product_value = $baseMrp;
+                $referral->product_value          = $baseMrp;
+                $referral->save();
+            }
+            return $referral;
+        }
+
+        // 4. Calculate commission to credit now
+        $commissionToCredit = 0.00;
+        if ($actuallyFullyPaid) {
+            // Settle all remaining commission on final payment
+            $commissionToCredit = $remainingCommission;
+        } else {
+            // Partial installment: credit proportional share strictly based on transaction base excluding GST
+            $totalMrpWithTax = max(0.01, (float)$booking->mrp);
+            $paidFraction = min(1.0, max(0.0, $cashPaid / $totalMrpWithTax));
+            $txBase = round($baseMrp * $paidFraction, 2);
+            $installmentCredit = round($txBase * ($stageRate / 100), 2);
+            $commissionToCredit = min($remainingCommission, max(0.00, $installmentCredit));
+        }
+
+        if ($commissionToCredit <= 0) {
+            return $referral;
+        }
+
+        return DB::transaction(function () use (
+            $referrer, $booking, $product, $referral, $baseMrp, $stageRate,
+            $totalEligibleCommission, $commissionToCredit, $alreadyCredited, $actuallyFullyPaid
+        ) {
+            $newTotalCredited = round($alreadyCredited + $commissionToCredit, 2);
+            if ($actuallyFullyPaid) {
+                $newTotalCredited = $totalEligibleCommission;
+            }
+
+            // Update primary Referral record
+            $referral->product_value          = $baseMrp;
+            $referral->eligible_product_value = $baseMrp;
+            $referral->credit_earned          = $newTotalCredited;
+            $referral->status                 = $actuallyFullyPaid ? 'available' : 'partial';
+            $referral->approved_at            = $referral->approved_at ?: now();
+            $referral->transaction_type       = 'referral';
+
+            if ($actuallyFullyPaid) {
+                $referral->notes = "Stage {$referral->referral_stage} | {$stageRate}% commission fully settled (₹" . number_format($totalEligibleCommission, 2) . ") on base price ₹" . number_format($baseMrp, 2) . " (Excl. GST)";
+            } else {
+                $referral->notes = "Stage {$referral->referral_stage} | {$stageRate}% partial settlement: ₹" . number_format($commissionToCredit, 2) . " credited (Total ₹" . number_format($newTotalCredited, 2) . " / ₹" . number_format($totalEligibleCommission, 2) . ") on base price ₹" . number_format($baseMrp, 2) . " (Excl. GST)";
+            }
+            $referral->save();
+
+            // Credit Referrer Wallet
             $wallet = SelfDealerWallet::firstOrCreate(['user_id' => $referrer->id]);
-            $wallet->creditAvailable($creditEarned);
+            $wallet->creditAvailable($commissionToCredit);
 
-            $referrer->wallet_balance = ($referrer->wallet_balance ?? 0) + $creditEarned;
+            $referrer->wallet_balance = ($referrer->wallet_balance ?? 0) + $commissionToCredit;
             $referrer->save();
 
             // Record Wallet Transaction
             WalletTransaction::create([
                 'user_id'              => $referrer->id,
-                'amount'               => $creditEarned,
+                'amount'               => $commissionToCredit,
                 'type'                 => 'credit',
-                'source'               => 'category_completion_reward',
+                'source'               => $actuallyFullyPaid ? 'category_completion_reward' : 'referral_balance_settlement',
                 'booking_id'           => $booking->id,
-                'description'          => "80% Balance Completion Reward for {$product->name} ({$eligibleRate}% applied to 80% balance ₹" . number_format($eightyPercentBase, 2) . ")",
-                'transaction_type'     => 'category_completion',
+                'description'          => $actuallyFullyPaid
+                    ? "Referral Commission Balance Completion Reward for {$product->name} (₹" . number_format($commissionToCredit, 2) . " settled on base ₹" . number_format($baseMrp, 2) . " excl. GST)"
+                    : "Referral Commission Installment Settlement for {$product->name} (₹" . number_format($commissionToCredit, 2) . " on base ₹" . number_format($baseMrp, 2) . " excl. GST)",
+                'transaction_type'     => 'referral_incentive',
                 'status'               => 'available',
                 'available_at'         => now(),
                 'referral_id'          => $referral->id,
-                'category_id'          => $category->id,
-                'incentive_percentage' => $eligibleRate,
-                'referral_stage'       => $stage,
+                'category_id'          => $product->category_id,
+                'incentive_percentage' => $stageRate,
+                'referral_stage'       => $referral->referral_stage,
+                'cycle_number'         => $referral->cycle_number,
                 'rule_version'         => 'v1.0',
             ]);
 
             return $referral;
         });
+    }
+
+    /**
+     * STEP 3B — AWARD 80% BALANCE COMPLETION REWARD ACCORDING TO CATEGORY
+     * Triggered when the customer completes the remaining 80% balance (via EMI, lump-sum, or flexible payments).
+     * Delegates to settleReferralCommissionForPayment ensuring exact settlement on base price excluding GST.
+     */
+    public function award80PercentCategoryCompletionCredit(Booking $booking): ?Referral
+    {
+        return $this->settleReferralCommissionForPayment($booking, 0.0, true);
     }
 
     // =========================================================================

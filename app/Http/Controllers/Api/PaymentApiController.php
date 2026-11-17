@@ -398,8 +398,14 @@ class PaymentApiController extends Controller
                         'offline_payment_ref'      => $paymentId,
                     ]);
 
+                    $referralService = app(ReferralCommissionService::class);
+                    $referralService->settleReferralCommissionForPayment(
+                        $booking,
+                        $actualPaid,
+                        $isFullyPaid
+                    );
+
                     if ($isFullyPaid) {
-                        $referralService = app(ReferralCommissionService::class);
                         $referralService->autoApprovePendingReferralsForBooking($booking);
                         app(\App\Services\DeliveryChallanService::class)->generateForBooking($booking);
                         $booking->refresh();

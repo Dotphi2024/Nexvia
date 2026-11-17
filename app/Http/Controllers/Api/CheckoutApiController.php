@@ -139,7 +139,7 @@ class CheckoutApiController extends Controller
                 $balancePct = 100.00 - $bookingPct;
                 $balanceAmount = round($itemTotalMrp - $tokenAmount, 2);
 
-                // Tax breakdown: 5% for DLS Agro products vs 18% for other products
+                // Tax breakdown: 5% for DLS Agro products vs 18% for other products (added on top of price)
                 $catType = strtolower($product->category?->type ?? '');
                 $catName = strtolower($product->category?->name ?? '');
                 $isDlsAgro = ($catType === 'dls_farm_equipment' || $catType === 'dls_agro' || $catType === 'agro' || $catType === 'farm')
@@ -148,8 +148,14 @@ class CheckoutApiController extends Controller
                     || str_contains(strtolower($product->name), 'cultivator');
 
                 $taxRate = $isDlsAgro ? 5.0 : 18.0;
-                $taxableAmount = round($itemTotalMrp / (1 + ($taxRate / 100)), 2);
-                $itemTax = round($itemTotalMrp - $taxableAmount, 2);
+                $taxableAmount = round($itemTotalMrp, 2); // Base price before tax
+                $itemTax = round($taxableAmount * ($taxRate / 100), 2); // Tax added on top
+                $itemTotalWithTax = round($itemTotalMrp + $itemTax, 2);
+
+                $bookingPct = (float) ($product->booking_percentage ?: 20.00);
+                $balancePct = 100.00 - $bookingPct;
+                $tokenAmount = round($itemTotalWithTax * ($bookingPct / 100), 2);
+                $balanceAmount = round($itemTotalWithTax - $tokenAmount, 2);
 
                 $mainImageUrl = ImageHelper::resolve($product->main_image);
 
@@ -167,7 +173,8 @@ class CheckoutApiController extends Controller
                     'selected_color'      => $itemData['selected_color'],
                     'quantity'            => $qty,
                     'unit_mrp'            => $unitMrp,
-                    'item_total_mrp'      => $itemTotalMrp,
+                    'item_total_mrp'      => $itemTotalWithTax,
+                    'base_mrp'            => $itemTotalMrp,
                     'token_percentage'    => $bookingPct,
                     'token_amount'        => $tokenAmount,
                     'balance_percentage'  => $balancePct,
@@ -214,7 +221,7 @@ class CheckoutApiController extends Controller
             $deliveryFee = 0.0;
             $deliveryStatus = 'FREE';
 
-            $grandTotal = round($subtotalMrp + $deliveryFee, 2);
+            $grandTotal = round($subtotalMrp + $totalTaxAmount + $deliveryFee, 2);
 
             $customer = $this->resolveCustomer($request);
             $walletBalance = $customer ? (float) ($customer->wallet_balance ?? 0) : 0.0;
@@ -248,8 +255,8 @@ class CheckoutApiController extends Controller
                         'cgst_amount'            => $cgstAmount,
                         'sgst_amount'            => $sgstAmount,
                         'total_tax'              => $totalTaxAmount,
-                        'tax_status'             => 'Inclusive in MRP',
-                        'note'                   => 'DLS Agro products calculated at 5% GST; all other items at 18% GST (inclusive in MRP).',
+                        'tax_status'             => 'Exclusive (Added to price)',
+                        'note'                   => 'GST added at checkout: DLS Agro products calculated at 5% GST; all other items at 18% GST.',
                     ],
                     'delivery' => [
                         'charges'                => $deliveryFee,

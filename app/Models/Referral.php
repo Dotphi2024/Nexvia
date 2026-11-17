@@ -77,6 +77,11 @@ class Referral extends Model
         return $query->where('status', 'available');
     }
 
+    public function scopePartial($query)
+    {
+        return $query->where('status', 'partial');
+    }
+
     public function scopeReversed($query)
     {
         return $query->where('status', 'reversed');
@@ -102,6 +107,11 @@ class Referral extends Model
     public function isAvailable(): bool
     {
         return $this->status === 'available';
+    }
+
+    public function isPartial(): bool
+    {
+        return $this->status === 'partial';
     }
 
     public function isReversed(): bool
