@@ -8,7 +8,10 @@
         <div class="col-md-6 col-lg-5">
             <div class="card card-nexvia p-4 p-md-5 shadow-lg">
                 <div class="text-center mb-4">
-                    <a href="{{ route('home') }}" class="nexvia-brand-logo fs-2 d-block mb-1">NEXVIA</a>
+                    <a href="{{ route('home') }}" class="nexvia-brand-logo fs-2 d-inline-flex align-items-center justify-content-center gap-2 mb-2 text-decoration-none">
+                        <img src="{{ asset('images/logo.png') }}" alt="NEXVIA" height="40" width="40" class="rounded object-fit-contain">
+                        <span>NEXVIA</span>
+                    </a>
                     <h5 class="fw-bold text-dark mb-1">Customer Login & Registration</h5>
                     <p class="small text-muted mb-0">Enter your mobile phone number to receive OTP</p>
                 </div>

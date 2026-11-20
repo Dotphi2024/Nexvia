@@ -331,6 +331,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/verify-otp',      [CustomerAuthController::class, 'verifyOtp']);
     Route::post('/refresh-token',   [CustomerAuthController::class, 'refreshToken']);
     Route::post('/forgot-password', [CustomerAuthController::class, 'forgotPassword']);
+    Route::post('/reset-password',  [CustomerAuthController::class, 'resetPassword']);
+    Route::post('/change-password', [CustomerAuthController::class, 'changePassword']);
     Route::post('/resend-otp',      [CustomerAuthController::class, 'resendOtp']);
     Route::match(['get', 'post'], '/logout', [CustomerAuthController::class, 'logout']);
     Route::get('/categories',       [CategoryApiController::class, 'index']);
@@ -346,6 +348,7 @@ Route::prefix('user')->middleware('customer.auth')->group(function () {
     Route::put('/profile',           [CustomerAuthController::class, 'updateProfile']);
     Route::post('/profile',          [CustomerAuthController::class, 'profile']);
     Route::post('/update-profile',   [CustomerAuthController::class, 'updateProfile']);
+    Route::post('/change-password',  [CustomerAuthController::class, 'changePassword']);
 
     // Address Routes
     Route::get('/addresses',         [UserAddressController::class, 'index']);
@@ -380,8 +383,14 @@ Route::prefix('customer')->group(function () {
     Route::post('/verify-otp',         [CustomerAuthController::class, 'verifyOtp']);
     Route::post('/refresh-token',      [CustomerAuthController::class, 'refreshToken']);
     Route::post('/forgot-password',    [CustomerAuthController::class, 'forgotPassword']);
+    Route::post('/reset-password',     [CustomerAuthController::class, 'resetPassword']);
+    Route::post('/change-password',    [CustomerAuthController::class, 'changePassword']);
     Route::post('/resend-otp',         [CustomerAuthController::class, 'resendOtp']);
     Route::match(['get', 'post'], '/logout', [CustomerAuthController::class, 'logout']);
+    Route::post('/fcm-token',          [CustomerAuthController::class, 'updateFcmToken']);
+    Route::match(['get', 'post'], '/notifications', [CustomerAuthController::class, 'getNotifications']);
+    Route::post('/notifications/mark-read',         [CustomerAuthController::class, 'markNotificationRead']);
+    Route::match(['get', 'post'], '/test-notification', [CustomerAuthController::class, 'sendTestNotification']);
 
     Route::middleware('customer.auth')->group(function () {
         Route::get('/profile',          [CustomerAuthController::class, 'profile']);

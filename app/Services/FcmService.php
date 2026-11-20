@@ -24,10 +24,29 @@ class FcmService
         }
 
         try {
-            $credentialsPath = base_path('routemate-3d922-firebase-adminsdk-fbsvc-4c21f8b375.json');
+            $credentialsPath = env('FIREBASE_CREDENTIALS');
+            if (!$credentialsPath || !file_exists($credentialsPath)) {
+                $candidates = array_merge(
+                    [
+                        base_path('firebase-credentials.json'),
+                        base_path('firebase-service-account.json'),
+                        base_path('firebase.json'),
+                        base_path('routemate-3d922-firebase-adminsdk-fbsvc-4c21f8b375.json'),
+                    ],
+                    glob(base_path('*-firebase-adminsdk-*.json')) ?: []
+                );
 
-            if (!file_exists($credentialsPath)) {
-                Log::error('FCM Error: Firebase credentials JSON file not found at ' . $credentialsPath);
+                $credentialsPath = null;
+                foreach ($candidates as $cand) {
+                    if (is_string($cand) && file_exists($cand)) {
+                        $credentialsPath = $cand;
+                        break;
+                    }
+                }
+            }
+
+            if (!$credentialsPath || !file_exists($credentialsPath)) {
+                Log::warning('FCM Error: Firebase credentials JSON file not found. Place firebase-credentials.json in backend root.');
                 return false;
             }
 
@@ -62,7 +81,7 @@ class FcmService
                         'priority' => 'HIGH',
                         'notification' => [
                             'sound' => 'default',
-                            'channel_id' => 'ride_alerts',
+                            'channel_id' => 'nexvia_notifications_channel',
                             'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                         ],
                     ],
@@ -94,6 +113,22 @@ class FcmService
             Log::error('FCM Exception: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Send Push Notification directly to a Customer model or user_id
+     */
+    public static function sendToCustomer($customerOrId, string $title, string $body, array $data = []): bool
+    {
+        $customer = is_numeric($customerOrId) 
+            ? \App\Models\Customer::find($customerOrId) 
+            : $customerOrId;
+
+        if (!$customer || empty($customer->fcm_token)) {
+            return false;
+        }
+
+        return self::sendNotification($customer->fcm_token, $title, $body, $data);
     }
 
     /**

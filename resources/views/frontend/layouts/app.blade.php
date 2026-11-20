@@ -105,7 +105,7 @@
     <nav class="navbar navbar-expand-lg navbar-nexvia sticky-top">
         <div class="container">
             <a class="nexvia-brand-logo d-flex align-items-center gap-2" href="{{ route('home') }}">
-                <iconify-icon icon="solar:shield-star-bold" class="fs-2" style="color: #7c3aed;"></iconify-icon>
+                <img src="{{ asset('images/logo.png') }}" alt="NEXVIA" height="34" width="34" class="rounded object-fit-contain">
                 <span style="color: #7c3aed; font-weight: 800;">NEXVIA</span>
             </a>
             

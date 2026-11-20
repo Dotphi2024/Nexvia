@@ -416,22 +416,32 @@ class BookingApiController extends Controller
 
             // Apply Product Credit Wallet redemption if requested
             $appliedWalletDiscount = 0.00;
+            $paymentMethodInput = strtolower(trim((string)(
+                $request->input('payment_method')
+                ?? ($bodyJson['payment_method'] ?? '')
+            )));
+
             $useWallet = $request->boolean('use_wallet')
                 || $request->boolean('use_credits')
+                || in_array($paymentMethodInput, ['product credits', 'product_credits', 'product credit', 'product_credit', 'wallet', 'credits'])
                 || ($bodyJson['use_wallet'] ?? false)
                 || ($bodyJson['use_credits'] ?? false);
 
-            if ($useWallet && $user && (float) $user->wallet_balance > 0) {
-                $appliedWalletDiscount = min((float) $user->wallet_balance, $bookingAmount);
+            $sdWallet = \App\Models\SelfDealerWallet::firstOrCreate(['user_id' => $user->id]);
+            $effectiveWalletBalance = max((float)($user->wallet_balance ?? 0), (float)($sdWallet->available_points ?? 0));
+            $stakeResult = ['cancelled' => false];
+
+            if ($useWallet && $user && $effectiveWalletBalance > 0) {
+                $appliedWalletDiscount = min($effectiveWalletBalance, $bookingAmount);
                 $netCashPaid = max(0.00, round($bookingAmount - $appliedWalletDiscount, 2));
 
                 // Deduct wallet balance
-                $user->decrement('wallet_balance', $appliedWalletDiscount);
+                $user->wallet_balance = max(0.00, (float)($user->wallet_balance ?? 0) - $appliedWalletDiscount);
+                $user->save();
                 
                 // Sync with SelfDealerWallet
-                $dealerWallet = \App\Models\SelfDealerWallet::where('user_id', $user->id)->first();
-                if ($dealerWallet) {
-                    $dealerWallet->redeemPoints($appliedWalletDiscount);
+                if ($sdWallet) {
+                    $sdWallet->redeemPoints($appliedWalletDiscount);
                 }
 
                 // Record Debit Transaction
@@ -442,8 +452,14 @@ class BookingApiController extends Controller
                     'source'           => 'booking_redemption',
                     'description'      => "Redeemed Product Credit (₹" . number_format($appliedWalletDiscount, 2) . ") for Booking #{$bookingNumber}",
                     'transaction_type' => 'redemption',
-                    'status'           => 'available',
+                    'status'           => 'redeemed',
                 ]);
+
+                // Enforce activation stake rule:
+                // The initial 20% activation credit must always be retained in the wallet.
+                // If payment dips into this 20% activation credit, Self-Dealer status is cancelled.
+                $referralService = app(\App\Services\ReferralCommissionService::class);
+                $stakeResult     = $referralService->checkAndEnforceActivationStake($user, $appliedWalletDiscount);
             } else {
                 $netCashPaid = $bookingAmount;
             }
@@ -538,7 +554,7 @@ class BookingApiController extends Controller
             $hasActivationTx = WalletTransaction::where('user_id', $user->id)
                 ->where('transaction_type', 'activation_points')
                 ->exists();
-            if ($product->self_dealer_eligible && (!$user->is_self_dealer || $user->self_dealer_status !== 'active' || !$hasActivationTx)) {
+            if ($product->self_dealer_eligible && !($stakeResult['cancelled'] ?? false) && (!$user->is_self_dealer || $user->self_dealer_status !== 'active' || !$hasActivationTx)) {
                 $activatedSelfDealer = $referralService->activateSelfDealer($user, $booking);
             }
 
@@ -560,9 +576,21 @@ class BookingApiController extends Controller
 
             $mainImageUrl = \App\Helpers\ImageHelper::resolve($product->main_image);
 
+            $responseMessage = 'New confirmed Flexi-Booking entry created successfully.';
+            if (!empty($stakeResult['cancelled'])) {
+                $responseMessage = "Product purchased successfully using Product Credits. Notice: Your Self-Dealer status has been cancelled because your initial 20% activation credit was consumed. You are now a normal customer.";
+            } elseif ($appliedWalletDiscount > 0) {
+                $responseMessage = "Product purchased successfully using Product Credits (₹" . number_format($appliedWalletDiscount, 2) . "). Your Self-Dealer status remains active.";
+            }
+
+            $freshUser = $user->fresh();
+
             return response()->json([
                 'status'  => true,
-                'message' => 'New confirmed Flexi-Booking entry created successfully.',
+                'message' => $responseMessage,
+                'self_dealer_cancelled' => (bool) ($stakeResult['cancelled'] ?? false),
+                'self_dealer_status'    => $freshUser ? $freshUser->self_dealer_status : 'inactive',
+                'is_self_dealer'        => (bool) ($freshUser ? $freshUser->is_self_dealer : false),
                 'booking' => [
                     'id'                      => $booking->id,
                     'booking_number'          => $booking->booking_number,
@@ -922,6 +950,12 @@ class BookingApiController extends Controller
                 'booking_id'       => $booking->id,
                 'description'      => "Redeemed NEXVIA Product Credit (₹" . number_format($creditApplied, 2) . ") toward balance for booking {$booking->booking_number}",
             ]);
+
+            // Enforce activation stake rule:
+            // The initial 20% activation credit must always be retained in the wallet.
+            // If redemption dips into this 20% activation credit, Self-Dealer status is cancelled.
+            $referralService = app(\App\Services\ReferralCommissionService::class);
+            $stakeResult     = $referralService->checkAndEnforceActivationStake($user, $creditApplied);
         }
 
         $newBalance = max(0, round($currentBalance - ($creditApplied + $remainingCashToPay), 2));

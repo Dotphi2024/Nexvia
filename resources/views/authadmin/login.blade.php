@@ -9,6 +9,9 @@
                     <div class="card-body p-4 p-md-5">
 
                         <div class="text-center mb-4">
+                            <div class="d-inline-flex align-items-center justify-content-center mb-2">
+                                <img src="{{ asset('images/logo.png') }}" alt="NEXVIA" height="52" width="52" class="rounded object-fit-contain shadow-sm">
+                            </div>
                             <h3 class="fw-bold text-primary text-uppercase mb-2" style="letter-spacing: 2px; font-weight: 900;">NEXVIA</h3>
                             <h5 class="fw-bold text-dark mb-1">Admin Portal</h5>
                             <p class="text-muted fs-14 mb-0">Sign in to access your administrative dashboard</p>

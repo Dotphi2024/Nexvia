@@ -3,19 +3,13 @@
 <div class="app-sidebar">
      <!-- Sidebar Logo -->
      <div class="logo-box">
-          <a href="{{ route('admin.dashboard') }}" class="logo-dark text-decoration-none">
-               @if(isset($settings->logo) && !empty($settings->logo))
-                    <img src="{{ asset($settings->logo) }}" alt="logo" height="24">
-               @else
-                    <span class="fw-bold fs-22 text-uppercase" style="letter-spacing: 1.5px; font-weight: 800; color: #7c3aed;">NEXVIA</span>
-               @endif
+          <a href="{{ route('admin.dashboard') }}" class="logo-dark text-decoration-none d-flex align-items-center gap-2">
+               <img src="{{ asset('images/logo.png') }}" alt="logo" height="30" width="30" class="rounded object-fit-contain">
+               <span class="fw-bold fs-20 text-uppercase" style="letter-spacing: 1.5px; font-weight: 800; color: #7c3aed;">NEXVIA</span>
           </a>
-          <a href="{{ route('admin.dashboard') }}" class="logo-light text-decoration-none">
-               @if(isset($settings->logo) && !empty($settings->logo))
-                    <img src="{{ asset($settings->logo) }}" alt="logo" height="24">
-               @else
-                    <span class="fw-bold fs-22 text-uppercase" style="letter-spacing: 1.5px; font-weight: 800; color: #a78bfa;">NEXVIA</span>
-               @endif
+          <a href="{{ route('admin.dashboard') }}" class="logo-light text-decoration-none d-flex align-items-center gap-2">
+               <img src="{{ asset('images/logo.png') }}" alt="logo" height="30" width="30" class="rounded object-fit-contain">
+               <span class="fw-bold fs-20 text-uppercase" style="letter-spacing: 1.5px; font-weight: 800; color: #a78bfa;">NEXVIA</span>
           </a>
      </div>
 
